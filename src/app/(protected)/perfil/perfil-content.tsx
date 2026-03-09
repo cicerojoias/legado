@@ -45,7 +45,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
-    { versao: '0.7.1', data: '08/03/2026', resumo: 'RBAC reforçado, hydration fixes, seed 2026' },
+    { versao: '0.8.0', data: '08/03/2026', resumo: 'RBAC reforçado, hydration fixes, seed 2026' },
     { versao: '0.7.0', data: '08/03/2026', resumo: 'Relatórios, Dashboard e Custos Fixos' },
     { versao: '0.6.1', data: '08/03/2026', resumo: 'Edição e exclusão de lançamentos' },
 ];
@@ -150,7 +150,7 @@ export function PerfilContent({ nome, email, role, notifPush, notifHorario }: Pe
                         <div className="bg-card rounded-xl border p-4 space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Versão</span>
-                                <span className="text-sm font-medium">0.7.1</span>
+                                <span className="text-sm font-medium">0.8.0</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Ambiente</span>

@@ -20,7 +20,7 @@ No test runner is configured. Type-checking with `npx tsc --noEmit` is the verif
 
 ### Route Groups
 - `src/app/(auth)/` — Public auth routes: `/login`, `/pin`, `/setup-pin`, logout action
-- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/perfil`, `/sandbox`
+- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/sandbox`
 - `src/app/layout.tsx` — Root layout with Geist font and Sonner toaster
 
 ### Auth Flow (two-layer)
@@ -47,7 +47,7 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 ### RBAC
 - Roles: `SUPER_ADMIN` (Richard) | `ADMIN` (Cícero) | `OPERADOR` (staff)
 - `User.lojaAutorizada`: `JOAO_PESSOA` | `SANTA_RITA` | `AMBAS`
-- Middleware handles view-level RBAC: `/lancamentos` and `/relatorios` = ADMIN+, `/dashboard` and `/custos-fixos` = SUPER_ADMIN only. Server Actions enforce action-level RBAC by reading `dbUser.role` and `dbUser.lojaAutorizada` from the DB — never from the client.
+- Middleware handles view-level RBAC: `/lancamentos` and `/relatorios` = ADMIN+, `/dashboard`, `/custos-fixos`, `/usuarios` and `/logs` = SUPER_ADMIN only. Server Actions enforce action-level RBAC by reading `dbUser.role` and `dbUser.lojaAutorizada` from the DB — never from the client.
 - Users with `lojaAutorizada = AMBAS` must select a store in the UI; the server validates and rejects if omitted.
 
 ### Rate Limiting
@@ -68,6 +68,10 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 | `src/app/(protected)/relatorios/relatorios-content.tsx` | Relatórios data fetching + metrics + chart |
 | `src/app/(protected)/dashboard/page.tsx` | SUPER_ADMIN desktop dashboard |
 | `src/app/(protected)/custos-fixos/actions.ts` | CRUD for fixed costs (SUPER_ADMIN) |
+| `src/app/(protected)/perfil/actions.ts` | Trocar PIN, alterar senha, encerrar sessão, notificações |
+| `src/app/(protected)/usuarios/actions.ts` | Toggle loja e ativo por usuário (SUPER_ADMIN) |
+| `src/app/(protected)/logs/page.tsx` | Audit log viewer with filters + pagination (SUPER_ADMIN) |
+| `src/lib/pin-utils.ts` | Shared `hashPin`/`comparePin` (scrypt + timing-safe) |
 
 ### UI Conventions
 - **Color system:** Background `#F7F5F0` (creme), Primary `#184434` (dark green), Accent `#C79A34` (gold). ENTRADA = emerald, SAIDA = rose.
