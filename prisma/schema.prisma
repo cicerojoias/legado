@@ -1,0 +1,109 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  OPERADOR
+}
+
+enum Loja {
+  JOAO_PESSOA
+  SANTA_RITA
+  AMBAS
+}
+
+enum TipoLancamento {
+  ENTRADA
+  SAIDA
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  nome         String
+  role         Role        @default(OPERADOR)
+  lojaAutorizada Loja      @default(JOAO_PESSOA)
+  pin_hash       String?     // PIN de 4 dígitos (hashed) p/ fast-auth
+  pin_tentativas Int         @default(0)
+  bloqueado_ate  DateTime?   // Timestamp para cooldown (lockout)
+  ativo          Boolean     @default(true)
+  notif_push     Boolean     @default(false)  // Recebe push notification diária
+  notif_horario  String      @default("18:00") // Horário da notificação (HH:MM)
+  
+  lancamentos  Lancamento[]
+  logs         Log[]
+  custos_fixos CustoFixo[]
+
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  @@index([email])
+  @@index([lojaAutorizada])
+  @@map("users")
+}
+
+model Lancamento {
+  id           String         @id @default(uuid())
+  tipo         TipoLancamento
+  valor        Decimal        @db.Decimal(10, 2)
+  descricao    String?
+  metodo_pgto  String?        // Pix, Cartão, Dinheiro
+  loja         Loja
+  data_ref     DateTime       // A data que o lançamento se refere (Dashboard "Hoje")
+
+  // Soft-delete: null = ativo, preenchido = excluído (ADR-0001)
+  // NUNCA deletar fisicamente — integridade financeira e auditoria
+  deletado_at  DateTime?
+
+  usuario_id   String
+  usuario      User           @relation(fields: [usuario_id], references: [id])
+
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+
+  // Índice composto inclui deletado_at: queries sempre filtram por NULL (registros ativos)
+  // Planner usa o índice para loja + data_ref + deletado_at IS NULL sem full scan
+  @@index([loja, data_ref, deletado_at])
+  @@index([usuario_id])
+  @@map("lancamentos")
+}
+
+model CustoFixo {
+  id           String    @id @default(uuid())
+  nome         String
+  valor        Decimal   @db.Decimal(10, 2)
+  loja         Loja
+  dia_venc     Int       // Dia do mês que costuma vencer
+  ativo        Boolean   @default(true) // false = desativado temporariamente sem excluir
+
+  usuario_id   String
+  usuario      User      @relation(fields: [usuario_id], references: [id])
+
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([loja])
+  @@index([ativo])
+  @@map("custos_fixos")
+}
+
+model Log {
+  id           String    @id @default(uuid())
+  acao         String    // "LOGIN_SUCESSO", "LANCAMENTO_CRIADO", "LANCAMENTO_DELETADO"
+  detalhe      String?   @db.Text
+  
+  usuario_id   String?
+  usuario      User?     @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  created_at   DateTime  @default(now())
+
+  @@index([acao, created_at])
+  @@map("logs")
+}

@@ -1,0 +1,92 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Home, PieChart, User, FileText, Plus } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
+import { cn } from '@/lib/utils';
+import * as motion from 'framer-motion/client';
+import { Suspense } from 'react';
+import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
+
+export function BottomNav() {
+    const pathname = usePathname();
+    const { isAdmin, isLoading } = usePermissions();
+
+    let links = [];
+
+    if (!isLoading && isAdmin) {
+        // Admin: 5 itens (Hoje, Lançamentos, Registrar (centro), Relatórios, Perfil)
+        links = [
+            { href: '/hoje', icon: Home, label: 'Hoje' },
+            { href: '/lancamentos', icon: FileText, label: 'Lanç.' },
+            { href: '#', icon: Plus, label: 'Registrar' },
+            { href: '/relatorios', icon: PieChart, label: 'Relatórios' },
+            { href: '/perfil', icon: User, label: 'Perfil' },
+        ];
+    } else {
+        // Operador: 3 itens (Hoje, Registrar, Perfil)
+        links = [
+            { href: '/hoje', icon: Home, label: 'Hoje' },
+            { href: '#', icon: Plus, label: 'Registrar' },
+            { href: '/perfil', icon: User, label: 'Perfil' },
+        ];
+    }
+
+    const isSandbox = pathname === '/sandbox';
+
+    return (
+        <nav className={cn(
+            "flex items-center justify-around w-full h-16 bg-card pb-[env(safe-area-inset-bottom)] px-2",
+            !isSandbox && "border-t"
+        )}>
+            {links.map((link) => {
+                if (link.label === 'Registrar') {
+                    return (
+                        <div key="registrar" className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-1">
+                            <Suspense fallback={
+                                <div className="p-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 -mt-6 border-4 border-card">
+                                    <Plus className="w-6 h-6" />
+                                </div>
+                            }>
+                                <LancamentoModal canSelectLoja={isAdmin} />
+                            </Suspense>
+                        </div>
+                    );
+                }
+
+                const isActive = pathname.startsWith(link.href);
+                const Icon = link.icon;
+
+                return (
+                    <Link
+                        key={link.href}
+                        href={link.href}
+                        className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-1"
+                    >
+                        <div className={cn(
+                            "p-1.5 rounded-full transition-colors flex items-center justify-center",
+                            isActive ? "text-primary" : "text-primary/60 hover:text-primary/80"
+                        )}>
+                            <Icon className="w-5 h-5" />
+                            {isActive && (
+                                <motion.div
+                                    layoutId="bottom-nav-indicator"
+                                    className="absolute inset-0 bg-primary/10 rounded-full w-10 h-10 m-auto -z-10"
+                                    initial={false}
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            )}
+                        </div>
+                        <span className={cn(
+                            "text-[10px] font-medium leading-none",
+                            isActive ? "text-primary font-bold" : "text-primary/60"
+                        )}>
+                            {link.label}
+                        </span>
+                    </Link>
+                );
+            })}
+        </nav>
+    );
+}

@@ -1,0 +1,447 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+import {
+    trocarPinAction,
+    alterarSenhaAction,
+    encerrarSessaoAction,
+    atualizarNotificacoesAction,
+} from './actions';
+import {
+    KeyRound,
+    LogOut,
+    Lock,
+    Bell,
+    Info,
+    ChevronRight,
+    User,
+} from 'lucide-react';
+import * as motion from 'framer-motion/client';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface PerfilContentProps {
+    nome: string;
+    email: string;
+    role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERADOR';
+    notifPush: boolean;
+    notifHorario: string;
+}
+
+type OpenSection = 'pin' | 'senha' | 'notificacoes' | null;
+
+// ─── Role labels ────────────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+    SUPER_ADMIN: 'Super Admin',
+    ADMIN: 'Administrador',
+    OPERADOR: 'Operador',
+};
+
+// ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
+
+const CHANGELOG_RESUMIDO = [
+    { versao: '0.7.1', data: '08/03/2026', resumo: 'RBAC reforçado, hydration fixes, seed 2026' },
+    { versao: '0.7.0', data: '08/03/2026', resumo: 'Relatórios, Dashboard e Custos Fixos' },
+    { versao: '0.6.1', data: '08/03/2026', resumo: 'Edição e exclusão de lançamentos' },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
+export function PerfilContent({ nome, email, role, notifPush, notifHorario }: PerfilContentProps) {
+    const [openSection, setOpenSection] = useState<OpenSection>(null);
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const isSuperAdmin = role === 'SUPER_ADMIN';
+
+    const toggleSection = (section: OpenSection) => {
+        setOpenSection((prev) => (prev === section ? null : section));
+    };
+
+    return (
+        <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+                <h1 className="text-lg font-semibold">Configurações</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                    Gerencie sua conta e preferências
+                </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Perfil info card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-card rounded-xl p-4 border"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{nome}</p>
+                            <p className="text-sm text-muted-foreground truncate">{email}</p>
+                            <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                                {ROLE_LABELS[role] ?? role}
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Segurança */}
+                <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
+                        Segurança
+                    </p>
+
+                    {/* Trocar PIN */}
+                    <SectionButton
+                        icon={<KeyRound className="w-4 h-4" />}
+                        label="Trocar PIN"
+                        isOpen={openSection === 'pin'}
+                        onClick={() => toggleSection('pin')}
+                    />
+                    {openSection === 'pin' && <TrocarPinForm />}
+
+                    {/* Alterar Senha */}
+                    <SectionButton
+                        icon={<Lock className="w-4 h-4" />}
+                        label="Alterar senha"
+                        isOpen={openSection === 'senha'}
+                        onClick={() => toggleSection('senha')}
+                    />
+                    {openSection === 'senha' && <AlterarSenhaForm />}
+
+                    {/* Encerrar sessão */}
+                    <EncerrarSessaoButton />
+                </div>
+
+                {/* Notificações — ADMIN+ */}
+                {isAdmin && (
+                    <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
+                            Notificações
+                        </p>
+                        <SectionButton
+                            icon={<Bell className="w-4 h-4" />}
+                            label="Push notifications"
+                            isOpen={openSection === 'notificacoes'}
+                            onClick={() => toggleSection('notificacoes')}
+                        />
+                        {openSection === 'notificacoes' && (
+                            <NotificacoesForm
+                                initialPush={notifPush}
+                                initialHorario={notifHorario}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {/* Sistema — SUPER_ADMIN */}
+                {isSuperAdmin && (
+                    <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
+                            Sistema
+                        </p>
+                        <div className="bg-card rounded-xl border p-4 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Versão</span>
+                                <span className="text-sm font-medium">0.7.1</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Ambiente</span>
+                                <span className="text-sm font-medium">
+                                    {process.env.NODE_ENV === 'production' ? 'Produção' : 'Desenvolvimento'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="bg-card rounded-xl border p-4 space-y-3">
+                            <p className="text-sm font-medium flex items-center gap-2">
+                                <Info className="w-4 h-4 text-muted-foreground" />
+                                Últimas atualizações
+                            </p>
+                            {CHANGELOG_RESUMIDO.map((entry) => (
+                                <div key={entry.versao} className="pl-6 border-l-2 border-primary/20">
+                                    <p className="text-xs text-muted-foreground">
+                                        v{entry.versao} — {entry.data}
+                                    </p>
+                                    <p className="text-sm">{entry.resumo}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── Section Button ─────────────────────────────────────────────────────────
+
+function SectionButton({
+    icon,
+    label,
+    isOpen,
+    onClick,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    isOpen: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border text-sm hover:bg-accent/10 transition-colors"
+        >
+            <span className="text-muted-foreground">{icon}</span>
+            <span className="flex-1 text-left font-medium">{label}</span>
+            <ChevronRight
+                className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`}
+            />
+        </button>
+    );
+}
+
+// ─── Trocar PIN Form ────────────────────────────────────────────────────────
+
+function TrocarPinForm() {
+    const [isPending, startTransition] = useTransition();
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const form = e.currentTarget;
+
+        startTransition(async () => {
+            const result = await trocarPinAction(formData);
+            if (result.success) {
+                toast.success('PIN alterado com sucesso!');
+                form.reset();
+            } else {
+                toast.error(result.error);
+            }
+        });
+    };
+
+    return (
+        <motion.form
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            onSubmit={handleSubmit}
+            className="bg-card rounded-xl border p-4 space-y-3"
+        >
+            <div>
+                <label className="text-xs text-muted-foreground">PIN atual</label>
+                <Input
+                    name="pinAtual"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    pattern="\d{4}"
+                    placeholder="••••"
+                    required
+                    autoComplete="off"
+                />
+            </div>
+            <div>
+                <label className="text-xs text-muted-foreground">Novo PIN</label>
+                <Input
+                    name="novoPin"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    pattern="\d{4}"
+                    placeholder="••••"
+                    required
+                    autoComplete="off"
+                />
+            </div>
+            <div>
+                <label className="text-xs text-muted-foreground">Confirmar novo PIN</label>
+                <Input
+                    name="confirmarPin"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    pattern="\d{4}"
+                    placeholder="••••"
+                    required
+                    autoComplete="off"
+                />
+            </div>
+            <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? 'Alterando...' : 'Alterar PIN'}
+            </Button>
+        </motion.form>
+    );
+}
+
+// ─── Alterar Senha Form ─────────────────────────────────────────────────────
+
+function AlterarSenhaForm() {
+    const [isPending, startTransition] = useTransition();
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const form = e.currentTarget;
+
+        startTransition(async () => {
+            const result = await alterarSenhaAction(formData);
+            if (result.success) {
+                toast.success('Senha alterada com sucesso!');
+                form.reset();
+            } else {
+                toast.error(result.error);
+            }
+        });
+    };
+
+    return (
+        <motion.form
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            onSubmit={handleSubmit}
+            className="bg-card rounded-xl border p-4 space-y-3"
+        >
+            <div>
+                <label className="text-xs text-muted-foreground">Senha atual</label>
+                <Input
+                    name="senhaAtual"
+                    type="password"
+                    placeholder="••••••"
+                    required
+                    minLength={6}
+                    autoComplete="current-password"
+                />
+            </div>
+            <div>
+                <label className="text-xs text-muted-foreground">Nova senha</label>
+                <Input
+                    name="novaSenha"
+                    type="password"
+                    placeholder="••••••"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                />
+            </div>
+            <div>
+                <label className="text-xs text-muted-foreground">Confirmar nova senha</label>
+                <Input
+                    name="confirmarSenha"
+                    type="password"
+                    placeholder="••••••"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                />
+            </div>
+            <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? 'Alterando...' : 'Alterar senha'}
+            </Button>
+        </motion.form>
+    );
+}
+
+// ─── Encerrar Sessão Button ─────────────────────────────────────────────────
+
+function EncerrarSessaoButton() {
+    const [isPending, startTransition] = useTransition();
+
+    const handleLogout = () => {
+        startTransition(async () => {
+            await encerrarSessaoAction();
+        });
+    };
+
+    return (
+        <button
+            onClick={handleLogout}
+            disabled={isPending}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-card rounded-xl border text-sm hover:bg-destructive/5 transition-colors text-destructive disabled:opacity-50"
+        >
+            <LogOut className="w-4 h-4" />
+            <span className="flex-1 text-left font-medium">
+                {isPending ? 'Encerrando...' : 'Encerrar sessão'}
+            </span>
+        </button>
+    );
+}
+
+// ─── Notificações Form ──────────────────────────────────────────────────────
+
+function NotificacoesForm({
+    initialPush,
+    initialHorario,
+}: {
+    initialPush: boolean;
+    initialHorario: string;
+}) {
+    const [isPending, startTransition] = useTransition();
+    const [pushEnabled, setPushEnabled] = useState(initialPush);
+    const [horario, setHorario] = useState(initialHorario);
+
+    const handleSave = () => {
+        const formData = new FormData();
+        formData.set('notif_push', String(pushEnabled));
+        formData.set('notif_horario', horario);
+
+        startTransition(async () => {
+            const result = await atualizarNotificacoesAction(formData);
+            if (result.success) {
+                toast.success('Notificações atualizadas!');
+            } else {
+                toast.error(result.error);
+            }
+        });
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-card rounded-xl border p-4 space-y-4"
+        >
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-medium">Resumo diário</p>
+                    <p className="text-xs text-muted-foreground">
+                        Receba o total do dia por push
+                    </p>
+                </div>
+                <Switch
+                    checked={pushEnabled}
+                    onCheckedChange={setPushEnabled}
+                />
+            </div>
+
+            <div>
+                <label className="text-xs text-muted-foreground">Horário da notificação</label>
+                <Input
+                    type="time"
+                    value={horario}
+                    onChange={(e) => setHorario(e.target.value)}
+                    className="mt-1"
+                />
+            </div>
+
+            <Button
+                onClick={handleSave}
+                className="w-full"
+                disabled={isPending}
+            >
+                {isPending ? 'Salvando...' : 'Salvar preferências'}
+            </Button>
+        </motion.div>
+    );
+}
