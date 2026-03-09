@@ -62,3 +62,9 @@ README.md
 
 # default Next.js SVGs (keep manifest.json)
 /public/*.svg
+
+# serwist (generated service worker)
+/public/sw.js
+/public/sw.js.map
+/public/serwist-worker-*.js
+/public/serwist-worker-*.js.map
