@@ -55,8 +55,8 @@ README.md
 .cache/
 .claude/
 
-# screenshots & logs
-*.png
+# screenshots & logs (root only)
+/*.png
 *.log
 *.txt
 
