@@ -182,7 +182,7 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
     const serialized = lancamentos.map((l) => ({ ...l, valor: Number(l.valor) }));
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
             {/* Filtro de Período */}
             <Suspense fallback={<div className="h-9 w-full bg-muted rounded-lg animate-pulse" />}>
                 <PeriodoSelect current={periodo} />
@@ -224,7 +224,7 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
                 )}
 
                 {totalLancamentos > 10 && (
-                    <div className="pt-2 pb-6 flex justify-center">
+                    <div className="pt-2 pb-2 flex justify-center">
                         <Link
                             href="/lancamentos"
                             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-muted hover:text-foreground h-10 px-4 py-2 text-muted-foreground w-full border border-dashed border-border/60"
