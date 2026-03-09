@@ -182,7 +182,7 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
     const serialized = lancamentos.map((l) => ({ ...l, valor: Number(l.valor) }));
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-16">
             {/* Filtro de Período */}
             <Suspense fallback={<div className="h-9 w-full bg-muted rounded-lg animate-pulse" />}>
                 <PeriodoSelect current={periodo} />
