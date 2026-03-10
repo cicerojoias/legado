@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -36,10 +36,61 @@ import {
 
 import { createLancamento } from '@/app/(protected)/hoje/actions';
 
+// ─── Helpers de formatação BRL ──────────────────────────────────────────────
+function formatCurrency(value: string): string {
+    // Remove tudo exceto digitos e virgula
+    let cleaned = value.replace(/[^\d,]/g, '');
+
+    // Garante no máximo uma vírgula
+    const parts = cleaned.split(',');
+    if (parts.length > 2) {
+        cleaned = parts[0] + ',' + parts.slice(1).join('');
+    }
+
+    // Limita casas decimais a 2
+    if (parts.length === 2 && parts[1].length > 2) {
+        cleaned = parts[0] + ',' + parts[1].slice(0, 2);
+    }
+
+    return cleaned;
+}
+
+function parseBRLtoNumber(value: string): string {
+    // Converte "1.500,50" ou "1500,50" para "1500.50"
+    return value.replace(/\./g, '').replace(',', '.');
+}
+
+// ─── Labels humanizados ─────────────────────────────────────────────────────
+const CATEGORIA_LABELS: Record<string, string> = {
+    BANHO_OURO: 'Banho de Ouro',
+    ALIANCA: 'Aliança',
+    ANEL_FORMATURA: 'Anel de Formatura',
+    CONSERTO: 'Conserto',
+    VENDA: 'Venda',
+    DESPESA_FIXA: 'Despesa Fixa',
+    OUTROS: 'Outros',
+};
+
+const METODO_LABELS: Record<string, string> = {
+    PIX: 'PIX',
+    TON: 'TON (Maquininha)',
+    ESPECIE: 'Dinheiro',
+};
+
+const CATEGORIAS = Object.keys(CATEGORIA_LABELS);
+const METODOS_ENTRADA = ['PIX', 'TON', 'ESPECIE'];
+const METODOS_SAIDA = ['PIX', 'ESPECIE'];
+
+// ─── Schema ─────────────────────────────────────────────────────────────────
 const lancamentoSchema = z.object({
     tipo: z.enum(['ENTRADA', 'SAIDA']),
-    valor: z.string().min(1, 'Valor obrigatório'),
-    descricao: z.string().min(1, 'Descrição obrigatória').max(200),
+    valor: z.string()
+        .min(1, 'Informe o valor')
+        .refine((val) => {
+            const num = parseFloat(parseBRLtoNumber(val));
+            return !isNaN(num) && num > 0;
+        }, 'O valor deve ser maior que zero'),
+    descricao: z.string().max(200, 'Máximo 200 caracteres').optional(),
     categoria: z.string().optional(),
     metodo_pgto: z.string().optional(),
     loja: z.string().optional(),
@@ -49,10 +100,7 @@ const lancamentoSchema = z.object({
 
 type FormValues = z.infer<typeof lancamentoSchema>;
 
-const CATEGORIAS = ['BANHO_OURO', 'ALIANCA', 'ANEL_FORMATURA', 'CONSERTO', 'VENDA', 'DESPESA_FIXA', 'OUTROS'];
-// TON (maquininha) só aparece em ENTRADA — saídas são pagas em PIX ou Dinheiro
-const METODOS_ENTRADA = ['PIX', 'TON', 'ESPECIE'];
-const METODOS_SAIDA = ['PIX', 'ESPECIE'];
+const DESC_MAX = 200;
 
 export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boolean }) {
     const [open, setOpen] = useState(false);
@@ -75,14 +123,26 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
     });
 
     const isEntrada = form.watch('tipo') === 'ENTRADA';
+    const descricaoValue = form.watch('descricao') ?? '';
     const metodosDisponiveis = isEntrada ? METODOS_ENTRADA : METODOS_SAIDA;
+
+    const handleValorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+        const formatted = formatCurrency(e.target.value);
+        onChange(formatted);
+    }, []);
 
     const onSubmit = async (values: FormValues) => {
         const formData = new FormData();
-        Object.entries(values).forEach(([key, val]) => {
-            if (val) formData.append(key, val);
-        });
-        // Inject the current navigation date so the transaction is recorded on the correct day
+
+        // Converte valor BRL para formato numérico
+        const valorNumerico = parseBRLtoNumber(values.valor);
+        formData.append('tipo', values.tipo);
+        formData.append('valor', valorNumerico);
+        if (values.descricao) formData.append('descricao', values.descricao);
+        if (values.categoria) formData.append('categoria', values.categoria);
+        if (values.metodo_pgto) formData.append('metodo_pgto', values.metodo_pgto);
+        if (values.loja) formData.append('loja', values.loja);
+        if (values.observacao) formData.append('observacao', values.observacao);
         formData.set('data_ref', currentDate);
 
         toast.promise(createLancamento(formData), {
@@ -107,29 +167,55 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                     <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh]">
-                <div className="mx-auto w-full p-4 overflow-y-auto">
+            <DialogContent className="max-h-[90vh] p-0 overflow-hidden gap-0" showCloseButton={false}>
+                {/* Header verde escuro */}
+                <div className="bg-primary px-6 py-5 relative">
+                    <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="absolute top-4 right-4 text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                        aria-label="Fechar"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
                     <DialogHeader className="px-0 text-left">
-                        <DialogTitle>Novo Lançamento</DialogTitle>
-                        <DialogDescription>Preencha os dados da transação.</DialogDescription>
+                        <DialogTitle className="text-primary-foreground text-lg">
+                            Novo Lançamento
+                        </DialogTitle>
+                        <DialogDescription className="text-primary-foreground/60 text-sm">
+                            Preencha os dados da transação.
+                        </DialogDescription>
                     </DialogHeader>
+                </div>
 
+                {/* Form body */}
+                <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-100px)]">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                             {/* Toggle Tipo */}
-                            <div className="grid grid-cols-2 gap-2 bg-muted/40 p-1 rounded-xl">
-                                <Button
+                            <div className="grid grid-cols-2 gap-2 bg-muted/60 p-1.5 rounded-xl">
+                                <button
                                     type="button"
-                                    variant="ghost"
-                                    className={`rounded-lg ${isEntrada ? 'bg-emerald-500 text-white hover:bg-emerald-600 hover:text-white' : 'text-muted-foreground'}`}
+                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        isEntrada
+                                            ? 'bg-emerald-600 text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
                                     onClick={() => form.setValue('tipo', 'ENTRADA')}
                                 >
-                                    📥 Entrada
-                                </Button>
-                                <Button
+                                    <ArrowDownLeft className="w-4 h-4" />
+                                    Entrada
+                                </button>
+                                <button
                                     type="button"
-                                    variant="ghost"
-                                    className={`rounded-lg ${!isEntrada ? 'bg-rose-500 text-white hover:bg-rose-600 hover:text-white' : 'text-muted-foreground'}`}
+                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                        !isEntrada
+                                            ? 'bg-rose-600 text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
                                         if (form.getValues('metodo_pgto') === 'TON') {
@@ -137,30 +223,54 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                         }
                                     }}
                                 >
-                                    📤 Saída
-                                </Button>
+                                    <ArrowUpRight className="w-4 h-4" />
+                                    Saída
+                                </button>
                             </div>
 
+                            {/* Valor */}
                             <FormField
                                 control={form.control}
                                 name="valor"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Valor (R$)</FormLabel>
+                                        <FormLabel>
+                                            Valor (R$) <span className="text-rose-500">*</span>
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" step="0.01" inputMode="decimal" placeholder="0.00" {...field} />
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                                                    R$
+                                                </span>
+                                                <Input
+                                                    inputMode="decimal"
+                                                    placeholder="0,00"
+                                                    className="pl-10 text-lg font-semibold h-12"
+                                                    value={field.value}
+                                                    onChange={(e) => handleValorChange(e, field.onChange)}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Descrição */}
                             <FormField
                                 control={form.control}
                                 name="descricao"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Descrição</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel>Descrição</FormLabel>
+                                            <span className={`text-xs ${descricaoValue.length > DESC_MAX ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}>
+                                                {descricaoValue.length}/{DESC_MAX}
+                                            </span>
+                                        </div>
                                         <FormControl>
                                             <Input placeholder="Venda de aliança, conserto..." {...field} />
                                         </FormControl>
@@ -169,6 +279,7 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                 )}
                             />
 
+                            {/* Pagamento + Categoria */}
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -184,7 +295,9 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                                 </FormControl>
                                                 <SelectContent>
                                                     {metodosDisponiveis.map((m) => (
-                                                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                        <SelectItem key={m} value={m}>
+                                                            {METODO_LABELS[m] ?? m}
+                                                        </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
@@ -207,7 +320,9 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                                 </FormControl>
                                                 <SelectContent>
                                                     {CATEGORIAS.map((c) => (
-                                                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                        <SelectItem key={c} value={c}>
+                                                            {CATEGORIA_LABELS[c] ?? c}
+                                                        </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
@@ -217,13 +332,16 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                 />
                             </div>
 
+                            {/* Loja */}
                             {canSelectLoja && (
                                 <FormField
                                     control={form.control}
                                     name="loja"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Loja</FormLabel>
+                                            <FormLabel>
+                                                Loja <span className="text-rose-500">*</span>
+                                            </FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -241,9 +359,10 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                 />
                             )}
 
+                            {/* Submit */}
                             <Button
                                 type="submit"
-                                className="w-full mt-6 py-6 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 transition-all"
+                                className="w-full mt-2 py-6 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 transition-all"
                                 disabled={form.formState.isSubmitting}
                             >
                                 {form.formState.isSubmitting ? (

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useTransition, useState } from 'react';
+import { useEffect, useTransition, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { TipoLancamento } from '@prisma/client';
 
@@ -46,16 +46,50 @@ import {
 
 import { editarLancamento, deletarLancamento } from '@/app/(protected)/hoje/actions';
 
+// ─── Helpers de formatação BRL ──────────────────────────────────────────────
+function formatCurrency(value: string): string {
+    let cleaned = value.replace(/[^\d,]/g, '');
+    const parts = cleaned.split(',');
+    if (parts.length > 2) {
+        cleaned = parts[0] + ',' + parts.slice(1).join('');
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+        cleaned = parts[0] + ',' + parts[1].slice(0, 2);
+    }
+    return cleaned;
+}
+
+function parseBRLtoNumber(value: string): string {
+    return value.replace(/\./g, '').replace(',', '.');
+}
+
+function numberToBRL(value: number): string {
+    // Converte 150.5 para "150,50"
+    return value.toFixed(2).replace('.', ',');
+}
+
+// ─── Labels humanizados ─────────────────────────────────────────────────────
+const METODO_LABELS: Record<string, string> = {
+    PIX: 'PIX',
+    TON: 'TON (Maquininha)',
+    ESPECIE: 'Dinheiro',
+};
+
 const JANELA_24H_MS = 24 * 60 * 60 * 1000;
-// TON (maquininha) só aparece em ENTRADA — saídas são pagas em PIX ou Dinheiro
 const METODOS_ENTRADA = ['PIX', 'TON', 'ESPECIE'];
-const METODOS_SAIDA   = ['PIX', 'ESPECIE'];
+const METODOS_SAIDA = ['PIX', 'ESPECIE'];
+const DESC_MAX = 200;
 
 const editarSchema = z.object({
     id: z.string().uuid(),
     tipo: z.enum(['ENTRADA', 'SAIDA']),
-    valor: z.string().min(1, 'Valor obrigatório'),
-    descricao: z.string().max(200).optional(),
+    valor: z.string()
+        .min(1, 'Informe o valor')
+        .refine((val) => {
+            const num = parseFloat(parseBRLtoNumber(val));
+            return !isNaN(num) && num > 0;
+        }, 'O valor deve ser maior que zero'),
+    descricao: z.string().max(200, 'Máximo 200 caracteres').optional(),
     metodo_pgto: z.string().optional(),
 });
 
@@ -107,8 +141,9 @@ export function EditarLancamentoModal({
         defaultValues: { id: '', tipo: 'ENTRADA', valor: '', descricao: '', metodo_pgto: 'PIX' },
     });
 
+    const descricaoValue = form.watch('descricao') ?? '';
+
     // Pré-popula o form sempre que um lancamento diferente é aberto.
-    // Se a saída tinha TON cadastrado (legado), normaliza para PIX.
     useEffect(() => {
         if (lancamento) {
             const metodoSalvo = lancamento.metodo_pgto ?? 'PIX';
@@ -117,7 +152,7 @@ export function EditarLancamentoModal({
             form.reset({
                 id: lancamento.id,
                 tipo: lancamento.tipo,
-                valor: String(lancamento.valor),
+                valor: numberToBRL(lancamento.valor),
                 descricao: lancamento.descricao ?? '',
                 metodo_pgto: metodoNormalizado,
             });
@@ -125,12 +160,17 @@ export function EditarLancamentoModal({
         }
     }, [lancamento, form]);
 
+    const handleValorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
+        const formatted = formatCurrency(e.target.value);
+        onChange(formatted);
+    }, []);
+
     const onSubmit = async (values: EditarFormValues) => {
         setInlineError(null);
         const formData = new FormData();
         formData.append('id', values.id);
         formData.append('tipo', values.tipo);
-        formData.append('valor', values.valor);
+        formData.append('valor', parseBRLtoNumber(values.valor));
         if (values.descricao) formData.append('descricao', values.descricao);
         if (values.metodo_pgto) formData.append('metodo_pgto', values.metodo_pgto);
 
@@ -165,37 +205,61 @@ export function EditarLancamentoModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90vh]">
-                <div className="mx-auto w-full p-4 overflow-y-auto">
+            <DialogContent className="max-h-[90vh] p-0 overflow-hidden gap-0" showCloseButton={false}>
+                {/* Header verde escuro */}
+                <div className="bg-primary px-6 py-5 relative">
+                    <button
+                        type="button"
+                        onClick={() => onOpenChange(false)}
+                        className="absolute top-4 right-4 text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                        aria-label="Fechar"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
                     <DialogHeader className="px-0 text-left">
-                        <DialogTitle>Editar Lançamento</DialogTitle>
-                        <DialogDescription>
+                        <DialogTitle className="text-primary-foreground text-lg">
+                            Editar Lançamento
+                        </DialogTitle>
+                        <DialogDescription className="text-primary-foreground/60 text-sm">
                             {isEditavel
                                 ? 'Altere os dados da transação.'
                                 : 'Prazo de edição encerrado ou lançamento de outro usuário.'}
                         </DialogDescription>
                     </DialogHeader>
+                </div>
 
+                {/* Form body */}
+                <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-100px)]">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                             <input type="hidden" {...form.register('id')} />
 
                             {/* Toggle Tipo */}
-                            <div className="grid grid-cols-2 gap-2 bg-muted/40 p-1 rounded-xl">
-                                <Button
+                            <div className="grid grid-cols-2 gap-2 bg-muted/60 p-1.5 rounded-xl">
+                                <button
                                     type="button"
-                                    variant="ghost"
                                     disabled={!isEditavel || isAnyPending}
-                                    className={`rounded-lg ${isEntrada ? 'bg-emerald-500 text-white hover:bg-emerald-600 hover:text-white' : 'text-muted-foreground'}`}
+                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
+                                        isEntrada
+                                            ? 'bg-emerald-600 text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
                                     onClick={() => form.setValue('tipo', 'ENTRADA')}
                                 >
+                                    <ArrowDownLeft className="w-4 h-4" />
                                     Entrada
-                                </Button>
-                                <Button
+                                </button>
+                                <button
                                     type="button"
-                                    variant="ghost"
                                     disabled={!isEditavel || isAnyPending}
-                                    className={`rounded-lg ${!isEntrada ? 'bg-rose-500 text-white hover:bg-rose-600 hover:text-white' : 'text-muted-foreground'}`}
+                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
+                                        !isEntrada
+                                            ? 'bg-rose-600 text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
                                         if (form.getValues('metodo_pgto') === 'TON') {
@@ -203,37 +267,55 @@ export function EditarLancamentoModal({
                                         }
                                     }}
                                 >
+                                    <ArrowUpRight className="w-4 h-4" />
                                     Saída
-                                </Button>
+                                </button>
                             </div>
 
+                            {/* Valor */}
                             <FormField
                                 control={form.control}
                                 name="valor"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Valor (R$)</FormLabel>
+                                        <FormLabel>
+                                            Valor (R$) <span className="text-rose-500">*</span>
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                inputMode="decimal"
-                                                placeholder="0.00"
-                                                disabled={!isEditavel || isAnyPending}
-                                                {...field}
-                                            />
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                                                    R$
+                                                </span>
+                                                <Input
+                                                    inputMode="decimal"
+                                                    placeholder="0,00"
+                                                    className="pl-10 text-lg font-semibold h-12"
+                                                    disabled={!isEditavel || isAnyPending}
+                                                    value={field.value}
+                                                    onChange={(e) => handleValorChange(e, field.onChange)}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
+                                            </div>
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Descrição */}
                             <FormField
                                 control={form.control}
                                 name="descricao"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Descrição</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel>Descrição</FormLabel>
+                                            <span className={`text-xs ${descricaoValue.length > DESC_MAX ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}>
+                                                {descricaoValue.length}/{DESC_MAX}
+                                            </span>
+                                        </div>
                                         <FormControl>
                                             <Input
                                                 placeholder="Venda de aliança, conserto..."
@@ -246,6 +328,7 @@ export function EditarLancamentoModal({
                                 )}
                             />
 
+                            {/* Pagamento */}
                             <FormField
                                 control={form.control}
                                 name="metodo_pgto"
@@ -264,7 +347,9 @@ export function EditarLancamentoModal({
                                             </FormControl>
                                             <SelectContent>
                                                 {metodosDisponiveis.map((m) => (
-                                                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                                                    <SelectItem key={m} value={m}>
+                                                        {METODO_LABELS[m] ?? m}
+                                                    </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -279,7 +364,7 @@ export function EditarLancamentoModal({
                             )}
 
                             {/* Botões de ação */}
-                            <div className="flex gap-3 mt-6">
+                            <div className="flex gap-3 mt-2">
                                 {isEditavel && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
