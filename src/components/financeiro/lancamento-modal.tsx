@@ -36,27 +36,25 @@ import {
 
 import { createLancamento } from '@/app/(protected)/hoje/actions';
 
-// ─── Helpers de formatação BRL ──────────────────────────────────────────────
+// ─── Helpers de formatação BRL (estilo transferência bancária) ───────────────
 function formatCurrency(value: string): string {
-    // Remove tudo exceto digitos e virgula
-    let cleaned = value.replace(/[^\d,]/g, '');
+    // Extrai apenas dígitos
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '0,00';
 
-    // Garante no máximo uma vírgula
-    const parts = cleaned.split(',');
-    if (parts.length > 2) {
-        cleaned = parts[0] + ',' + parts.slice(1).join('');
-    }
+    // Converte para centavos e formata
+    const cents = parseInt(digits, 10);
+    const reais = (cents / 100).toFixed(2);
+    const [intPart, decPart] = reais.split('.');
 
-    // Limita casas decimais a 2
-    if (parts.length === 2 && parts[1].length > 2) {
-        cleaned = parts[0] + ',' + parts[1].slice(0, 2);
-    }
+    // Adiciona pontos de milhar
+    const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-    return cleaned;
+    return `${withThousands},${decPart}`;
 }
 
 function parseBRLtoNumber(value: string): string {
-    // Converte "1.500,50" ou "1500,50" para "1500.50"
+    // Converte "1.500,50" para "1500.50"
     return value.replace(/\./g, '').replace(',', '.');
 }
 
@@ -113,7 +111,7 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
         resolver: zodResolver(lancamentoSchema),
         defaultValues: {
             tipo: 'ENTRADA',
-            valor: '',
+            valor: '0,00',
             descricao: '',
             categoria: '',
             metodo_pgto: 'PIX',
@@ -206,14 +204,14 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                     }`}
                                     onClick={() => form.setValue('tipo', 'ENTRADA')}
                                 >
-                                    <ArrowDownLeft className="w-4 h-4" />
+                                    <ArrowUpRight className="w-4 h-4" />
                                     Entrada
                                 </button>
                                 <button
                                     type="button"
                                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                                         !isEntrada
-                                            ? 'bg-rose-600 text-white shadow-sm'
+                                            ? 'bg-rose-500 text-white shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                     onClick={() => {
@@ -223,7 +221,7 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                         }
                                     }}
                                 >
-                                    <ArrowUpRight className="w-4 h-4" />
+                                    <ArrowDownLeft className="w-4 h-4 -scale-x-100" />
                                     Saída
                                 </button>
                             </div>

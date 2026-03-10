@@ -46,17 +46,18 @@ import {
 
 import { editarLancamento, deletarLancamento } from '@/app/(protected)/hoje/actions';
 
-// ─── Helpers de formatação BRL ──────────────────────────────────────────────
+// ─── Helpers de formatação BRL (estilo transferência bancária) ───────────────
 function formatCurrency(value: string): string {
-    let cleaned = value.replace(/[^\d,]/g, '');
-    const parts = cleaned.split(',');
-    if (parts.length > 2) {
-        cleaned = parts[0] + ',' + parts.slice(1).join('');
-    }
-    if (parts.length === 2 && parts[1].length > 2) {
-        cleaned = parts[0] + ',' + parts[1].slice(0, 2);
-    }
-    return cleaned;
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '0,00';
+
+    const cents = parseInt(digits, 10);
+    const reais = (cents / 100).toFixed(2);
+    const [intPart, decPart] = reais.split('.');
+
+    const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    return `${withThousands},${decPart}`;
 }
 
 function parseBRLtoNumber(value: string): string {
@@ -64,8 +65,10 @@ function parseBRLtoNumber(value: string): string {
 }
 
 function numberToBRL(value: number): string {
-    // Converte 150.5 para "150,50"
-    return value.toFixed(2).replace('.', ',');
+    const reais = value.toFixed(2);
+    const [intPart, decPart] = reais.split('.');
+    const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `${withThousands},${decPart}`;
 }
 
 // ─── Labels humanizados ─────────────────────────────────────────────────────
@@ -249,7 +252,7 @@ export function EditarLancamentoModal({
                                     }`}
                                     onClick={() => form.setValue('tipo', 'ENTRADA')}
                                 >
-                                    <ArrowDownLeft className="w-4 h-4" />
+                                    <ArrowUpRight className="w-4 h-4" />
                                     Entrada
                                 </button>
                                 <button
@@ -257,7 +260,7 @@ export function EditarLancamentoModal({
                                     disabled={!isEditavel || isAnyPending}
                                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
                                         !isEntrada
-                                            ? 'bg-rose-600 text-white shadow-sm'
+                                            ? 'bg-rose-500 text-white shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                     onClick={() => {
@@ -267,7 +270,7 @@ export function EditarLancamentoModal({
                                         }
                                     }}
                                 >
-                                    <ArrowUpRight className="w-4 h-4" />
+                                    <ArrowDownLeft className="w-4 h-4 -scale-x-100" />
                                     Saída
                                 </button>
                             </div>
