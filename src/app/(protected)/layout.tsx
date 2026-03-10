@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/navigation/sidebar";
 import { BottomNav } from "@/components/navigation/bottom-nav";
+import { NavigationProgress } from "@/components/navigation/navigation-progress";
 
 export default function ProtectedLayout({
     children,
@@ -9,6 +10,10 @@ export default function ProtectedLayout({
 }) {
     return (
         <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+            <Suspense fallback={null}>
+                <NavigationProgress />
+            </Suspense>
+
             {/* Desktop Sidebar (hidden on mobile) */}
             <div className="hidden md:flex">
                 <Suspense fallback={null}>
