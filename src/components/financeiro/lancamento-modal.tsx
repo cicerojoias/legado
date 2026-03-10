@@ -165,7 +165,7 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                     <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] p-0 overflow-hidden gap-0" showCloseButton={false}>
+            <DialogContent className="max-h-[90vh] p-0 overflow-hidden gap-0" showCloseButton={false} onInteractOutside={(e) => e.preventDefault()}>
                 {/* Header verde escuro */}
                 <div className="bg-primary px-6 py-5 relative">
                     <button
