@@ -7,8 +7,12 @@ import { z } from 'zod';
 
 type Role = z.infer<typeof RolesEnum>;
 
+type LojaValue = 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS' | null;
+
 interface PermissionState {
     role: Role | null;
+    lojaAutorizada: LojaValue;
+    lojaPadrao: 'JOAO_PESSOA' | 'SANTA_RITA' | null;
     isLoading: boolean;
     isAdmin: boolean;
     isSuperAdmin: boolean;
@@ -17,6 +21,8 @@ interface PermissionState {
 export function usePermissions(): PermissionState {
     const [state, setState] = useState<PermissionState>({
         role: null,
+        lojaAutorizada: null,
+        lojaPadrao: null,
         isLoading: true,
         isAdmin: false,
         isSuperAdmin: false,
@@ -32,11 +38,10 @@ export function usePermissions(): PermissionState {
                     return;
                 }
 
-                // Search the custom users table for the specific role
                 const { data, error } = await supabase
                     .from('users')
-                    .select('role')
-                    .eq('email', user.email) // Assuming user email is the main join or we join via id
+                    .select('role, lojaAutorizada, lojaPadrao')
+                    .eq('email', user.email)
                     .single();
 
                 if (error || !data) {
@@ -47,6 +52,8 @@ export function usePermissions(): PermissionState {
                 const role = data.role as Role;
                 setState({
                     role,
+                    lojaAutorizada: data.lojaAutorizada as LojaValue,
+                    lojaPadrao: (data.lojaPadrao as 'JOAO_PESSOA' | 'SANTA_RITA' | null) ?? null,
                     isLoading: false,
                     isAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN',
                     isSuperAdmin: role === 'SUPER_ADMIN',

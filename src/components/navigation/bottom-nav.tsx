@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, PieChart, User, FileText, Plus } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,16 @@ import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
 
 export function BottomNav() {
     const pathname = usePathname();
-    const { isAdmin, isLoading } = usePermissions();
+    const searchParams = useSearchParams();
+    const { isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
+
+    // Loja da URL tem prioridade; se não tiver, usa a lojaPadrao; fallback: JOAO_PESSOA
+    const lojaUrl = searchParams.get('loja') as 'JOAO_PESSOA' | 'SANTA_RITA' | null;
+    const defaultLoja: 'JOAO_PESSOA' | 'SANTA_RITA' =
+        lojaUrl ?? lojaPadrao ?? 'JOAO_PESSOA';
+
+    // Pode selecionar loja: admin OU usuário com acesso a ambas as lojas
+    const canSelectLoja = isAdmin || lojaAutorizada === 'AMBAS';
 
     let links = [];
 
@@ -49,7 +58,10 @@ export function BottomNav() {
                                     <Plus className="w-6 h-6" />
                                 </div>
                             }>
-                                <LancamentoModal canSelectLoja={isAdmin} />
+                                <LancamentoModal
+                                    canSelectLoja={canSelectLoja}
+                                    defaultLoja={defaultLoja}
+                                />
                             </Suspense>
                         </div>
                     );

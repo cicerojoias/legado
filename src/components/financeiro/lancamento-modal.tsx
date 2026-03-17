@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -100,7 +100,13 @@ type FormValues = z.infer<typeof lancamentoSchema>;
 
 const DESC_MAX = 200;
 
-export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boolean }) {
+export function LancamentoModal({
+    canSelectLoja = false,
+    defaultLoja,
+}: {
+    canSelectLoja?: boolean;
+    defaultLoja?: 'JOAO_PESSOA' | 'SANTA_RITA';
+}) {
     const [open, setOpen] = useState(false);
     const searchParams = useSearchParams();
     const tzOffset = -3 * 60 * 60 * 1000;
@@ -115,10 +121,17 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
             descricao: '',
             categoria: '',
             metodo_pgto: 'PIX',
-            loja: '',
+            loja: defaultLoja ?? '',
             observacao: '',
         },
     });
+
+    // Sincroniza o campo loja quando defaultLoja muda (vem assincronamente do Supabase)
+    useEffect(() => {
+        if (defaultLoja && !open) {
+            form.setValue('loja', defaultLoja);
+        }
+    }, [defaultLoja, open, form]);
 
     const isEntrada = form.watch('tipo') === 'ENTRADA';
     const descricaoValue = form.watch('descricao') ?? '';
@@ -148,7 +161,15 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
             success: (data) => {
                 if (data.error) throw new Error(data.error);
                 setOpen(false);
-                form.reset();
+                form.reset({
+                    tipo: 'ENTRADA',
+                    valor: '0,00',
+                    descricao: '',
+                    categoria: '',
+                    metodo_pgto: 'PIX',
+                    loja: defaultLoja ?? '',
+                    observacao: '',
+                });
                 return 'Lançamento registrado com sucesso!';
             },
             error: (err) => err.message || 'Erro ao registrar',
@@ -340,7 +361,11 @@ export function LancamentoModal({ canSelectLoja = false }: { canSelectLoja?: boo
                                             <FormLabel>
                                                 Loja <span className="text-rose-500">*</span>
                                             </FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                                defaultValue={field.value}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Selecione a loja..." />
