@@ -16,6 +16,7 @@ function UsuariosSkeleton() {
 
 async function UsuariosData() {
     const usuarios = await prisma.user.findMany({
+        where: { ativo: true },
         select: {
             id: true,
             nome: true,

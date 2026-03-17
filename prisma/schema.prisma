@@ -30,6 +30,7 @@ model User {
   nome         String
   role         Role        @default(OPERADOR)
   lojaAutorizada Loja      @default(JOAO_PESSOA)
+  lojaPadrao   Loja?       // Loja padrão ao fazer login (opcional, fallback = JOAO_PESSOA)
   pin_hash       String?     // PIN de 4 dígitos (hashed) p/ fast-auth
   pin_tentativas Int         @default(0)
   bloqueado_ate  DateTime?   // Timestamp para cooldown (lockout)

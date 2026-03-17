@@ -17,6 +17,8 @@ export default async function PerfilPage() {
             nome: true,
             email: true,
             role: true,
+            lojaAutorizada: true,
+            lojaPadrao: true,
             notif_push: true,
             notif_horario: true,
         },
@@ -31,6 +33,8 @@ export default async function PerfilPage() {
                     nome={dbUser.nome}
                     email={dbUser.email}
                     role={dbUser.role}
+                    lojaAutorizada={dbUser.lojaAutorizada}
+                    lojaPadrao={dbUser.lojaPadrao}
                     notifPush={dbUser.notif_push}
                     notifHorario={dbUser.notif_horario}
                 />

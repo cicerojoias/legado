@@ -1,10 +1,22 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Loja } from '@prisma/client';
-import { EditarUsuarioLojaSchema, EditarUsuarioAtivoSchema } from '@/lib/validations';
+import { EditarUsuarioLojaSchema, EditarUsuarioAtivoSchema, EditarUsuarioSchema, ExcluirUsuarioSchema } from '@/lib/validations';
+
+// ─── Infraestrutura ─────────────────────────────────────────────────────────
+
+function getSupabaseAdmin() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) return null;
+    return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    });
+}
 
 // ─── Verificação de identidade e role ────────────────────────────────────────
 
@@ -22,7 +34,7 @@ async function getSuperAdmin() {
     return { userId: dbUser.id };
 }
 
-// ─── Revalidar todas as rotas afetadas por mudança de usuário ────────────────
+// ─── Revalidar rotas ─────────────────────────────────────────────────────────
 
 function revalidateAll() {
     revalidatePath('/usuarios', 'layout');
@@ -35,8 +47,173 @@ function revalidateAll() {
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-// ─── 1. Alterar Loja Autorizada ─────────────────────────────────────────────
-// Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → $transaction { read → write → audit }
+// ─── 1. Alterar Loja e Ativo de uma vez (Modal de Edição) ───────────────────
+// Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → $transaction { read → write → audit }
+
+export async function editUserAction(formData: FormData): Promise<ActionResult> {
+    try {
+        const admin = await getSuperAdmin();
+        if (!admin) return { success: false, error: 'Não autorizado.' };
+
+        const raw = {
+            userId: formData.get('userId') as string,
+            lojaAutorizada: formData.get('lojaAutorizada') as string,
+            ativo: formData.get('ativo') === 'true',
+        };
+
+        const parsed = EditarUsuarioSchema.safeParse(raw);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
+        }
+
+        // Guard: SUPER_ADMIN não pode desativar a si mesmo
+        if (parsed.data.userId === admin.userId && !parsed.data.ativo) {
+            return { success: false, error: 'Você não pode desativar sua própria conta.' };
+        }
+
+        await prisma.$transaction(async (tx) => {
+            const target = await tx.user.findUnique({
+                where: { id: parsed.data.userId },
+                select: { id: true, nome: true, lojaAutorizada: true, ativo: true },
+            });
+
+            if (!target) throw new Error('Usuário não encontrado.');
+
+            await tx.user.update({
+                where: { id: parsed.data.userId },
+                data: { 
+                    lojaAutorizada: parsed.data.lojaAutorizada as Loja,
+                    ativo: parsed.data.ativo 
+                },
+            });
+
+            await tx.log.create({
+                data: {
+                    acao: 'USUARIO_EDITADO',
+                    detalhe: JSON.stringify({
+                        targetId: target.id,
+                        nome: target.nome,
+                        loja_antes: target.lojaAutorizada,
+                        loja_depois: parsed.data.lojaAutorizada,
+                        ativo_antes: target.ativo,
+                        ativo_depois: parsed.data.ativo
+                    }),
+                    usuario_id: admin.userId,
+                },
+            });
+        });
+
+        revalidateAll();
+        return { success: true };
+
+    } catch (error) {
+        console.error('[editUserAction] Erro:', error);
+        return { success: false, error: 'Erro interno. Tente novamente.' };
+    }
+}
+
+// ─── 2. Exclusão de Usuário Completa (Supabase + Local) ─────────────────────
+// Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → Auth API → $transaction { hard-delete || soft-delete fallback }
+
+export async function deleteUserAction(formData: FormData): Promise<ActionResult> {
+    try {
+        const admin = await getSuperAdmin();
+        if (!admin) return { success: false, error: 'Não autorizado.' };
+
+        const raw = {
+            userId: formData.get('userId') as string,
+        };
+
+        const parsed = ExcluirUsuarioSchema.safeParse(raw);
+        if (!parsed.success) {
+            return { success: false, error: 'ID inválido.' };
+        }
+
+        const targetId = parsed.data.userId;
+
+        // Guard: SUPER_ADMIN não pode deletar a si mesmo
+        if (targetId === admin.userId) {
+            return { success: false, error: 'Você não pode excluir sua própria conta.' };
+        }
+
+        // 1. Apagar do Supabase Auth
+        const supabaseAdmin = getSupabaseAdmin();
+        if (!supabaseAdmin || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+             console.error('[deleteUserAction] Supabase Admin Client não configurado ou chave faltante.');
+             return { success: false, error: 'Configuração incompleta: SUPABASE_SERVICE_ROLE_KEY não encontrada no servidor.' };
+        }
+
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(targetId);
+        if (authError && (authError as any).status !== 404) {
+             console.error('[deleteUserAction] Erro no Supabase Auth:', authError);
+             return { success: false, error: 'Erro ao remover credenciais do servidor de autenticação.' };
+        }
+
+        // 2. Apagar/Desativar no Prisma localmente
+        try {
+            await prisma.$transaction(async (tx) => {
+                const target = await tx.user.findUnique({
+                    where: { id: targetId },
+                    select: { id: true, nome: true, email: true },
+                });
+
+                if (!target) return; // Se não existe local, ignora
+
+                // Verifica dependências antes de tentar deletar
+                // Note: Se tiver Logs, também vai falhar o delete. 
+                // Como queremos logs históricos, se tiver QUALQUER coisa vinculada, fazemos anonimização.
+                const lancamentosCount = await tx.lancamento.count({ where: { usuario_id: targetId } });
+                const logsCount = await tx.log.count({ where: { usuario_id: targetId } });
+
+                if (lancamentosCount === 0 && logsCount === 0) {
+                    await tx.user.delete({ where: { id: targetId } });
+                    await tx.log.create({
+                        data: {
+                            acao: 'USUARIO_DELETADO',
+                            detalhe: JSON.stringify({ targetId, nome: target.nome, tipo: 'HARD_DELETE' }),
+                            usuario_id: admin.userId,
+                        },
+                    });
+                } else {
+                    await tx.user.update({
+                        where: { id: targetId },
+                        data: { 
+                            ativo: false, 
+                            email: `deleted_${Date.now()}_${target.email}`,
+                            nome: `${target.nome} (Excluído)`,
+                            pin_hash: null
+                        }
+                    });
+
+                    await tx.log.create({
+                        data: {
+                            acao: 'USUARIO_ANONIMIZADO',
+                            detalhe: JSON.stringify({ 
+                                targetId, 
+                                nome: target.nome, 
+                                motivo: lancamentosCount > 0 ? 'Lançamentos Vinculados' : 'Logs Vinculados',
+                                tipo: 'SOFT_DELETE' 
+                            }),
+                            usuario_id: admin.userId,
+                        },
+                    });
+                }
+            });
+        } catch (dbError) {
+            console.error('[deleteUserAction] Erro BD:', dbError);
+            return { success: false, error: 'Autenticação removida, mas ocorreu erro no banco de dados local.' };
+        }
+
+        revalidateAll();
+        return { success: true };
+
+    } catch (error) {
+        console.error('[deleteUserAction] Erro fatal:', error);
+        return { success: false, error: 'Ocorreu um erro interno. Tente novamente.' };
+    }
+}
+
+// ─── Actions Antigas (Mantidas p/ Compatibilidade se necessário) ────────────
 
 export async function alterarLojaUsuario(formData: FormData): Promise<ActionResult> {
     try {
@@ -89,9 +266,6 @@ export async function alterarLojaUsuario(formData: FormData): Promise<ActionResu
     }
 }
 
-// ─── 2. Toggle Ativo/Inativo ────────────────────────────────────────────────
-// Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → $transaction { read → write → audit }
-
 export async function toggleAtivoUsuario(formData: FormData): Promise<ActionResult> {
     try {
         const admin = await getSuperAdmin();
@@ -107,7 +281,6 @@ export async function toggleAtivoUsuario(formData: FormData): Promise<ActionResu
             return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
         }
 
-        // Guard: SUPER_ADMIN não pode desativar a si mesmo
         if (parsed.data.userId === admin.userId && !parsed.data.ativo) {
             return { success: false, error: 'Você não pode desativar sua própria conta.' };
         }

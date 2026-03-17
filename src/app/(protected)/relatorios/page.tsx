@@ -48,14 +48,18 @@ export default async function RelatoriosPage({
 
     const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { role: true, lojaAutorizada: true, ativo: true },
+        select: { role: true, lojaAutorizada: true, lojaPadrao: true, ativo: true },
     });
 
     if (!dbUser || !dbUser.ativo) redirect('/login');
     if (dbUser.role === 'OPERADOR') redirect('/hoje');
 
     const params = await searchParams;
-    const loja = params.loja ?? 'TODAS';
+    const defaultLoja = dbUser.lojaAutorizada === 'AMBAS'
+        ? (dbUser.lojaPadrao ?? 'TODAS')
+        : dbUser.lojaAutorizada;
+        
+    const loja = params.loja ?? defaultLoja;
     const periodo = params.periodo ?? 'mes';
 
     return (

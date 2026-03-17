@@ -12,6 +12,7 @@ import {
     TrocarPinSchema,
     AlterarSenhaSchema,
     AtualizarNotificacoesSchema,
+    EditarLojaPadraoSchema,
 } from '@/lib/validations';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -307,6 +308,51 @@ export async function atualizarNotificacoesAction(formData: FormData): Promise<A
 
     } catch (error) {
         console.error('[atualizarNotificacoesAction] Erro inesperado:', error);
+        return { success: false, error: 'Erro interno. Tente novamente.' };
+    }
+}
+
+// ─── 5. Atualizar Loja Padrão ───────────────────────────────────────────────
+
+export async function atualizarLojaPadraoAction(formData: FormData): Promise<ActionResult> {
+    try {
+        const ctx = await getAuthenticatedUser();
+        if (!ctx) return { success: false, error: 'Não autorizado.' };
+
+        const { dbUser } = ctx;
+
+        const rawVal = formData.get('lojaPadrao');
+        const raw = {
+            lojaPadrao: rawVal === 'null' || !rawVal ? null : (rawVal as string),
+        };
+        
+        const parsed = EditarLojaPadraoSchema.safeParse(raw);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
+        }
+
+        await prisma.user.update({
+            where: { id: dbUser.id },
+            data: {
+                lojaPadrao: parsed.data.lojaPadrao,
+            },
+        });
+
+        revalidatePath('/perfil', 'layout');
+        revalidatePath('/hoje', 'layout'); // Força update do header de hoje
+        await prisma.log.create({
+            data: {
+                acao: 'LOJA_PADRAO_ALTERADA',
+                detalhe: JSON.stringify({
+                    lojaPadrao: parsed.data.lojaPadrao,
+                }),
+                usuario_id: dbUser.id,
+            },
+        });
+        return { success: true };
+
+    } catch (error) {
+        console.error('[atualizarLojaPadraoAction] Erro inesperado:', error);
         return { success: false, error: 'Erro interno. Tente novamente.' };
     }
 }

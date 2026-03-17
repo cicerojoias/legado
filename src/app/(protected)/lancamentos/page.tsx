@@ -28,7 +28,7 @@ export default async function LancamentosPage({
 
     const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { lojaAutorizada: true, role: true },
+        select: { lojaAutorizada: true, role: true, lojaPadrao: true },
     });
     if (!dbUser) redirect('/login');
 
@@ -40,11 +40,12 @@ export default async function LancamentosPage({
     const from = params.from ?? defaultFrom;
     const to = params.to ?? defaultTo;
 
-    // Determine allowed loja
-    let targetLoja: Loja | 'TODAS' = dbUser.lojaAutorizada === 'AMBAS' ? (params.loja as any ?? 'AMBAS') : dbUser.lojaAutorizada;
-    if (dbUser.lojaAutorizada !== 'AMBAS') {
-        targetLoja = dbUser.lojaAutorizada;
-    }
+    // Determine allowed loja / default preference
+    const defaultLoja = dbUser.lojaAutorizada === 'AMBAS' 
+        ? (dbUser.lojaPadrao ?? 'AMBAS') 
+        : dbUser.lojaAutorizada;
+
+    const lojaParaFiltro = params.loja ?? defaultLoja;
 
     return (
         <div className="flex flex-col h-full bg-muted/20">

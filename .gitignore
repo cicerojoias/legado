@@ -68,3 +68,8 @@ README.md
 /public/sw.js.map
 /public/serwist-worker-*.js
 /public/serwist-worker-*.js.map
+
+# temporary files
+/tmp/
+test.out
+

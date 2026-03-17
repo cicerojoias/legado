@@ -105,3 +105,17 @@ export const EditarUsuarioAtivoSchema = z.object({
     userId: z.string().uuid("ID de usuário inválido"),
     ativo: z.boolean(),
 });
+
+export const EditarLojaPadraoSchema = z.object({
+    lojaPadrao: LojasEnum.nullable(),
+});
+
+export const EditarUsuarioSchema = z.object({
+    userId: z.string().uuid("ID de usuário inválido"),
+    lojaAutorizada: LojasEnum,
+    ativo: z.boolean(),
+});
+
+export const ExcluirUsuarioSchema = z.object({
+    userId: z.string().uuid("ID de usuário inválido"),
+});

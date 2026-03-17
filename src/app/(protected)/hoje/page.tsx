@@ -26,7 +26,7 @@ export default async function HojePage({
 
     const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { lojaAutorizada: true, role: true },
+        select: { lojaAutorizada: true, role: true, lojaPadrao: true },
     });
 
     if (!dbUser) redirect('/login');
@@ -45,7 +45,7 @@ export default async function HojePage({
     ) {
         targetLoja = params.loja as Loja;
     } else if (dbUser.lojaAutorizada === 'AMBAS') {
-        targetLoja = 'JOAO_PESSOA';
+        targetLoja = dbUser.lojaPadrao || 'JOAO_PESSOA';
     }
 
     return (
