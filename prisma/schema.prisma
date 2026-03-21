@@ -108,3 +108,65 @@ model Log {
   @@index([acao, created_at])
   @@map("logs")
 }
+
+// ─── WhatsApp ────────────────────────────────────────────────────────────────
+
+model WaContact {
+  id         String           @id @default(uuid())
+  phone      String           @unique // "5583911800251" (sem + e sem espaços)
+  name       String?                  // nome que a Meta retorna
+  wa_id      String           @unique // ID interno da Meta
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+
+  conversations WaConversation[]
+
+  @@map("wa_contacts")
+}
+
+model WaConversation {
+  id              String     @id @default(uuid())
+  contact_id      String
+  contact         WaContact  @relation(fields: [contact_id], references: [id])
+  status          String     @default("open") // open | resolved | waiting
+  last_message_at DateTime?
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+
+  messages WaMessage[]
+
+  @@index([last_message_at(sort: Desc)])
+  @@index([status])
+  @@map("wa_conversations")
+}
+
+model WaMessage {
+  id              String         @id @default(uuid())
+  conversation_id String
+  conversation    WaConversation @relation(fields: [conversation_id], references: [id])
+  wa_message_id   String?        @unique // ID da Meta (dedup)
+  direction       String                 // inbound | outbound
+  type            String         @default("text")
+  content         String?        @db.Text
+  status          String         @default("sent") // sent | delivered | read | failed
+  sent_by         String?                // user id do operador (outbound)
+  timestamp       DateTime
+  created_at      DateTime       @default(now())
+
+  @@index([conversation_id, timestamp(sort: Desc)])
+  @@map("wa_messages")
+}
+
+model WaMessageGeneration {
+  id                String   @id @default(uuid())
+  service_type      String   // banho_ouro | alianca | conserto | followup | outro
+  input_context     String   @db.Text
+  generated_message String   @db.Text
+  was_used          Boolean  @default(false)
+  client_name       String?
+  created_by        String?  // user id do operador
+  created_at        DateTime @default(now())
+
+  @@map("wa_message_generations")
+}
+

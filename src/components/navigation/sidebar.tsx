@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText } from 'lucide-react';
+import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText, MessageCircle, Sparkles } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { logoutAction } from '@/app/(auth)/logout/actions';
@@ -116,6 +116,35 @@ export function Sidebar() {
                                 </Link>
                             </>
                         )}
+                    </>
+                )}
+
+                {/* Comunicação — visível para admin */}
+                {!isLoading && isAdmin && (
+                    <>
+                        <div className="pt-4 pb-1">
+                            <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Comunicação</p>
+                        </div>
+                        <Link
+                            href="/inbox"
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                                pathname.startsWith('/inbox') ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                            )}
+                        >
+                            <MessageCircle className="w-4 h-4" />
+                            WhatsApp
+                        </Link>
+                        <Link
+                            href="/assistente"
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                                pathname.startsWith('/assistente') ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                            )}
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Assistente IA
+                        </Link>
                     </>
                 )}
 
