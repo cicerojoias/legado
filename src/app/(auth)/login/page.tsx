@@ -57,7 +57,7 @@ export default function LoginPage() {
                         alt="Cícero Joias"
                         width={180}
                         height={60}
-                        className="object-contain"
+                        className="object-contain rounded-lg"
                         priority
                     />
                     <CardDescription>Acesse sua conta para continuar</CardDescription>
