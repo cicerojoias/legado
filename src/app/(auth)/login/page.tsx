@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image';
 import { LoginSchema } from '@/lib/validations';
 import { loginAction } from './actions';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 type LoginFormValues = z.infer<typeof LoginSchema>;
@@ -50,8 +51,15 @@ export default function LoginPage() {
     return (
         <div className="flex items-center justify-center min-h-screen p-4 bg-muted/40">
             <Card className="w-full max-w-sm">
-                <CardHeader className="text-center">
-                    <CardTitle className="text-2xl font-bold">Cícero Joias</CardTitle>
+                <CardHeader className="flex flex-col items-center text-center gap-2">
+                    <Image
+                        src="/assets/logos/workmark.webp"
+                        alt="Cícero Joias"
+                        width={180}
+                        height={60}
+                        className="object-contain"
+                        priority
+                    />
                     <CardDescription>Acesse sua conta para continuar</CardDescription>
                 </CardHeader>
                 <CardContent>
