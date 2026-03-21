@@ -9,6 +9,8 @@ interface PageProps {
   params: Promise<{ conversationId: string }>
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function ConversationPage({ params }: PageProps) {
   const { conversationId } = await params
 

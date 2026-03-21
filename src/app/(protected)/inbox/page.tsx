@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react'
 import { ConversationList } from './_components/ConversationList'
 
 export const metadata = { title: 'Inbox — Legado' }
+export const dynamic = 'force-dynamic'
 
 // Página principal do inbox.
 // Mobile: tela cheia com lista de conversas.
