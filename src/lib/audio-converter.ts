@@ -199,15 +199,16 @@ export async function convertToOggOpus(inputBlob: Blob): Promise<Blob> {
   let seq = 0
 
   // Página ID Header (BOS — Beginning of Stream)
+  // Granule = -1 (0xFFFFFFFFFFFFFFFF) para header pages, conforme RFC 7845 §3
   pages.push(buildOggPage(
     buildOpusIdHeader(channels, decoded.sampleRate),
-    serial, seq++, BigInt(0), true, false
+    serial, seq++, BigInt(-1), true, false
   ))
 
   // Página Comment Header
   pages.push(buildOggPage(
     buildOpusCommentHeader(),
-    serial, seq++, BigInt(0), false, false
+    serial, seq++, BigInt(-1), false, false
   ))
 
   // Páginas de áudio (1 pacote Opus por página)
