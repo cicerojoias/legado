@@ -106,7 +106,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const StatusIcon = () => {
     if (!isOutbound) return null
     if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
-    if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-blue-500" />
+    if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-accent" />
     if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold">!</span>
     return <Check className="w-3 h-3 text-muted-foreground" />
   }

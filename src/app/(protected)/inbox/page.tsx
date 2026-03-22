@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { MessageCircle } from 'lucide-react'
+import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { ConversationList } from './_components/ConversationList'
 
 export const metadata = { title: 'Inbox — Legado' }
@@ -15,7 +16,7 @@ export default function InboxPage() {
       <div className="w-full md:w-[360px] md:border-r flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-4 border-b">
-          <MessageCircle className="w-5 h-5 text-primary" />
+          <WhatsAppIcon className="w-5 h-5 text-primary" />
           <h1 className="font-semibold text-lg">WhatsApp</h1>
         </div>
 
