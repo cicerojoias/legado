@@ -126,7 +126,7 @@ model WaContact {
 
 model WaConversation {
   id              String     @id @default(uuid())
-  contact_id      String
+  contact_id      String     @unique
   contact         WaContact  @relation(fields: [contact_id], references: [id])
   status          String     @default("open") // open | resolved | waiting
   last_message_at DateTime?
@@ -148,6 +148,9 @@ model WaMessage {
   direction       String                 // inbound | outbound
   type            String         @default("text")
   content         String?        @db.Text
+  mediaUrl        String?
+  mediaId         String?                // Meta media ID — permite reprocessar se mediaUrl for null
+  mimeType        String?
   status          String         @default("sent") // sent | delivered | read | failed
   sent_by         String?                // user id do operador (outbound)
   timestamp       DateTime

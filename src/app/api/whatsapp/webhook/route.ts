@@ -1,129 +1,130 @@
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateSignature } from '@/lib/whatsapp/validate-signature'
-import { parseInboundMessages, parseStatusUpdates } from '@/lib/whatsapp/webhook-parser'
-import { markAsRead } from '@/lib/whatsapp/meta-client'
-import type { MetaWebhookPayload } from '@/lib/whatsapp/types'
+import { WebhookPayload } from '@/lib/whatsapp/types'
 
-// ─── GET — Verificação do webhook pela Meta ───────────────────────────────────
-
-export async function GET(req: Request) {
+// GET: Verificação de Webhook (Facebook/Meta exige isso para validar o endpoint)
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
-    console.log('[webhook] Verificação OK')
-    return new Response(challenge, { status: 200 })
+  if (mode && token) {
+    if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+      console.log('WEBHOOK_VERIFIED')
+      return new Response(challenge, { status: 200 })
+    } else {
+      return new Response('Forbidden', { status: 403 })
+    }
   }
 
-  console.warn('[webhook] Verificação falhou — token inválido')
-  return new Response('Forbidden', { status: 403 })
+  return new Response('Not Found', { status: 404 })
 }
 
-// ─── POST — Receber mensagens e status updates ────────────────────────────────
-
-export async function POST(req: Request) {
-  // 1. Ler o body bruto para validar a assinatura (parse depois)
-  const rawBody = await req.text()
-  const signature = req.headers.get('x-hub-signature-256') ?? ''
-
-  if (!validateSignature(rawBody, signature)) {
-    console.warn('[webhook] Assinatura inválida — requisição rejeitada')
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  // 2. Parse do payload
-  let payload: MetaWebhookPayload
+// POST: Recebimento de eventos (mensagens, status, etc)
+export async function POST(req: NextRequest) {
   try {
-    payload = JSON.parse(rawBody)
-  } catch {
-    return new Response('Bad Request', { status: 400 })
-  }
+    const body = (await req.json()) as WebhookPayload
+    
+    // Validar se é uma notificação do WhatsApp
+    if (body.object !== 'whatsapp_business_account') {
+      return NextResponse.json({ error: 'Not a WhatsApp webhook' }, { status: 404 })
+    }
 
-  // Responder APÓS processar — a Meta exige resposta rápida (< 20s), e o processamento no BD leva < 1s
-  // Em ambientes Serverless (Vercel), se não dermos await a função morre antes de finalizar o DB.
-  try {
-    await processPayload(payload)
+    const entry = body.entry?.[0]
+    const changes = entry?.changes?.[0]
+    const value = changes?.value
+
+    if (!value) return NextResponse.json({ status: 'ok' })
+
+    // 1. Processar Mensagens (messages)
+    if (value.messages && value.messages.length > 0) {
+      for (const msg of value.messages) {
+        const contactInfo = value.contacts?.find(c => c.wa_id === msg.from)
+        const waId = msg.from
+        const name = contactInfo?.profile?.name || waId
+
+        // A. Garantir que o contato existe
+        let waContact = await (prisma as any).waContact.upsert({
+          where: { phone: waId },
+          update: { name },
+          create: { phone: waId, name, wa_id: waId }
+        })
+
+        // B. Garantir que a conversa existe (um contato = uma conversa)
+        let waConversation = await (prisma as any).waConversation.upsert({
+          where: { contact_id: waContact.id },
+          update: {
+            status: 'open',
+            last_message_at: new Date()
+          },
+          create: {
+            contact_id: waContact.id,
+            status: 'open',
+            last_message_at: new Date()
+          }
+        })
+
+        // C. Salvar a Mensagem
+        let content = ''
+        let type = msg.type
+        let mediaId = ''
+        let mimeType = ''
+
+        if (msg.type === 'text') {
+          content = msg.text?.body || ''
+        } else if (msg.type === 'image') {
+          content = msg.image?.caption || '[Imagem]'
+          mediaId = msg.image?.id || ''
+          mimeType = msg.image?.mime_type || ''
+        } else if (msg.type === 'audio') {
+          content = '[Áudio]'
+          mediaId = msg.audio?.id || ''
+          mimeType = msg.audio?.mime_type || ''
+        } else if (msg.type === 'video') {
+          content = msg.video?.caption || '[Vídeo]'
+          mediaId = msg.video?.id || ''
+          mimeType = msg.video?.mime_type || ''
+        } else if (msg.type === 'document') {
+          content = msg.document?.filename || '[Documento]'
+          mediaId = msg.document?.id || ''
+          mimeType = msg.document?.mime_type || ''
+        }
+
+        // mediaUrl aponta para nosso proxy: busca da Meta on-demand, sem background job
+        const mediaUrl = mediaId ? `/api/whatsapp/media/${mediaId}` : null
+        console.log(`[webhook] msg type=${type} mediaId=${mediaId || 'N/A'} mediaUrl=${mediaUrl || 'null'}`)
+
+        await (prisma as any).waMessage.create({
+          data: {
+            wa_message_id: msg.id,
+            conversation_id: waConversation.id,
+            direction: 'inbound',
+            type,
+            content,
+            status: 'delivered',
+            timestamp: new Date(),
+            mediaUrl,
+            mediaId: mediaId || undefined,
+            mimeType: mimeType || undefined
+          }
+        })
+      }
+    }
+
+    // 2. Processar Status (statuses) - Confirmação de leitura/entrega
+    if (value.statuses && value.statuses.length > 0) {
+      for (const status of value.statuses) {
+        await (prisma as any).waMessage.updateMany({
+          where: { wa_message_id: status.id },
+          data: { status: status.status }
+        })
+      }
+    }
+
+    return NextResponse.json({ status: 'ok' })
   } catch (err) {
-    console.error('[webhook] Erro ao processar payload:', err)
+    console.error('Webhook Error:', err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-
-  return new Response('OK', { status: 200 })
-}
-
-// ─── Processamento assíncrono ─────────────────────────────────────────────────
-
-async function processPayload(payload: MetaWebhookPayload) {
-  // Processar mensagens recebidas
-  const messages = parseInboundMessages(payload)
-  for (const msg of messages) {
-    await upsertMessage(msg)
-  }
-
-  // Processar atualizações de status (delivered, read, etc.)
-  const statusUpdates = parseStatusUpdates(payload)
-  for (const update of statusUpdates) {
-    await updateMessageStatus(update.waMessageId, update.status)
-  }
-}
-
-async function upsertMessage(msg: Awaited<ReturnType<typeof parseInboundMessages>>[number]) {
-  // 1. Upsert do contato
-  const contact = await prisma.waContact.upsert({
-    where: { phone: msg.phone },
-    update: { name: msg.name ?? undefined, wa_id: msg.waId },
-    create: { phone: msg.phone, name: msg.name, wa_id: msg.waId },
-  })
-
-  // 2. Upsert da conversa (uma por contato; a mais recente)
-  let conversation = await prisma.waConversation.findFirst({
-    where: { contact_id: contact.id, status: { not: 'resolved' } },
-    orderBy: { created_at: 'desc' },
-  })
-
-  if (!conversation) {
-    conversation = await prisma.waConversation.create({
-      data: { contact_id: contact.id, last_message_at: msg.timestamp },
-    })
-  }
-
-  // 3. Insert da mensagem (idempotente via wa_message_id único)
-  const existing = await prisma.waMessage.findUnique({
-    where: { wa_message_id: msg.waMessageId },
-  })
-
-  if (existing) {
-    console.log(`[webhook] Mensagem duplicada ignorada: ${msg.waMessageId}`)
-    return
-  }
-
-  await prisma.waMessage.create({
-    data: {
-      conversation_id: conversation.id,
-      wa_message_id: msg.waMessageId,
-      direction: 'inbound',
-      type: msg.type,
-      content: msg.content,
-      timestamp: msg.timestamp,
-    },
-  })
-
-  // 4. Atualizar last_message_at da conversa
-  await prisma.waConversation.update({
-    where: { id: conversation.id },
-    data: { last_message_at: msg.timestamp },
-  })
-
-  // 5. Marcar como lida automaticamente (double check azul para o cliente)
-  await markAsRead(msg.waMessageId)
-
-  console.log(`[webhook] Mensagem de ${msg.phone} salva`)
-}
-
-async function updateMessageStatus(waMessageId: string, status: string) {
-  await prisma.waMessage.updateMany({
-    where: { wa_message_id: waMessageId },
-    data: { status },
-  })
 }

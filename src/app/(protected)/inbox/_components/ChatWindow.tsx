@@ -18,9 +18,11 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
     bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' })
   }, [])
 
-  // Scroll inicial instantâneo
+  // Scroll inicial + reprocessar mídias pendentes ao abrir a conversa
   useEffect(() => {
     scrollToBottom(false)
+    // Dispara reprocessamento de mídias que falharam no after() — não bloqueia UI
+    void fetch(`/api/whatsapp/reprocess-media?conversationId=${conversationId}`, { method: 'POST' })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Polling: busca novas mensagens a cada 5s
@@ -32,8 +34,12 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
         const data = await res.json()
         const fresh: WaMessage[] = data.conversation?.messages ?? []
         setMessages((prev) => {
-          if (fresh.length === prev.length) return prev
-          scrollToBottom()
+          const hasNew = fresh.length > prev.length
+          const hasMediaUpdate = fresh.some(
+            (msg, i) => prev[i] && (prev[i].mediaUrl !== msg.mediaUrl || prev[i].status !== msg.status)
+          )
+          if (!hasNew && !hasMediaUpdate) return prev
+          if (hasNew) scrollToBottom()
           return fresh
         })
       } catch {
