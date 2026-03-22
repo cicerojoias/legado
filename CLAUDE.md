@@ -126,6 +126,20 @@ VALUES ('UUID_FROM_SUPABASE_AUTH', 'email', 'Nome', 'OPERADOR', 'JOAO_PESSOA', t
 3. Frontend chama `/api/whatsapp/send-media` com `{ conversationId, mediaUrl, mimeType }`
 4. Server baixa o buffer via SDK admin, valida tamanho, faz upload para Meta, envia via `sendMediaByMediaId`, persiste `WaMessage`
 
+**Gravação de áudio — pipeline de conversão:**
+- `MediaRecorder` tenta MIMEs em ordem: `audio/ogg;codecs=opus` → `audio/webm;codecs=opus` → `audio/mp4`
+  - Firefox: usa OGG nativo (sem conversão)
+  - Chrome Android: usa WebM (válido) → converte para OGG Opus via WebCodecs
+  - Safari/iOS: usa MP4 (válido, aceito diretamente pela Meta)
+- Antes de converter, verifica magic bytes do blob gravado (`OggS` = OGG, `ftyp` em bytes 4-7 = MP4 válido, resto = precisa conversão)
+- `audio-converter.ts` implementa OGG Opus muxer em TypeScript puro usando WebCodecs `AudioEncoder`
+  - `AudioSampleFormat`: usar `'f32-planar'` — `'f32-interleaved'` não é suportado em Chrome Android
+  - Granule position dos headers OGG deve ser `0` (RFC 7845 §3.1)
+  - Granule da última página = `PRE_SKIP + decoded.length` (não inclui zero-padding)
+  - Granule das páginas intermediárias = `PRE_SKIP + chunk.endSample` (timestamp real do encoder)
+- Após conversão: valida magic bytes `OggS` + tamanho mínimo 200 bytes antes de fazer upload
+- Webhook loga código de erro Meta quando status `failed` chega (buscar `[webhook] Meta entrega falhou` nos logs do Vercel para diagnóstico)
+
 **Env vars necessárias para WhatsApp:**
 - `WHATSAPP_TOKEN` — token de acesso permanente da Meta
 - `WHATSAPP_PHONE_ID` — ID do número de telefone
