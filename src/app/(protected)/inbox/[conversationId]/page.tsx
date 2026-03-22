@@ -27,9 +27,9 @@ export default async function ConversationPage({ params }: PageProps) {
   const { contact, messages } = conversation
 
   return (
-    <div className="flex min-h-dvh">
-      {/* Lista de conversas — sticky no desktop, oculta no mobile */}
-      <div className="hidden md:flex md:sticky md:top-0 md:h-dvh md:w-[360px] md:border-r flex-col shrink-0 overflow-hidden">
+    <div className="flex h-full">
+      {/* Lista de conversas — oculta no mobile, visível no desktop */}
+      <div className="hidden md:flex md:w-[360px] md:border-r flex-col h-full overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-4 border-b">
           <span className="font-semibold text-lg">WhatsApp</span>
         </div>
@@ -38,8 +38,8 @@ export default async function ConversationPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Área do chat — fluxo normal; ContactHeader e MessageInput são sticky */}
-      <div className="flex-1 flex flex-col">
+      {/* Área do chat — ocupa tela cheia no mobile */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ContactHeader
           contact={contact}
           conversation={conversation}

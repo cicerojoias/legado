@@ -87,7 +87,7 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b bg-card">
+      <div className="flex items-center gap-3 px-4 py-3 border-b bg-card">
         {/* Botão voltar — só no mobile */}
         {showBackButton && (
           <button

@@ -54,8 +54,8 @@ export function BottomNav() {
                     return (
                         <div key="registrar" className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-1">
                             <Suspense fallback={
-                                <div className="p-3 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 -mt-6 border-4 border-card">
-                                    <Plus className="w-6 h-6" />
+                                <div className="p-2 rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20">
+                                    <Plus className="w-5 h-5" />
                                 </div>
                             }>
                                 <LancamentoModal

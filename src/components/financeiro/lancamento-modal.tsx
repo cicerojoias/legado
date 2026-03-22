@@ -180,8 +180,8 @@ export function LancamentoModal({
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <div className="flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all text-primary hover:text-primary/80">
-                    <div className="bg-primary text-primary-foreground p-3 rounded-full shadow-lg shadow-primary/20 mb-1 -mt-6 border-4 border-card relative z-10">
-                        <Plus className="w-6 h-6" />
+                    <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md shadow-primary/20 mb-1">
+                        <Plus className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
                 </div>
