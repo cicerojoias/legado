@@ -148,12 +148,19 @@ export async function POST(req: NextRequest) {
     if (value.statuses && value.statuses.length > 0) {
       // Batch update de status ao invés de um por um
       await Promise.all(
-        value.statuses.map((status) =>
-          prisma.waMessage.updateMany({
+        value.statuses.map((status) => {
+          if (status.status === 'failed' && status.errors?.length) {
+            console.error('[webhook] Meta entrega falhou', {
+              waMessageId: status.id,
+              recipientId: status.recipient_id,
+              errors: JSON.stringify(status.errors),
+            })
+          }
+          return prisma.waMessage.updateMany({
             where: { wa_message_id: status.id },
             data: { status: status.status },
           })
-        )
+        })
       )
     }
 

@@ -199,22 +199,26 @@ export async function convertToOggOpus(inputBlob: Blob): Promise<Blob> {
   let seq = 0
 
   // Página ID Header (BOS — Beginning of Stream)
-  // Granule = -1 (0xFFFFFFFFFFFFFFFF) para header pages, conforme RFC 7845 §3
+  // Granule = 0 para header pages, conforme RFC 7845 §3.1 (MUST be 0)
   pages.push(buildOggPage(
     buildOpusIdHeader(channels, decoded.sampleRate),
-    serial, seq++, BigInt(-1), true, false
+    serial, seq++, BigInt(0), true, false
   ))
 
   // Página Comment Header
   pages.push(buildOggPage(
     buildOpusCommentHeader(),
-    serial, seq++, BigInt(-1), false, false
+    serial, seq++, BigInt(0), false, false
   ))
 
   // Páginas de áudio (1 pacote Opus por página)
+  // Última página: granule = PRE_SKIP + decoded.length (PCM real, sem zero-padding)
+  // Demais páginas: granule = PRE_SKIP + (i+1) * FRAME_SIZE
   for (let i = 0; i < opusFrames.length; i++) {
     const isLast = i === opusFrames.length - 1
-    const granule = BigInt(PRE_SKIP + (i + 1) * FRAME_SIZE)
+    const granule = isLast
+      ? BigInt(PRE_SKIP + decoded.length)
+      : BigInt(PRE_SKIP + (i + 1) * FRAME_SIZE)
     pages.push(buildOggPage(opusFrames[i], serial, seq++, granule, false, isLast))
   }
 

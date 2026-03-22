@@ -57,6 +57,12 @@ export interface WebhookPayload {
           status: 'sent' | 'delivered' | 'read' | 'failed' | 'deleted'
           timestamp: string
           recipient_id: string
+          errors?: Array<{
+            code: number
+            title: string
+            message?: string
+            error_data?: { details: string }
+          }>
         }>
       }
       field: 'messages'
