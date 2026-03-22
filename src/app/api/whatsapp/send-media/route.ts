@@ -8,13 +8,15 @@ import { WhatsAppError } from '@/lib/whatsapp/errors'
 
 // ── Constantes de segurança ────────────────────────────────────────────────────
 
+// Apenas formatos aceitos pela Meta WhatsApp Cloud API para ENVIO.
+// audio/webm NÃO está aqui: Meta aceita o upload mas rejeita a entrega.
+// O cliente converte webm→ogg antes de enviar (ver audio-converter.ts).
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
   'audio/mpeg',
   'audio/mp4',
-  'audio/webm',
   'audio/ogg',
   'video/mp4',
   'application/pdf',

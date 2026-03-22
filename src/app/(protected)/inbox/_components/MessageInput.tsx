@@ -130,25 +130,42 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
     recorder.onstop = async () => {
       // Normalizar: remove parâmetros de codec (ex: "audio/ogg;codecs=opus" → "audio/ogg")
       const rawMime = recorder.mimeType || 'audio/webm'
-      const mimeType = rawMime.split(';')[0].trim()
-      const blob = new Blob(audioChunksRef.current, { type: mimeType })
-      const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm'
-      const fileName = `audio-${Date.now()}.${ext}`
+      const baseMime = rawMime.split(';')[0].trim()
 
       // Parar todas as tracks do stream para liberar o microfone
       recorder.stream.getTracks().forEach((t) => t.stop())
-
-      // Fazer upload do blob de áudio como um File
-      const file = new File([blob], fileName, { type: mimeType })
 
       setUploadState('uploading')
       setRecording(false)
 
       try {
+        let finalBlob = new Blob(audioChunksRef.current, { type: baseMime })
+        let finalMime = baseMime
+
+        // Chrome grava como audio/webm que a Meta WhatsApp API não suporta.
+        // Converter para audio/ogg (mesmo codec Opus, container diferente)
+        // usando a WebCodecs API nativa do browser — sem dependências externas.
+        if (baseMime.includes('webm')) {
+          try {
+            const { convertToOggOpus, isAudioConversionSupported } = await import('@/lib/audio-converter')
+            if (isAudioConversionSupported()) {
+              finalBlob = await convertToOggOpus(finalBlob)
+              finalMime = 'audio/ogg'
+            }
+          } catch (convErr) {
+            console.warn('[audio-converter] Conversão falhou, tentando com webm:', convErr)
+            // Continua com webm — o servidor retornará erro claro
+          }
+        }
+
+        const ext = finalMime.includes('mp4') ? 'mp4' : finalMime.includes('ogg') ? 'ogg' : 'webm'
+        const fileName = `audio-${Date.now()}.${ext}`
+        const file = new File([finalBlob], fileName, { type: finalMime })
+
         const sigRes = await fetch('/api/storage/signed-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mimeType, fileName }),
+          body: JSON.stringify({ mimeType: finalMime, fileName }),
         })
         if (!sigRes.ok) {
           const { error } = await sigRes.json().catch(() => ({}))
@@ -158,12 +175,12 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
 
         const putRes = await fetch(uploadUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': mimeType },
+          headers: { 'Content-Type': finalMime },
           body: file,
         })
         if (!putRes.ok) throw new Error('Falha ao carregar o áudio. Verifique sua conexão.')
 
-        setMediaPreview({ url: publicUrl, mimeType, fileName })
+        setMediaPreview({ url: publicUrl, mimeType: finalMime, fileName })
         setUploadState('preview')
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Erro ao processar áudio gravado.')
