@@ -27,13 +27,13 @@ export default async function ConversationPage({ params }: PageProps) {
   const { contact, messages } = conversation
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-[calc(100dvh-4rem)] md:h-dvh overflow-hidden">
       {/* Lista de conversas — oculta no mobile, visível no desktop */}
       <div className="hidden md:flex md:w-[360px] md:border-r flex-col h-full overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-4 border-b">
           <span className="font-semibold text-lg">WhatsApp</span>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <ConversationList activeId={conversationId} />
         </div>
       </div>
