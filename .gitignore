@@ -73,3 +73,7 @@ README.md
 /tmp/
 test.out
 
+
+# Arquivos de contexto e testes locais
+PROMPT_NEXT_CHAT.md
+tests/

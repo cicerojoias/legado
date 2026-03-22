@@ -1,6 +1,7 @@
 import type { ConversationWithPreview } from './types'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { Check, CheckCheck } from 'lucide-react'
 
 interface ConversationItemProps {
   conversation: ConversationWithPreview
@@ -25,7 +26,7 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
   const initials = (contact.name ?? contact.phone)
     .split(' ')
     .slice(0, 2)
-    .map((w) => w[0])
+    .map((w: string) => w[0])
     .join('')
     .toUpperCase()
 
@@ -57,11 +58,22 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
             {formatTime(last_message_at)}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">
-          {lastMsg
-            ? (lastMsg.direction === 'outbound' ? '✓ ' : '') + lastMsg.content
-            : 'Sem mensagens'}
-        </p>
+        <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+          {lastMsg && lastMsg.direction === 'outbound' && (
+            <span className="shrink-0 flex items-center">
+              {lastMsg.status === 'read' ? (
+                <CheckCheck className="w-[14px] h-[14px] text-accent" />
+              ) : lastMsg.status === 'delivered' ? (
+                <CheckCheck className="w-[14px] h-[14px]" />
+              ) : (
+                <Check className="w-[14px] h-[14px]" />
+              )}
+            </span>
+          )}
+          <span className="truncate">
+            {lastMsg ? lastMsg.content : 'Sem mensagens'}
+          </span>
+        </div>
       </div>
     </Link>
   )

@@ -21,8 +21,18 @@ export function parseInboundMessages(payload: MetaWebhookPayload): ParsedInbound
       )
 
       for (const msg of value.messages) {
-        const content =
-          msg.type === 'text' ? (msg.text?.body ?? '') : `[${msg.type}]`
+        const mediaTypes = ['image', 'audio', 'document', 'video', 'sticker'] as const
+        const mediaObj = mediaTypes
+          .map((t) => ((msg as unknown) as Record<string, { id: string; mime_type: string } | undefined>)[t])
+          .find(Boolean)
+
+        const content = msg.type === 'text'
+          ? (msg.text?.body ?? '')
+          : mediaObj?.mime_type?.startsWith('audio')
+            ? '[Áudio]'
+            : mediaObj?.mime_type?.startsWith('image')
+              ? '[Imagem]'
+              : `[${msg.type}]`
 
         messages.push({
           waId: msg.from,
@@ -32,6 +42,8 @@ export function parseInboundMessages(payload: MetaWebhookPayload): ParsedInbound
           type: msg.type,
           content,
           timestamp: new Date(Number(msg.timestamp) * 1000),
+          mediaId: mediaObj?.id,
+          mimeType: mediaObj?.mime_type,
         })
       }
     }
