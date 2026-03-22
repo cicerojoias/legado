@@ -64,9 +64,9 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
   }, [conversationId, scrollToBottom])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Área de mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             Sem mensagens ainda

@@ -39,13 +39,13 @@ export default async function ConversationPage({ params }: PageProps) {
       </div>
 
       {/* Área do chat — ocupa tela cheia no mobile */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-h-0">
         <ContactHeader
           contact={contact}
           conversation={conversation}
           showBackButton
         />
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <ChatWindow
             conversationId={conversationId}
             initialMessages={messages}
