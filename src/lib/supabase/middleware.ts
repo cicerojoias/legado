@@ -70,7 +70,8 @@ export async function updateSession(request: NextRequest) {
 
         // RBAC: proteger rotas gerenciais por role
         const pathname = request.nextUrl.pathname;
-        const isAdminRoute = pathname.startsWith('/relatorios') || pathname.startsWith('/lancamentos');
+        const isWhatsAppApi = pathname.startsWith('/api/whatsapp/') && !pathname.startsWith('/api/whatsapp/webhook');
+        const isAdminRoute = pathname.startsWith('/relatorios') || pathname.startsWith('/lancamentos') || pathname.startsWith('/inbox') || isWhatsAppApi;
         const isSuperAdminRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/custos-fixos') || pathname.startsWith('/usuarios') || pathname.startsWith('/logs');
 
         if (hasVerifiedPin && (isAdminRoute || isSuperAdminRoute)) {
