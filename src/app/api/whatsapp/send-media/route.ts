@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { uploadMediaToMeta, sendMediaByMediaId } from '@/lib/whatsapp/meta-client'
+import { getWhatsAppMediaType } from '@/lib/whatsapp/mime-utils'
+import { WhatsAppError } from '@/lib/whatsapp/errors'
 
 // ── Constantes de segurança ────────────────────────────────────────────────────
 
@@ -86,10 +88,7 @@ export async function POST(req: Request) {
   }
 
   // 8. Determinar waType para validação de tamanho
-  const waType =
-    mimeType.startsWith('image/') ? 'image' :
-    mimeType.startsWith('audio/') ? 'audio' :
-    mimeType.startsWith('video/') ? 'video' : 'document'
+  const waType = getWhatsAppMediaType(mimeType)
 
   try {
     // 9. Download do buffer via Supabase SDK (service role — nunca fetch arbitrário)
@@ -104,16 +103,21 @@ export async function POST(req: Request) {
 
     if (downloadError || !blobData) {
       console.error('[send-media] Falha ao baixar do Storage:', downloadError?.message)
-      return Response.json({ error: 'Não foi possível recuperar o arquivo. Tente enviar novamente.' }, { status: 500 })
+      throw new WhatsAppError(
+        'INTERNAL_ERROR',
+        'Não foi possível recuperar o arquivo. Tente enviar novamente.'
+      )
     }
 
     // 10. Validar tamanho do buffer contra limites da Meta (file-uploads skill: SET SIZE LIMITS)
     const buffer = Buffer.from(await blobData.arrayBuffer())
     const sizeLimit = META_SIZE_LIMITS[waType]
     if (buffer.length > sizeLimit) {
-      return Response.json({
-        error: `Arquivo muito grande. O WhatsApp aceita no máximo ${sizeLimit / 1024 / 1024}MB para ${waType === 'image' ? 'imagens' : waType === 'audio' ? 'áudios' : waType === 'video' ? 'vídeos' : 'documentos'}.`,
-      }, { status: 400 })
+      const sizeText = waType === 'image' ? 'imagens' : waType === 'audio' ? 'áudios' : waType === 'video' ? 'vídeos' : 'documentos'
+      throw new WhatsAppError(
+        'SIZE_EXCEEDED',
+        `Arquivo muito grande. O WhatsApp aceita no máximo ${sizeLimit / 1024 / 1024}MB para ${sizeText}.`
+      )
     }
 
     // 11. Upload para Meta e envio atômico (media_id expira — usar imediatamente)
@@ -157,14 +161,26 @@ export async function POST(req: Request) {
 
     return Response.json({ message })
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[send-media] Erro:', msg)
-
-    // Erros da Meta API têm mensagens legíveis — expor ao usuário com contexto
-    if (msg.includes('Meta Media')) {
-      return Response.json({ error: 'O WhatsApp recusou o envio. Verifique o arquivo e tente novamente.' }, { status: 502 })
+    if (error instanceof WhatsAppError) {
+      return Response.json(error.toJSON(), { status: error.statusCode })
     }
 
-    return Response.json({ error: 'Erro interno ao enviar. Tente novamente em instantes.' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[send-media] Erro desconhecido:', msg)
+
+    // Erros da Meta API têm "Meta Media" na mensagem
+    if (msg.includes('Meta Media')) {
+      const waError = new WhatsAppError(
+        'UPLOAD_FAILED',
+        'O WhatsApp recusou o envio. Verifique o arquivo e tente novamente.'
+      )
+      return Response.json(waError.toJSON(), { status: waError.statusCode })
+    }
+
+    // Generic error para o cliente
+    return Response.json(
+      { error: 'Erro interno ao enviar. Tente novamente em instantes.' },
+      { status: 500 }
+    )
   }
 }

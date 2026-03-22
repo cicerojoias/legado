@@ -1,3 +1,5 @@
+import { getWhatsAppMediaType } from './mime-utils'
+
 const BASE_URL = 'https://graph.facebook.com/v22.0'
 
 function getPhoneId(): string {
@@ -79,12 +81,7 @@ export async function sendMediaMessage(
   const token = getToken()
 
   // Determinar o tipo de mensagem de mídia com base no MIME
-  type WaMediaType = 'image' | 'audio' | 'document' | 'video'
-  let waType: WaMediaType = 'document' // fallback seguro
-
-  if (mimeType.startsWith('image/')) waType = 'image'
-  else if (mimeType.startsWith('audio/')) waType = 'audio'
-  else if (mimeType.startsWith('video/')) waType = 'video'
+  const waType = getWhatsAppMediaType(mimeType)
 
   // Montar o payload de mídia com link (hosted externally)
   const mediaPayload = {
@@ -178,12 +175,7 @@ export async function sendMediaByMediaId(
   const phoneId = getPhoneId()
   const token = getToken()
 
-  type WaMediaType = 'image' | 'audio' | 'document' | 'video'
-  let waType: WaMediaType = 'document'
-
-  if (mimeType.startsWith('image/')) waType = 'image'
-  else if (mimeType.startsWith('audio/')) waType = 'audio'
-  else if (mimeType.startsWith('video/')) waType = 'video'
+  const waType = getWhatsAppMediaType(mimeType)
 
   const mediaPayload = {
     id: mediaId,
