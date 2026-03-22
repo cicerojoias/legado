@@ -237,7 +237,7 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
   const isUploading = uploadState === 'uploading'
 
   return (
-    <div className="border-t bg-background">
+    <div className="sticky bottom-16 md:bottom-0 z-10 border-t bg-background">
       {/* Preview da mídia selecionada */}
       {mediaPreview && (
         <div className="flex items-center gap-2 px-4 pt-2 pb-1">

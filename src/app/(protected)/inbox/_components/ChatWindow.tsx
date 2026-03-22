@@ -64,11 +64,11 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
   }, [conversationId, scrollToBottom])
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <div>
       {/* Área de mensagens */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2">
+      <div className="px-4 py-4 space-y-2">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
             Sem mensagens ainda
           </div>
         ) : (
@@ -77,7 +77,6 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
         <div ref={bottomRef} />
       </div>
 
-      {/* Input fixo no fundo */}
       <MessageInput conversationId={conversationId} onMessageSent={handleMessageSent} />
     </div>
   )
