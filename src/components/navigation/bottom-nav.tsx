@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Home, PieChart, User, Plus, MessageCircle } from 'lucide-react';
+import { Home, PieChart, User, Plus } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
@@ -28,7 +29,7 @@ export function BottomNav() {
         // Admin: 5 itens (Hoje, Inbox, Registrar (centro), Relatórios, Perfil)
         links = [
             { href: '/hoje', icon: Home, label: 'Hoje' },
-            { href: '/inbox', icon: MessageCircle, label: 'Inbox' },
+            { href: '/inbox', icon: WhatsAppIcon, label: 'WAB' },
             { href: '#', icon: Plus, label: 'Registrar' },
             { href: '/relatorios', icon: PieChart, label: 'Relatórios' },
             { href: '/perfil', icon: User, label: 'Perfil' },

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText, MessageCircle, Sparkles } from 'lucide-react';
+import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText, Sparkles } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 import { usePermissions } from '@/hooks/use-permissions';
 import { cn } from '@/lib/utils';
 import { logoutAction } from '@/app/(auth)/logout/actions';
@@ -132,8 +133,8 @@ export function Sidebar() {
                                 pathname.startsWith('/inbox') ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
                             )}
                         >
-                            <MessageCircle className="w-4 h-4" />
-                            WhatsApp
+                            <WhatsAppIcon className="w-4 h-4" />
+                            WAB
                         </Link>
                         <Link
                             href="/assistente"
