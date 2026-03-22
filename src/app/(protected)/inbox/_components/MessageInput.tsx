@@ -142,20 +142,35 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
         let finalBlob = new Blob(audioChunksRef.current, { type: baseMime })
         let finalMime = baseMime
 
-        // Chrome grava como audio/webm que a Meta WhatsApp API não suporta.
-        // Converter para audio/ogg (mesmo codec Opus, container diferente)
-        // usando a WebCodecs API nativa do browser — sem dependências externas.
-        if (baseMime.includes('webm')) {
+        // Detectar se o blob gravado precisa de conversão para OGG Opus.
+        //
+        // Problema: Chrome Android declara suporte a "audio/mp4" via isTypeSupported()
+        // mas o arquivo gravado não é um MP4 válido — Meta rejeita com código 131053.
+        // Solução: verificar magic bytes reais do blob antes de decidir o fluxo.
+        //
+        // OGG Opus nativo (Firefox): primeiros 4 bytes = "OggS" (0x4F 0x67 0x67 0x53) → OK sem converter
+        // MP4 válido (Safari):        bytes 4-7 = "ftyp" (0x66 0x74 0x79 0x70) → OK sem converter
+        // Qualquer outra coisa:       converter para OGG Opus via WebCodecs
+        const header = new Uint8Array(await finalBlob.slice(0, 8).arrayBuffer())
+        const isNativeOgg = header[0] === 0x4F && header[1] === 0x67 && header[2] === 0x67 && header[3] === 0x53
+        const isValidMp4 = header[4] === 0x66 && header[5] === 0x74 && header[6] === 0x79 && header[7] === 0x70
+        const needsConversion = !isNativeOgg && !isValidMp4
+
+        if (needsConversion) {
           try {
             const { convertToOggOpus, isAudioConversionSupported } = await import('@/lib/audio-converter')
             if (isAudioConversionSupported()) {
               finalBlob = await convertToOggOpus(finalBlob)
               finalMime = 'audio/ogg'
+            } else {
+              throw new Error('Gravação de áudio não suportada neste browser. Tente pelo WhatsApp.')
             }
           } catch (convErr) {
-            console.warn('[audio-converter] Conversão falhou, tentando com webm:', convErr)
-            // Continua com webm — o servidor retornará erro claro
+            // Re-throw para chegar no toast.error do catch externo
+            throw convErr instanceof Error ? convErr : new Error('Erro ao processar áudio gravado.')
           }
+        } else if (isNativeOgg) {
+          finalMime = 'audio/ogg'
         }
 
         const ext = finalMime.includes('mp4') ? 'mp4' : finalMime.includes('ogg') ? 'ogg' : 'webm'
