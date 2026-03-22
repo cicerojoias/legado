@@ -104,8 +104,11 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      // Ordem de preferência: mp4 (Safari/iOS) → ogg/opus (Chrome/Firefox, suportado pelo WhatsApp) → webm (fallback)
-      const preferredMimes = ['audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm;codecs=opus']
+      // Ordem de preferência:
+      //   1. ogg/opus — Firefox: grava OGG nativo, zero conversão necessária
+      //   2. webm/opus — Chrome: grava WebM válido com Opus, converte para OGG
+      //   3. mp4 — Safari/iOS último: Chrome Android reporta suporte mas grava conteúdo inválido
+      const preferredMimes = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/mp4']
       const selectedMime = preferredMimes.find((m) => MediaRecorder.isTypeSupported(m)) ?? 'audio/webm'
       const recorder = new MediaRecorder(stream, { mimeType: selectedMime })
       audioChunksRef.current = []
@@ -157,17 +160,18 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
         const needsConversion = !isNativeOgg && !isValidMp4
 
         if (needsConversion) {
-          try {
-            const { convertToOggOpus, isAudioConversionSupported } = await import('@/lib/audio-converter')
-            if (isAudioConversionSupported()) {
-              finalBlob = await convertToOggOpus(finalBlob)
-              finalMime = 'audio/ogg'
-            } else {
-              throw new Error('Gravação de áudio não suportada neste browser. Tente pelo WhatsApp.')
-            }
-          } catch (convErr) {
-            // Re-throw para chegar no toast.error do catch externo
-            throw convErr instanceof Error ? convErr : new Error('Erro ao processar áudio gravado.')
+          const { convertToOggOpus, isAudioConversionSupported } = await import('@/lib/audio-converter')
+          if (!isAudioConversionSupported()) {
+            throw new Error('Este navegador não suporta gravação de áudio. Use o aplicativo WhatsApp para enviar áudios.')
+          }
+          finalBlob = await convertToOggOpus(finalBlob)
+          finalMime = 'audio/ogg'
+
+          // Validar que o OGG produzido tem magic bytes corretos ("OggS")
+          const outHeader = new Uint8Array(await finalBlob.slice(0, 4).arrayBuffer())
+          const isValidOgg = outHeader[0] === 0x4F && outHeader[1] === 0x67 && outHeader[2] === 0x67 && outHeader[3] === 0x53
+          if (!isValidOgg || finalBlob.size < 200) {
+            throw new Error('Falha ao converter áudio. Tente gravar novamente.')
           }
         } else if (isNativeOgg) {
           finalMime = 'audio/ogg'

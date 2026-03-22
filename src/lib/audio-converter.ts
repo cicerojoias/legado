@@ -148,15 +148,19 @@ export async function convertToOggOpus(inputBlob: Blob): Promise<Blob> {
   }
 
   // 2. Encodar PCM → Opus via WebCodecs AudioEncoder
-  const opusFrames: Uint8Array[] = []
+  // Cada chunk carrega timestamp e duration em microsegundos, usados para
+  // calcular o granule position correto sem assumir frame size fixo.
+  const opusFrames: Array<{ data: Uint8Array; endSample: number }> = []
 
   await new Promise<void>((resolve, reject) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const encoder = new (AudioEncoder as any)({
-      output: (chunk: { byteLength: number; copyTo: (dest: Uint8Array) => void }) => {
-        const frame = new Uint8Array(chunk.byteLength)
-        chunk.copyTo(frame)
-        opusFrames.push(frame)
+      output: (chunk: { byteLength: number; copyTo: (b: Uint8Array) => void; timestamp: number; duration: number }) => {
+        const data = new Uint8Array(chunk.byteLength)
+        chunk.copyTo(data)
+        // endSample = posição PCM do final deste packet (em amostras @ 48kHz)
+        const endSample = Math.round((chunk.timestamp + (chunk.duration ?? 0)) / 1e6 * sampleRate)
+        opusFrames.push({ data, endSample })
       },
       error: reject,
     })
@@ -212,14 +216,15 @@ export async function convertToOggOpus(inputBlob: Blob): Promise<Blob> {
   ))
 
   // Páginas de áudio (1 pacote Opus por página)
-  // Última página: granule = PRE_SKIP + decoded.length (PCM real, sem zero-padding)
-  // Demais páginas: granule = PRE_SKIP + (i+1) * FRAME_SIZE
+  // Granule = PRE_SKIP + endSample do chunk (timestamp real reportado pelo encoder).
+  // Última página: clamped em PRE_SKIP + decoded.length para não incluir zero-padding.
   for (let i = 0; i < opusFrames.length; i++) {
+    const { data, endSample } = opusFrames[i]
     const isLast = i === opusFrames.length - 1
     const granule = isLast
       ? BigInt(PRE_SKIP + decoded.length)
-      : BigInt(PRE_SKIP + (i + 1) * FRAME_SIZE)
-    pages.push(buildOggPage(opusFrames[i], serial, seq++, granule, false, isLast))
+      : BigInt(PRE_SKIP + endSample)
+    pages.push(buildOggPage(data, serial, seq++, granule, false, isLast))
   }
 
   // Montar buffer final
