@@ -27,7 +27,7 @@ export default async function ConversationPage({ params }: PageProps) {
   const { contact, messages } = conversation
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] md:h-dvh overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       {/* Lista de conversas — oculta no mobile, visível no desktop */}
       <div className="hidden md:flex md:w-[360px] md:border-r flex-col h-full overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-4 border-b">
@@ -38,8 +38,10 @@ export default async function ConversationPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Área do chat — ocupa tela cheia no mobile */}
-      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+      {/* Área do chat — ocupa tela cheia no mobile.
+          pb-16 md:pb-0: empurra o input acima do bottom nav mobile (4rem)
+          sem criar gap scrollável externamente. */}
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0 pb-16 md:pb-0">
         <ContactHeader
           contact={contact}
           conversation={conversation}
