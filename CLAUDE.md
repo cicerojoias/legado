@@ -20,7 +20,7 @@ No test runner is configured. Type-checking with `npx tsc --noEmit` is the verif
 
 ### Route Groups
 - `src/app/(auth)/` — Public auth routes: `/login`, `/pin`, `/setup-pin`, logout action
-- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/sandbox`
+- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/inbox`, `/sandbox`
 - `src/app/layout.tsx` — Root layout with Geist font and Sonner toaster
 
 ### Auth Flow (two-layer)
@@ -72,6 +72,17 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 | `src/app/(protected)/usuarios/actions.ts` | Toggle loja e ativo por usuário (SUPER_ADMIN) |
 | `src/app/(protected)/logs/page.tsx` | Audit log viewer with filters + pagination (SUPER_ADMIN) |
 | `src/lib/pin-utils.ts` | Shared `hashPin`/`comparePin` (scrypt + timing-safe) |
+| `src/app/(protected)/inbox/` | WhatsApp inbox — lista de conversas + chat window com polling |
+| `src/app/(protected)/inbox/_components/ChatWindow.tsx` | Polling 5s, reprocess-media on mount, detecção de mudanças em mediaUrl |
+| `src/app/(protected)/inbox/_components/MessageBubble.tsx` | Renderiza texto, imagem, áudio, vídeo e documento com fallback |
+| `src/app/(protected)/inbox/_components/MessageInput.tsx` | Envio de texto e mídias (upload + gravação de voz) |
+| `src/app/api/whatsapp/webhook/route.ts` | Recebe eventos Meta: salva mensagem com `mediaUrl=/api/whatsapp/media/<id>` imediatamente |
+| `src/app/api/whatsapp/media/[mediaId]/route.ts` | Proxy autenticado: resolve URL assinada Meta on-demand e faz stream |
+| `src/app/api/whatsapp/send-media/route.ts` | Outbound: Storage → buffer → Meta upload → `sendMediaByMediaId` |
+| `src/app/api/storage/signed-url/route.ts` | Gera signed upload URL para `outbound/` no bucket `whatsapp-media` |
+| `src/app/api/whatsapp/reprocess-media/route.ts` | Migra mensagens com `mediaId` mas `mediaUrl` nulo para proxy URL |
+| `src/lib/whatsapp/meta-client.ts` | `sendTextMessage`, `sendMediaByMediaId`, `uploadMediaToMeta`, `downloadMediaBuffer`, `markAsRead` |
+| `src/lib/whatsapp/media-handler.ts` | Download Meta → magic bytes → Supabase Storage (usado apenas em contextos futuros de arquivo permanente) |
 
 ### UI Conventions
 - **Color system:** Background `#F7F5F0` (creme), Primary `#184434` (dark green), Accent `#C79A34` (gold). ENTRADA = emerald, SAIDA = rose.
@@ -100,6 +111,26 @@ New users must exist in **both** Supabase Auth (`auth.users`) and the app's `pub
 INSERT INTO users (id, email, nome, role, "lojaAutorizada", ativo, created_at, updated_at)
 VALUES ('UUID_FROM_SUPABASE_AUTH', 'email', 'Nome', 'OPERADOR', 'JOAO_PESSOA', true, NOW(), NOW());
 ```
+
+### WhatsApp Inbox — Arquitetura de Mídias
+
+**Inbound (recebido):**
+1. Meta envia webhook → `/api/whatsapp/webhook` salva `WaMessage` com `mediaUrl = /api/whatsapp/media/<mediaId>` e `mediaId` no banco
+2. Browser carrega `<img src="/api/whatsapp/media/<id>">` → proxy resolve URL assinada fresh da Meta → stream binário
+3. Meta mantém mídias por ~30 dias. O `mediaId` não expira; apenas a URL assinada (5 min) expira — o proxy re-resolve a cada request
+4. `Cache-Control: private, max-age=3600` evita fetches repetidos no mesmo browser
+
+**Outbound (enviado):**
+1. `MessageInput` faz POST em `/api/storage/signed-url` → recebe `uploadUrl` (signed) e `publicUrl`
+2. Browser faz PUT direto no Supabase Storage (path `outbound/`)
+3. Frontend chama `/api/whatsapp/send-media` com `{ conversationId, mediaUrl, mimeType }`
+4. Server baixa o buffer via SDK admin, valida tamanho, faz upload para Meta, envia via `sendMediaByMediaId`, persiste `WaMessage`
+
+**Env vars necessárias para WhatsApp:**
+- `WHATSAPP_TOKEN` — token de acesso permanente da Meta
+- `WHATSAPP_PHONE_ID` — ID do número de telefone
+- `WHATSAPP_VERIFY_TOKEN` — token de verificação do webhook
+- `SUPABASE_SERVICE_ROLE_KEY` — necessária apenas para outbound (download do Storage com bypass de RLS)
 
 ### ADRs
 - `docs/adr/0001-soft-delete-lancamentos.md` — why soft-delete
