@@ -183,7 +183,7 @@ export async function convertToOggOpus(inputBlob: Blob): Promise<Blob> {
       encoder.encode(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (AudioData as any)({
-          format: 'f32-interleaved',
+          format: 'f32-planar',
           sampleRate,
           numberOfFrames: FRAME_SIZE,
           numberOfChannels: channels,
