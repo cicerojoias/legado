@@ -41,11 +41,13 @@ export async function POST(req: Request) {
     return new Response('Bad Request', { status: 400 })
   }
 
-  // Responder imediatamente — a Meta exige resposta em < 20s
-  // Processar em background sem await (Edge não suporta waitUntil nativo)
-  processPayload(payload).catch((err) =>
+  // Responder APÓS processar — a Meta exige resposta rápida (< 20s), e o processamento no BD leva < 1s
+  // Em ambientes Serverless (Vercel), se não dermos await a função morre antes de finalizar o DB.
+  try {
+    await processPayload(payload)
+  } catch (err) {
     console.error('[webhook] Erro ao processar payload:', err)
-  )
+  }
 
   return new Response('OK', { status: 200 })
 }
