@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { WaMessage } from '@prisma/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
+import { TemplateSelector } from './TemplateSelector'
+
+const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 
 interface ChatWindowProps {
   conversationId: string
@@ -51,6 +54,15 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
     return () => clearInterval(interval)
   }, [conversationId, scrollToBottom])
 
+  // Detecta se a janela de 24h está expirada.
+  // A janela é aberta pela última mensagem INBOUND do contato.
+  // Se não há inbound ou o último é > 24h, só templates são permitidos.
+  const windowExpired = useMemo(() => {
+    const lastInbound = [...messages].reverse().find((m) => m.direction === 'inbound')
+    if (!lastInbound) return true
+    return Date.now() - new Date(lastInbound.timestamp).getTime() > WINDOW_MS
+  }, [messages])
+
   const handleMessageSent = useCallback(() => {
     // Refetch imediato após envio para exibir a mensagem
     fetch(`/api/whatsapp/conversations/${conversationId}`)
@@ -77,7 +89,11 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput conversationId={conversationId} onMessageSent={handleMessageSent} />
+      {windowExpired ? (
+        <TemplateSelector conversationId={conversationId} onMessageSent={handleMessageSent} />
+      ) : (
+        <MessageInput conversationId={conversationId} onMessageSent={handleMessageSent} />
+      )}
     </div>
   )
 }

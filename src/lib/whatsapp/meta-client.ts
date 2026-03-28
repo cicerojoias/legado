@@ -206,6 +206,62 @@ export async function sendMediaByMediaId(
 }
 
 /**
+ * Envia uma mensagem de template pré-aprovado pela Meta.
+ * Necessário para contatos fora da janela de 24h.
+ *
+ * @param to           - Número do destinatário (formato E.164 sem +)
+ * @param templateName - Nome exato do template no Meta Business Manager
+ * @param languageCode - Código de idioma (ex: "pt_BR")
+ * @param bodyParams   - Valores das variáveis {{1}}, {{2}}... do corpo do template
+ * @returns            - wa_message_id retornado pela Meta
+ */
+export async function sendTemplateMessage(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[] = []
+): Promise<string> {
+  const phoneId = getPhoneId()
+  const token = getToken()
+
+  const components =
+    bodyParams.length > 0
+      ? [
+          {
+            type: 'body',
+            parameters: bodyParams.map((text) => ({ type: 'text', text })),
+          },
+        ]
+      : []
+
+  const res = await fetch(`${BASE_URL}/${phoneId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: languageCode },
+        ...(components.length > 0 ? { components } : {}),
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Meta Template error ${res.status}: ${err}`)
+  }
+
+  const data = (await res.json()) as { messages: Array<{ id: string }> }
+  return data.messages[0]?.id ?? ''
+}
+
+/**
  * Baixa o binário de uma mídia da Meta em dois passos:
  * 1. Resolve o URL de download usando o media_id
  * 2. Faz o GET autenticado para baixar o buffer
