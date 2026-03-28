@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -126,12 +126,17 @@ export function LancamentoModal({
         },
     });
 
-    // Sincroniza o campo loja quando defaultLoja muda (vem assincronamente do Supabase)
+    // Sincroniza o campo loja quando defaultLoja muda OU quando o modal abre.
+    // Race condition: usePermissions carrega async — se o modal abrir antes de terminar,
+    // a condição !open impedia a atualização. O ref rastreia a transição de abertura.
+    const prevOpenRef = useRef(false);
     useEffect(() => {
-        if (defaultLoja && !open) {
+        const justOpened = open && !prevOpenRef.current;
+        prevOpenRef.current = open;
+        if (defaultLoja && (!open || justOpened)) {
             form.setValue('loja', defaultLoja);
         }
-    }, [defaultLoja, open, form]);
+    }, [open, defaultLoja, form]);
 
     const isEntrada = form.watch('tipo') === 'ENTRADA';
     const descricaoValue = form.watch('descricao') ?? '';
