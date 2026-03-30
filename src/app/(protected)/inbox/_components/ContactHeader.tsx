@@ -91,7 +91,13 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
         {/* Botão voltar — só no mobile */}
         {showBackButton && (
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              if (window.history.length <= 1) {
+                router.push('/inbox')
+              } else {
+                router.back()
+              }
+            }}
             className="md:hidden p-1 -ml-1 text-muted-foreground"
             aria-label="Voltar"
           >
