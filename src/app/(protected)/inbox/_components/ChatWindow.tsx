@@ -18,9 +18,19 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
   const router = useRouter()
   const [messages, setMessages] = useState<WaMessage[]>(initialMessages)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback((smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' })
+    const el = scrollContainerRef.current
+    if (!el) return
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    } else {
+      // requestAnimationFrame garante que o browser finalizou o layout antes de scrollar
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight
+      })
+    }
   }, [])
 
   // Scroll inicial + reprocessar mídias pendentes ao abrir a conversa
@@ -95,7 +105,7 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Área de mensagens — scroll interno */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             Sem mensagens ainda
