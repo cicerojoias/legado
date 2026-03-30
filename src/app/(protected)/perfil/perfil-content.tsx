@@ -17,11 +17,13 @@ import {
     LogOut,
     Lock,
     Bell,
+    BellRing,
     Info,
     ChevronRight,
     User,
     Store,
 } from 'lucide-react';
+import { usePushSubscription } from '@/hooks/use-push-subscription';
 import * as motion from 'framer-motion/client';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -138,9 +140,13 @@ export function PerfilContent({
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
                             Notificações
                         </p>
+
+                        {/* Toggle WAB push — inline, sem expansão */}
+                        <WabNotificacoesToggle />
+
                         <SectionButton
                             icon={<Bell className="w-4 h-4" />}
-                            label="Push notifications"
+                            label="Resumo diário (financeiro)"
                             isOpen={openSection === 'notificacoes'}
                             onClick={() => toggleSection('notificacoes')}
                         />
@@ -407,6 +413,53 @@ function EncerrarSessaoButton() {
             </span>
         </button>
     );
+}
+
+// ─── WAB Notificações Toggle ─────────────────────────────────────────────────
+
+function WabNotificacoesToggle() {
+    const { supported, permission, subscribed, isLoading, subscribe, unsubscribe } = usePushSubscription()
+
+    const handleToggle = async (checked: boolean) => {
+        if (checked) {
+            const ok = await subscribe()
+            if (!ok && permission === 'denied') {
+                toast.error('Notificações bloqueadas. Habilite nas configurações do navegador.')
+            } else if (!ok) {
+                toast.error('Não foi possível ativar as notificações.')
+            } else {
+                toast.success('Notificações WAB ativadas!')
+            }
+        } else {
+            await unsubscribe()
+            toast.success('Notificações WAB desativadas.')
+        }
+    }
+
+    return (
+        <div className="bg-card rounded-xl border px-4 py-3">
+            <div className="flex items-center gap-3">
+                <BellRing className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Mensagens WhatsApp</p>
+                    <p className="text-xs text-muted-foreground">
+                        {!supported
+                            ? 'Instale o app na tela inicial para ativar (iOS)'
+                            : permission === 'denied'
+                                ? 'Bloqueado — habilite nas configurações do navegador'
+                                : subscribed
+                                    ? 'Recebendo alertas de novas mensagens'
+                                    : 'Ative para receber alertas de novas mensagens'}
+                    </p>
+                </div>
+                <Switch
+                    checked={subscribed}
+                    onCheckedChange={handleToggle}
+                    disabled={isLoading || !supported || permission === 'denied'}
+                />
+            </div>
+        </div>
+    )
 }
 
 // ─── Notificações Form ──────────────────────────────────────────────────────

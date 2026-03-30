@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import type { WaMessage } from '@prisma/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
@@ -14,6 +15,7 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps) {
+  const router = useRouter()
   const [messages, setMessages] = useState<WaMessage[]>(initialMessages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -53,6 +55,21 @@ export function ChatWindow({ conversationId, initialMessages }: ChatWindowProps)
     const interval = setInterval(poll, 5000)
     return () => clearInterval(interval)
   }, [conversationId, scrollToBottom])
+
+  // Listener para mensagens do Service Worker (notificationclick → NAVIGATE_TO)
+  // Quando o usuário clica numa notificação estando em outra conversa, navega para a correta.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+
+    const handler = (event: MessageEvent<{ type?: string; url?: string }>) => {
+      if (event.data?.type === 'NAVIGATE_TO' && typeof event.data.url === 'string') {
+        router.push(event.data.url)
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', handler)
+    return () => navigator.serviceWorker.removeEventListener('message', handler)
+  }, [router])
 
   // Detecta se a janela de 24h está expirada.
   // A janela é aberta pela última mensagem INBOUND do contato.

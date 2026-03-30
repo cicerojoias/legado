@@ -252,6 +252,13 @@ export async function encerrarSessaoAction(): Promise<void> {
         // Limpar cookie PIN
         const cookieStore = await cookies();
         cookieStore.delete(`pin_verified_${user.id}`);
+
+        // Limpar push subscriptions — falha não deve bloquear o logout
+        try {
+            await prisma.waPushSubscription.deleteMany({ where: { userId: user.id } });
+        } catch (e) {
+            console.error('[logout] push subscription cleanup failed:', e);
+        }
     }
 
     await supabase.auth.signOut();

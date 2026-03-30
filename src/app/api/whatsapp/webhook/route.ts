@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { WebhookPayload } from '@/lib/whatsapp/types'
 import { WhatsAppError } from '@/lib/whatsapp/errors'
@@ -7,6 +7,7 @@ import {
   isWebhookProcessed,
   markWebhookProcessed,
 } from '@/lib/whatsapp/webhook-dedup'
+import { dispatchPushForConversation } from '@/lib/whatsapp/push-dispatcher'
 
 // GET: Verificação de Webhook (Facebook/Meta exige isso para validar o endpoint)
 export async function GET(req: NextRequest) {
@@ -136,6 +137,12 @@ export async function POST(req: NextRequest) {
                 mimeType: mimeType || undefined,
               },
             })
+
+            // Dispara push após a resposta 200 ser enviada à Meta (não bloqueia o webhook)
+            after(() =>
+              dispatchPushForConversation(waConversation.id, name, content || '[Mídia]')
+                .catch((err) => console.error('[webhook] push dispatch error:', err))
+            )
           } catch (msgError) {
             console.error(`[webhook] Error processing message ${msg.id}:`, msgError)
             // Continue processing other messages instead of failing entire webhook

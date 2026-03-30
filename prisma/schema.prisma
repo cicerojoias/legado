@@ -38,9 +38,10 @@ model User {
   notif_push     Boolean     @default(false)  // Recebe push notification diária
   notif_horario  String      @default("18:00") // Horário da notificação (HH:MM)
   
-  lancamentos  Lancamento[]
-  logs         Log[]
-  custos_fixos CustoFixo[]
+  lancamentos       Lancamento[]
+  logs              Log[]
+  custos_fixos      CustoFixo[]
+  push_subscriptions WaPushSubscription[]
 
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
@@ -158,6 +159,21 @@ model WaMessage {
 
   @@index([conversation_id, timestamp(sort: Desc)])
   @@map("wa_messages")
+}
+
+model WaPushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique @db.VarChar(512)
+  p256dh    String   @db.VarChar(100)
+  auth      String   @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("wa_push_subscriptions")
 }
 
 model WaMessageGeneration {
