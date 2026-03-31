@@ -205,6 +205,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
         enterRef.current({
           id: message.id,
           content: message.content,
+          type: message.type,
           direction: message.direction,
           timestamp: message.timestamp,
           wa_message_id: message.wa_message_id ?? null,
@@ -249,6 +250,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
         toggleRef.current({
           id: message.id,
           content: message.content,
+          type: message.type,
           direction: message.direction,
           timestamp: message.timestamp,
           wa_message_id: message.wa_message_id ?? null,
@@ -443,9 +445,8 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
               isOutbound
                 ? 'bg-primary text-primary-foreground rounded-tr-none'
                 : 'bg-card text-card-foreground border rounded-tl-none',
-              // Anel de seleção sobre a bolha
+              // Anel de seleção sobre a bolha (apenas outbound — inbound usa highlight no wrapper)
               isSelected && isOutbound && 'ring-2 ring-primary-foreground/30',
-              isSelected && !isOutbound && 'ring-2 ring-primary/30',
             )}
           >
             {/* Quote snippet — mensagem citada */}

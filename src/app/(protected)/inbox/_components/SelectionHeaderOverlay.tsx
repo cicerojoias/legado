@@ -44,8 +44,14 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
 
     const text = msgs.map((msg) => {
       const time = fmt.format(new Date(msg.timestamp))
-      const sender = msg.direction === 'outbound' ? 'Você' : contactName
-      const body = msg.content ?? '[Mídia]'
+      const sender = msg.direction === 'outbound' ? 'Cícero Joias' : contactName
+      const body = (() => {
+        if (msg.type === 'image') return msg.content ? `[Imagem] ${msg.content}` : '[Imagem]'
+        if (msg.type === 'audio') return '[Áudio]'
+        if (msg.type === 'video') return msg.content ? `[Vídeo] ${msg.content}` : '[Vídeo]'
+        if (msg.type === 'document') return msg.content ? `[Documento] ${msg.content}` : '[Documento]'
+        return msg.content ?? '[Mídia]'
+      })()
       return `[${time}] ${sender}: ${body}`
     }).join('\n')
 

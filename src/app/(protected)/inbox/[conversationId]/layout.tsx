@@ -18,13 +18,19 @@ export default function ConversationLayout({ children }: { children: React.React
 
     const prevOverflow = main.style.overflowY
     const prevPadding = main.style.paddingBottom
+    const prevBodyOverscroll = document.body.style.overscrollBehavior
+    const prevHtmlOverscroll = document.documentElement.style.overscrollBehavior
 
     main.style.overflowY = 'hidden'
     main.style.paddingBottom = '0'
+    document.body.style.overscrollBehavior = 'none'
+    document.documentElement.style.overscrollBehavior = 'none'
 
     return () => {
       main.style.overflowY = prevOverflow
       main.style.paddingBottom = prevPadding
+      document.body.style.overscrollBehavior = prevBodyOverscroll
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll
     }
   }, [])
 

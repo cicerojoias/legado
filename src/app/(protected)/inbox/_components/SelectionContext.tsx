@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 export interface MsgSnapshot {
   id: string
   content: string | null
+  type: string
   direction: string
   timestamp: Date | string
   wa_message_id: string | null
