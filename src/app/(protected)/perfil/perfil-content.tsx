@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.14.2', data: '31/03/2026', resumo: 'WAB: reagir em modo seleção — barra flutuante de emojis estilo WhatsApp (aparece com 1 msg selecionada); botão Smile oculto no mobile' },
     { versao: '0.14.1', data: '31/03/2026', resumo: 'WAB: fix encaminhar — botão visível (z-index acima do BottomNav); fix reações — Smile visível no mobile e fecha ao entrar no modo seleção' },
     { versao: '0.14.0', data: '31/03/2026', resumo: 'WAB: encaminhar mensagens — selecionar → ↗ → bottom sheet estilo WhatsApp com busca, multi-conversa e indicador "Encaminhada" na bolha' },
     { versao: '0.13.2', data: '31/03/2026', resumo: 'WAB: fix overscroll — listener nativo non-passive no container do input impede drag na área de padding scrollar a página' },
@@ -201,7 +202,7 @@ export function PerfilContent({
                         <div className="bg-card rounded-xl border p-4 space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Versão</span>
-                                <span className="text-sm font-medium">0.14.1</span>
+                                <span className="text-sm font-medium">0.14.2</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Ambiente</span>

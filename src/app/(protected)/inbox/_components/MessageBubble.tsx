@@ -405,7 +405,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
                 onClick={(e) => { e.stopPropagation(); openPicker() }}
                 className={cn(
                   'shrink-0 p-1 text-muted-foreground transition-opacity',
-                  'inline-flex md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
+                  'hidden md:inline-flex md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
                 )}
                 title="Reagir"
                 aria-label="Reagir à mensagem"

@@ -10,9 +10,10 @@ import { createClient } from '@/lib/supabase/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TemplateSelector } from './TemplateSelector'
-import { useSelectionState } from './SelectionContext'
+import { useSelectionState, useSelectionActions } from './SelectionContext'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
+const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 const PAGE_SIZE = 100
 const BOTTOM_THRESHOLD = 150 // px — considera "no fundo" se dentro desse limite
 
@@ -32,7 +33,16 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [pendingCount, setPendingCount] = useState(0)
   const reactingRef = useRef<Set<string>>(new Set())
 
-  const { active: selectionActive } = useSelectionState()
+  const { active: selectionActive, selected: selectedMessages } = useSelectionState()
+  const { clear: clearSelection } = useSelectionActions()
+
+  // Barra de reação flutuante — só quando exatamente 1 mensagem selecionada
+  const reactionBarMsgId = selectionActive && selectedMessages.size === 1
+    ? [...selectedMessages.keys()][0]
+    : null
+  const reactionBarMsg = reactionBarMsgId
+    ? messages.find(m => m.id === reactionBarMsgId) ?? null
+    : null
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -302,7 +312,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         <div ref={bottomRef} />
       </div>
 
-      {/* Botão flutuante "↓ N novas" — visível quando scrollado para cima e há mensagens pendentes */}
+      {/* Botão flutuante "↓ N novas" */}
       {pendingCount > 0 && (
         <button
           onClick={handleJumpToBottom}
@@ -311,6 +321,29 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           <ChevronDown className="w-3.5 h-3.5" />
           {pendingCount}
         </button>
+      )}
+
+      {/* Barra de reação flutuante — estilo WhatsApp, aparece com 1 msg selecionada */}
+      {reactionBarMsgId && reactionBarMsg && (
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center z-20 pointer-events-none">
+          <div className="pointer-events-auto bg-background border rounded-full shadow-2xl px-2 py-1.5 flex items-center gap-0.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            {REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  handleReact(reactionBarMsgId, reactionBarMsg.reaction === emoji ? '' : emoji)
+                  clearSelection()
+                }}
+                className={cn(
+                  'w-11 h-11 flex items-center justify-center rounded-full text-2xl transition-transform active:scale-90 hover:bg-muted',
+                  reactionBarMsg.reaction === emoji && 'bg-primary/10 ring-2 ring-primary/30'
+                )}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       </div>
 
