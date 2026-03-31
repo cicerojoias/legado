@@ -67,6 +67,19 @@ export async function POST(req: NextRequest) {
       await Promise.all(
         value.messages.map(async (msg) => {
           try {
+            // Reação — atualiza mensagem-alvo sem criar nova mensagem/conversa
+            if (msg.type === 'reaction') {
+              const targetWaId = msg.reaction?.message_id
+              const emoji = msg.reaction?.emoji || null
+              if (targetWaId) {
+                await prisma.waMessage.updateMany({
+                  where: { wa_message_id: targetWaId },
+                  data: { reaction: emoji || null },
+                })
+              }
+              return
+            }
+
             const contactInfo = value.contacts?.find(c => c.wa_id === msg.from)
             const waId = msg.from
             const name = contactInfo?.profile?.name || waId

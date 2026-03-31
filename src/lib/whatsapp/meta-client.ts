@@ -274,6 +274,38 @@ export async function sendTemplateMessage(
 }
 
 /**
+ * Envia ou remove uma reação a uma mensagem.
+ * Para remover, passe emoji como string vazia "".
+ *
+ * @param to          - Número do destinatário (formato E.164 sem +)
+ * @param waMessageId - ID da mensagem na Meta (wamid.xxx)
+ * @param emoji       - Emoji da reação. "" remove a reação existente.
+ */
+export async function sendReaction(
+  to: string,
+  waMessageId: string,
+  emoji: string
+): Promise<void> {
+  const phoneId = getPhoneId()
+  const token = getToken()
+
+  await fetch(`${BASE_URL}/${phoneId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'reaction',
+      reaction: { message_id: waMessageId, emoji },
+    }),
+  })
+}
+
+/**
  * Baixa o binário de uma mídia da Meta em dois passos:
  * 1. Resolve o URL de download usando o media_id
  * 2. Faz o GET autenticado para baixar o buffer

@@ -165,6 +165,9 @@ model WaMessage {
   replies         WaMessage[]    @relation("MessageReply")
   replyToSnapshot String?        @db.VarChar(500) // snapshot do conteúdo citado no momento do envio
 
+  // Reaction
+  reaction        String?        // emoji da reação — null = sem reação
+
   @@index([conversation_id, timestamp(sort: Desc)])
   @@map("wa_messages")
 }

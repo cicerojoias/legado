@@ -15,15 +15,19 @@ interface WaMessage {
   mediaUrl?: string | null
   mimeType?: string | null
   replyToSnapshot?: string | null
+  reaction?: string | null
 }
 
 interface MessageBubbleProps {
   message: WaMessage
   onReply?: () => void
+  onReact?: (emoji: string) => void
 }
 
 const SWIPE_THRESHOLD = 60 // px para acionar reply
 const SWIPE_MAX = 80       // px máximo de arrasto (rubber band)
+const LONG_PRESS_MS = 500  // ms para acionar o picker de reações
+const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
@@ -108,7 +112,7 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
   return null
 }
 
-export function MessageBubble({ message, onReply }: MessageBubbleProps) {
+export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps) {
   const isOutbound = message.direction === 'outbound'
 
   // ── Swipe-to-reply state ──────────────────────────────────────────────────
@@ -117,12 +121,31 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const dragXRef = useRef(0)
   const onReplyRef = useRef(onReply)
+  const onReactRef = useRef(onReact)
 
   useEffect(() => { onReplyRef.current = onReply }, [onReply])
+  useEffect(() => { onReactRef.current = onReact }, [onReact])
 
+  // ── Reaction picker state ─────────────────────────────────────────────────
+  const [showPicker, setShowPicker] = useState(false)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Fechar picker ao tocar fora
+  useEffect(() => {
+    if (!showPicker) return
+    const close = () => setShowPicker(false)
+    document.addEventListener('touchstart', close, { once: true, passive: true })
+    document.addEventListener('mousedown', close, { once: true })
+    return () => {
+      document.removeEventListener('touchstart', close)
+      document.removeEventListener('mousedown', close)
+    }
+  }, [showPicker])
+
+  // ── Touch listeners: swipe + long press ──────────────────────────────────
   useEffect(() => {
     const el = wrapperRef.current
-    if (!el || !onReply) return
+    if (!el) return
 
     let startX = 0
     let startY = 0
@@ -132,15 +155,27 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
       active = false
+
+      // Iniciar timer de long press
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null
+        setShowPicker(true)
+      }, LONG_PRESS_MS)
     }
 
     const onTouchMove = (e: TouchEvent) => {
       const dx = e.touches[0].clientX - startX
       const dy = e.touches[0].clientY - startY
 
-      // Se movimento vertical dominante e ainda não confirmamos horizontal, ignora
+      // Cancelar long press se o dedo moveu
+      if ((Math.abs(dx) > 8 || Math.abs(dy) > 8) && longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+
+      // Lógica de swipe-to-reply
+      if (!onReplyRef.current) return
       if (!active && Math.abs(dy) > Math.abs(dx)) return
-      // Só ativa para arrasto para a direita
       if (dx <= 0) {
         if (active) { dragXRef.current = 0; setDragX(0) }
         return
@@ -154,6 +189,12 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
     }
 
     const onTouchEnd = () => {
+      // Cancelar long press pendente
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+
       if (active && dragXRef.current >= SWIPE_THRESHOLD) {
         onReplyRef.current?.()
       }
@@ -172,8 +213,9 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
-  }, [onReply])
+  }, []) // refs são estáveis — sem deps necessárias
 
   const replyProgress = Math.min(dragX / SWIPE_THRESHOLD, 1)
 
@@ -186,8 +228,15 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
     return <Check className="w-3 h-3 text-muted-foreground" />
   }
 
+  const handleEmojiSelect = (emoji: string) => {
+    // Toggle: se o mesmo emoji já está selecionado, remove
+    const next = message.reaction === emoji ? '' : emoji
+    onReactRef.current?.(next)
+    setShowPicker(false)
+  }
+
   return (
-    <div ref={wrapperRef} className="relative mb-2">
+    <div ref={wrapperRef} className="relative mb-4">
       {/* Ícone de reply fixo — aparece conforme o arrasto */}
       {onReply && (
         <div
@@ -225,41 +274,88 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
           </button>
         )}
 
-        <div
-          className={cn(
-            'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl shadow-sm',
-            isOutbound
-              ? 'bg-primary text-primary-foreground rounded-tr-none'
-              : 'bg-card text-card-foreground border rounded-tl-none'
-          )}
-        >
-          {/* Quote snippet — mensagem citada */}
-          {message.replyToSnapshot && (
+        {/* Bolha + picker de reações */}
+        <div className="relative">
+          {/* Picker de reações — aparece acima da bolha */}
+          {showPicker && (
             <div
               className={cn(
-                'mb-2 pl-2 border-l-2 rounded text-xs line-clamp-2 opacity-80',
-                isOutbound ? 'border-white/60 bg-white/10 px-2 py-1' : 'border-primary/60 bg-primary/5 px-2 py-1'
+                'absolute z-50 bottom-full mb-2 flex items-center gap-0.5',
+                'bg-background border rounded-full shadow-xl px-2 py-1.5',
+                isOutbound ? 'right-0' : 'left-0'
               )}
+              onTouchStart={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
-              {message.replyToSnapshot}
+              {REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  className={cn(
+                    'w-10 h-10 flex items-center justify-center rounded-full text-xl transition-transform active:scale-90',
+                    'hover:bg-muted',
+                    message.reaction === emoji && 'bg-primary/10 ring-2 ring-primary/30'
+                  )}
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
           )}
 
-          {/* Renderiza Mídia se houver */}
-          <MediaBody message={message} isOutbound={isOutbound} />
+          <div
+            className={cn(
+              'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl shadow-sm',
+              isOutbound
+                ? 'bg-primary text-primary-foreground rounded-tr-none'
+                : 'bg-card text-card-foreground border rounded-tl-none'
+            )}
+          >
+            {/* Quote snippet — mensagem citada */}
+            {message.replyToSnapshot && (
+              <div
+                className={cn(
+                  'mb-2 pl-2 border-l-2 rounded text-xs line-clamp-2 opacity-80',
+                  isOutbound ? 'border-white/60 bg-white/10 px-2 py-1' : 'border-primary/60 bg-primary/5 px-2 py-1'
+                )}
+              >
+                {message.replyToSnapshot}
+              </div>
+            )}
 
-          {/* Texto da Mensagem */}
-          {message.content && message.type === 'text' && (
-            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-              {message.content}
-            </p>
-          )}
+            {/* Renderiza Mídia se houver */}
+            <MediaBody message={message} isOutbound={isOutbound} />
 
-          {/* Rodapé: Hora e Status */}
-          <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
-            <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
-            <StatusIcon />
+            {/* Texto da Mensagem */}
+            {message.content && message.type === 'text' && (
+              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                {message.content}
+              </p>
+            )}
+
+            {/* Rodapé: Hora e Status */}
+            <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
+              <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
+              <StatusIcon />
+            </div>
           </div>
+
+          {/* Badge de reação — aparece abaixo da bolha */}
+          {message.reaction && (
+            <button
+              onClick={() => onReactRef.current?.('')}
+              className={cn(
+                'absolute -bottom-3 z-10',
+                'flex items-center justify-center w-6 h-6 rounded-full',
+                'bg-background border shadow-sm text-base leading-none',
+                'hover:scale-110 transition-transform active:scale-90',
+                isOutbound ? '-left-1' : '-right-1'
+              )}
+              title="Remover reação"
+            >
+              {message.reaction}
+            </button>
+          )}
         </div>
       </div>
     </div>

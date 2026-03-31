@@ -44,12 +44,13 @@ export interface WebhookPayload {
           from: string
           id: string
           timestamp: string
-          type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'unknown'
+          type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'reaction' | 'unknown'
           text?: { body: string }
           image?: { caption?: string; mime_type: string; id: string; sha256: string }
           audio?: { mime_type: string; id: string }
           video?: { caption?: string; mime_type: string; id: string; sha256: string }
           document?: { filename?: string; mime_type: string; id: string; sha256: string }
+          reaction?: { message_id: string; emoji: string }
           context?: { from: string; id: string }
         }>
         statuses?: Array<{

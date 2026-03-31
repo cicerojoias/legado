@@ -28,6 +28,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
 
   const [pendingCount, setPendingCount] = useState(0)
+  const reactingRef = useRef<Set<string>>(new Set())
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -164,11 +165,11 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const updated = payload.new as { id: string; status: string; mediaUrl: string | null }
+          const updated = payload.new as { id: string; status: string; mediaUrl: string | null; reaction: string | null }
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updated.id
-                ? { ...m, status: updated.status, mediaUrl: updated.mediaUrl ?? m.mediaUrl }
+                ? { ...m, status: updated.status, mediaUrl: updated.mediaUrl ?? m.mediaUrl, reaction: updated.reaction }
                 : m
             )
           )
@@ -208,6 +209,30 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     if (!lastInbound) return true
     return Date.now() - new Date(lastInbound.timestamp).getTime() > WINDOW_MS
   }, [messages])
+
+  const handleReact = useCallback((messageId: string, emoji: string) => {
+    // Dedup — ignora se já há uma requisição em andamento para esta mensagem
+    if (reactingRef.current.has(messageId)) return
+    reactingRef.current.add(messageId)
+
+    // Atualização otimista imediata
+    setMessages((prev) =>
+      prev.map((m) => m.id === messageId ? { ...m, reaction: emoji || null } : m)
+    )
+
+    fetch('/api/whatsapp/react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId, emoji }),
+    })
+      .catch(() => {
+        // Reverter em caso de erro
+        setMessages((prev) =>
+          prev.map((m) => m.id === messageId ? { ...m, reaction: m.reaction } : m)
+        )
+      })
+      .finally(() => { reactingRef.current.delete(messageId) })
+  }, [])
 
   const handleMessageSent = useCallback(() => {
     // Refetch das últimas 100 após envio (usuário está no fundo — não há perda de contexto)
@@ -252,6 +277,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
                 content: msg.content ?? '[Mídia]',
                 direction: msg.direction,
               })}
+              onReact={(emoji) => handleReact(msg.id, emoji)}
             />
           ))
         )}
