@@ -29,6 +29,12 @@ const SWIPE_MAX = 80       // px máximo de arrasto (rubber band)
 const LONG_PRESS_MS = 500  // ms para acionar o picker de reações
 const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 
+// Alturas aproximadas do header (ContactHeader) e do footer (MessageInput)
+// usadas para calcular se há espaço suficiente acima ou abaixo para o picker
+const HEADER_H = 60  // px
+const FOOTER_H = 72  // px
+const PICKER_H = 56  // px (h-10 dos botões + padding vertical)
+
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
   const { mediaUrl, mimeType, content, type } = message
@@ -128,6 +134,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
   // ── Reaction picker state ─────────────────────────────────────────────────
   const [showPicker, setShowPicker] = useState(false)
+  const [pickerDir, setPickerDir] = useState<'above' | 'below'>('above')
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fechar picker ao tocar fora
@@ -159,6 +166,11 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
       // Iniciar timer de long press
       longPressTimerRef.current = setTimeout(() => {
         longPressTimerRef.current = null
+        // Decidir direção do picker com base no espaço disponível
+        const rect = el.getBoundingClientRect()
+        const spaceAbove = rect.top - HEADER_H
+        const spaceBelow = window.innerHeight - rect.bottom - FOOTER_H
+        setPickerDir(spaceAbove >= PICKER_H || spaceAbove >= spaceBelow ? 'above' : 'below')
         setShowPicker(true)
       }, LONG_PRESS_MS)
     }
@@ -276,12 +288,13 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
         {/* Bolha + picker de reações */}
         <div className="relative">
-          {/* Picker de reações — aparece acima da bolha */}
+          {/* Picker de reações — direção calculada no long-press */}
           {showPicker && (
             <div
               className={cn(
-                'absolute z-50 bottom-full mb-2 flex items-center gap-0.5',
+                'absolute z-50 flex items-center gap-0.5',
                 'bg-background border rounded-full shadow-xl px-2 py-1.5',
+                pickerDir === 'above' ? 'bottom-full mb-2' : 'top-full mt-2',
                 isOutbound ? 'right-0' : 'left-0'
               )}
               onTouchStart={(e) => e.stopPropagation()}
