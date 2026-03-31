@@ -136,17 +136,17 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   const [showPicker, setShowPicker] = useState(false)
   const [pickerDir, setPickerDir] = useState<'above' | 'below'>('above')
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Ref para leitura síncrona dentro dos listeners nativos (closure não captura state)
+  const showPickerRef = useRef(false)
+  useEffect(() => { showPickerRef.current = showPicker }, [showPicker])
 
-  // Fechar picker ao tocar fora
+  // Fechar picker ao clicar/tocar fora — usa 'click' (dispara após touchend,
+  // depois que o onClick do emoji já foi processado pelo React)
   useEffect(() => {
     if (!showPicker) return
     const close = () => setShowPicker(false)
-    document.addEventListener('touchstart', close, { once: true, passive: true })
-    document.addEventListener('mousedown', close, { once: true })
-    return () => {
-      document.removeEventListener('touchstart', close)
-      document.removeEventListener('mousedown', close)
-    }
+    document.addEventListener('click', close, { once: true })
+    return () => { document.removeEventListener('click', close) }
   }, [showPicker])
 
   // ── Touch listeners: swipe + long press ──────────────────────────────────
@@ -159,6 +159,9 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
     let active = false
 
     const onTouchStart = (e: TouchEvent) => {
+      // Picker aberto — ignorar touchstart para não iniciar novo timer
+      if (showPickerRef.current) return
+
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
       active = false
@@ -297,8 +300,6 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
                 pickerDir === 'above' ? 'bottom-full mb-2' : 'top-full mt-2',
                 isOutbound ? 'right-0' : 'left-0'
               )}
-              onTouchStart={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
             >
               {REACTIONS.map((emoji) => (
                 <button
