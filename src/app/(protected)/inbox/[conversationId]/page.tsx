@@ -57,7 +57,7 @@ export default async function ConversationPage({ params }: PageProps) {
       </div>
 
       {/* Área do chat — ocupa tela cheia no mobile */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <ContactHeader
           contact={contact}
           conversation={conversation}
