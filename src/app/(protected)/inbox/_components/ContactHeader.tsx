@@ -16,6 +16,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useSelectionState } from './SelectionContext'
+import { SelectionHeaderOverlay } from './SelectionHeaderOverlay'
 
 interface ContactHeaderProps {
   contact: WaContact
@@ -33,9 +35,11 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
   const router = useRouter()
   const [resolving, setResolving] = useState(false)
   const [status, setStatus] = useState(conversation.status)
-  
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'clear' | 'delete' | null>(null)
+
+  const { active } = useSelectionState()
 
   async function handleResolve() {
     setResolving(true)
@@ -84,6 +88,16 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
     .map((w: string) => w[0])
     .join('')
     .toUpperCase()
+
+  // Modo seleção: renderiza overlay no lugar do header normal
+  if (active) {
+    return (
+      <SelectionHeaderOverlay
+        contactName={contact.name ?? contact.phone}
+        conversationId={conversation.id}
+      />
+    )
+  }
 
   return (
     <>

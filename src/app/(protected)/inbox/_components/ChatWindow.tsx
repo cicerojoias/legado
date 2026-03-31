@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { WaMessage } from '@prisma/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TemplateSelector } from './TemplateSelector'
+import { useSelectionState } from './SelectionContext'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 const PAGE_SIZE = 100
@@ -29,6 +31,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
   const [pendingCount, setPendingCount] = useState(0)
   const reactingRef = useRef<Set<string>>(new Set())
+
+  const { active: selectionActive } = useSelectionState()
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -165,11 +169,25 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const updated = payload.new as { id: string; status: string; mediaUrl: string | null; reaction: string | null }
+          const updated = payload.new as {
+            id: string
+            status: string
+            mediaUrl: string | null
+            reaction: string | null
+            type: string
+            content: string | null
+          }
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updated.id
-                ? { ...m, status: updated.status, mediaUrl: updated.mediaUrl ?? m.mediaUrl, reaction: updated.reaction }
+                ? {
+                    ...m,
+                    status: updated.status,
+                    mediaUrl: updated.type === 'deleted' ? null : (updated.mediaUrl ?? m.mediaUrl),
+                    reaction: updated.type === 'deleted' ? null : updated.reaction,
+                    type: updated.type,
+                    content: updated.type === 'deleted' ? null : updated.content,
+                  }
                 : m
             )
           )
@@ -252,7 +270,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Área de mensagens — scroll interno */}
       <div className="relative flex-1 min-h-0">
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="h-full overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className={cn('h-full overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2', selectionActive && 'select-none')}>
         {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
         <div ref={topSentinelRef} className="h-1" />
 

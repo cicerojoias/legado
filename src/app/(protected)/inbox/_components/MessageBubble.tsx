@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSelectionState, useSelectionActions } from './SelectionContext'
 
 // Tipo local para evitar erro de exportação do Prisma Client
 interface WaMessage {
@@ -16,6 +17,7 @@ interface WaMessage {
   mimeType?: string | null
   replyToSnapshot?: string | null
   reaction?: string | null
+  wa_message_id?: string | null
 }
 
 interface MessageBubbleProps {
@@ -26,14 +28,13 @@ interface MessageBubbleProps {
 
 const SWIPE_THRESHOLD = 60 // px para acionar reply
 const SWIPE_MAX = 80       // px máximo de arrasto (rubber band)
-const LONG_PRESS_MS = 500  // ms para acionar o picker de reações
+const LONG_PRESS_MS = 500  // ms para acionar long press
 const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 
-// Alturas aproximadas do header (ContactHeader) e do footer (MessageInput)
-// usadas para calcular se há espaço suficiente acima ou abaixo para o picker
-const HEADER_H = 60  // px
-const FOOTER_H = 72  // px
-const PICKER_H = 56  // px (h-10 dos botões + padding vertical)
+// Alturas aproximadas do header e footer para posicionar o picker
+const HEADER_H = 60
+const FOOTER_H = 72
+const PICKER_H = 56
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
@@ -121,6 +122,24 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
 export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps) {
   const isOutbound = message.direction === 'outbound'
 
+  // ── Todos os hooks devem ser chamados incondicionalmente (React Rules of Hooks) ──
+  // O early-return para mensagens apagadas vem DEPOIS deste bloco.
+
+  // ── Selection context ─────────────────────────────────────────────────────
+  const { active, selected } = useSelectionState()
+  const { enter, toggle } = useSelectionActions()
+  const isSelected = selected.has(message.id)
+
+  // Refs estáveis para closures nos listeners nativos
+  const enterRef = useRef(enter)
+  const toggleRef = useRef(toggle)
+  useEffect(() => { enterRef.current = enter }, [enter])
+  useEffect(() => { toggleRef.current = toggle }, [toggle])
+
+  // activeRef: leitura síncrona dentro de handlers nativos (closure não captura state)
+  const activeRef = useRef(active)
+  useEffect(() => { activeRef.current = active }, [active])
+
   // ── Swipe-to-reply state ──────────────────────────────────────────────────
   const [dragX, setDragX] = useState(0)
   const [snapping, setSnapping] = useState(false)
@@ -133,21 +152,30 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   useEffect(() => { onReactRef.current = onReact }, [onReact])
 
   // ── Reaction picker state ─────────────────────────────────────────────────
+  // Picker agora é acionado pelo botão Smile (não mais por long press)
   const [showPicker, setShowPicker] = useState(false)
   const [pickerDir, setPickerDir] = useState<'above' | 'below'>('above')
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Ref para leitura síncrona dentro dos listeners nativos (closure não captura state)
   const showPickerRef = useRef(false)
   useEffect(() => { showPickerRef.current = showPicker }, [showPicker])
 
-  // Fechar picker ao clicar/tocar fora — usa 'click' (dispara após touchend,
-  // depois que o onClick do emoji já foi processado pelo React)
+  // Fechar picker ao clicar fora
   useEffect(() => {
     if (!showPicker) return
     const close = () => setShowPicker(false)
     document.addEventListener('click', close, { once: true })
     return () => { document.removeEventListener('click', close) }
   }, [showPicker])
+
+  // Abrir picker de reações — calcula direção conforme espaço disponível
+  const openPicker = () => {
+    if (!wrapperRef.current) return
+    const rect = wrapperRef.current.getBoundingClientRect()
+    const spaceAbove = rect.top - HEADER_H
+    const spaceBelow = window.innerHeight - rect.bottom - FOOTER_H
+    setPickerDir(spaceAbove >= PICKER_H || spaceAbove >= spaceBelow ? 'above' : 'below')
+    setShowPicker(true)
+  }
 
   // ── Touch listeners: swipe + long press ──────────────────────────────────
   useEffect(() => {
@@ -156,25 +184,31 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
     let startX = 0
     let startY = 0
-    let active = false
+    let swiping = false        // evita conflito com `active` do selection context
+    let longPressFired = false
 
     const onTouchStart = (e: TouchEvent) => {
-      // Picker aberto — ignorar touchstart para não iniciar novo timer
       if (showPickerRef.current) return
 
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
-      active = false
+      swiping = false
+      longPressFired = false
 
-      // Iniciar timer de long press
       longPressTimerRef.current = setTimeout(() => {
         longPressTimerRef.current = null
-        // Decidir direção do picker com base no espaço disponível
-        const rect = el.getBoundingClientRect()
-        const spaceAbove = rect.top - HEADER_H
-        const spaceBelow = window.innerHeight - rect.bottom - FOOTER_H
-        setPickerDir(spaceAbove >= PICKER_H || spaceAbove >= spaceBelow ? 'above' : 'below')
-        setShowPicker(true)
+        longPressFired = true
+
+        if (activeRef.current) return // selection mode ativo: long press é no-op
+
+        // Entra no modo seleção com esta mensagem
+        enterRef.current({
+          id: message.id,
+          content: message.content,
+          direction: message.direction,
+          timestamp: message.timestamp,
+          wa_message_id: message.wa_message_id ?? null,
+        })
       }, LONG_PRESS_MS)
     }
 
@@ -188,36 +222,49 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
         longPressTimerRef.current = null
       }
 
-      // Lógica de swipe-to-reply
+      // Swipe desativado em modo seleção
+      if (activeRef.current) return
       if (!onReplyRef.current) return
-      if (!active && Math.abs(dy) > Math.abs(dx)) return
+      if (!swiping && Math.abs(dy) > Math.abs(dx)) return
       if (dx <= 0) {
-        if (active) { dragXRef.current = 0; setDragX(0) }
+        if (swiping) { dragXRef.current = 0; setDragX(0) }
         return
       }
 
-      active = true
-      e.preventDefault() // bloqueia scroll vertical durante swipe horizontal
+      swiping = true
+      e.preventDefault()
       const clamped = Math.min(dx, SWIPE_MAX)
       dragXRef.current = clamped
       setDragX(clamped)
     }
 
     const onTouchEnd = () => {
-      // Cancelar long press pendente
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current)
         longPressTimerRef.current = null
       }
 
-      if (active && dragXRef.current >= SWIPE_THRESHOLD) {
+      // Tap curto em modo seleção → toggle
+      if (!longPressFired && !swiping && activeRef.current) {
+        toggleRef.current({
+          id: message.id,
+          content: message.content,
+          direction: message.direction,
+          timestamp: message.timestamp,
+          wa_message_id: message.wa_message_id ?? null,
+        })
+      }
+
+      // Swipe completo → reply
+      if (!activeRef.current && swiping && dragXRef.current >= SWIPE_THRESHOLD) {
         onReplyRef.current?.()
       }
+
       dragXRef.current = 0
       setDragX(0)
       setSnapping(true)
       setTimeout(() => setSnapping(false), 200)
-      active = false
+      swiping = false
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -232,6 +279,38 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
     }
   }, []) // refs são estáveis — sem deps necessárias
 
+  // ── Mensagem apagada — renderização simplificada (após todos os hooks) ─────
+  if (message.type === 'deleted') {
+    return (
+      <div className="relative mb-4">
+        <div className={cn('flex w-full items-end', isOutbound ? 'flex-row-reverse' : 'flex-row')}>
+          <div
+            className={cn(
+              'px-3 py-2 rounded-2xl max-w-[85%] sm:max-w-[70%]',
+              isOutbound
+                ? 'bg-primary/20 text-primary-foreground/60 rounded-tr-none'
+                : 'bg-card border text-muted-foreground rounded-tl-none'
+            )}
+          >
+            <p className="text-sm italic flex items-center gap-1.5">
+              <Ban className="w-3.5 h-3.5 shrink-0 opacity-70" />
+              Mensagem apagada
+            </p>
+            <div className="flex items-center gap-1 mt-1 text-[10px] opacity-50 justify-end">
+              <span>
+                {new Intl.DateTimeFormat('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'America/Recife',
+                }).format(new Date(message.timestamp))}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const replyProgress = Math.min(dragX / SWIPE_THRESHOLD, 1)
 
   // ── Status icon ───────────────────────────────────────────────────────────
@@ -244,16 +323,24 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   }
 
   const handleEmojiSelect = (emoji: string) => {
-    // Toggle: se o mesmo emoji já está selecionado, remove
     const next = message.reaction === emoji ? '' : emoji
     onReactRef.current?.(next)
     setShowPicker(false)
   }
 
   return (
-    <div ref={wrapperRef} className="relative mb-4">
-      {/* Ícone de swipe-to-reply — mobile only, acompanha o progresso do arrasto */}
-      {onReply && (
+    <div
+      ref={wrapperRef}
+      className={cn(
+        'relative mb-4 rounded-lg transition-colors',
+        // Highlight de seleção — usa cor primary do projeto (#184434)
+        isSelected && 'bg-primary/10',
+        // user-select: none em modo seleção para evitar seleção de texto nativa
+        active && 'select-none'
+      )}
+    >
+      {/* Ícone de swipe-to-reply — mobile only, acompanha progresso do arrasto */}
+      {onReply && !active && (
         <div
           className="absolute left-3 inset-y-0 flex items-center text-muted-foreground pointer-events-none md:hidden"
           style={{
@@ -277,21 +364,54 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
           transition: snapping ? 'transform 0.2s ease-out' : 'none',
         }}
       >
-        {/* Botão de reply no hover — desktop only */}
-        {onReply && (
-          <button
-            onClick={onReply}
-            className="hidden md:inline-flex shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
-            title="Responder"
-            aria-label="Responder mensagem"
-          >
-            <Reply className="w-4 h-4" />
-          </button>
+        {/* Checkmark de seleção — substitui os botões de ação quando selecionado */}
+        {active && (
+          <div className="shrink-0 flex items-end pb-1 px-1">
+            <CheckCircle2
+              className={cn(
+                'w-5 h-5 transition-colors',
+                isSelected ? 'text-primary fill-primary/20' : 'text-muted-foreground/40'
+              )}
+            />
+          </div>
+        )}
+
+        {/* Botões de ação (reply + emoji) — desktop hover, ocultos em modo seleção */}
+        {!active && (
+          <>
+            {/* Botão de reply no hover — desktop only */}
+            {onReply && (
+              <button
+                onClick={onReply}
+                className="hidden md:inline-flex shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
+                title="Responder"
+                aria-label="Responder mensagem"
+              >
+                <Reply className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Botão de reação — desktop hover + mobile sempre visível (pequeno) */}
+            {onReact && (
+              <button
+                onClick={(e) => { e.stopPropagation(); openPicker() }}
+                className={cn(
+                  'shrink-0 p-1 text-muted-foreground transition-opacity',
+                  // Desktop: aparece no hover
+                  'hidden md:inline-flex opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
+                )}
+                title="Reagir"
+                aria-label="Reagir à mensagem"
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+            )}
+          </>
         )}
 
         {/* Bolha + picker de reações */}
         <div className="relative">
-          {/* Picker de reações — direção calculada no long-press */}
+          {/* Picker de reações — direção calculada ao abrir */}
           {showPicker && (
             <div
               className={cn(
@@ -322,7 +442,10 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
               'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl shadow-sm',
               isOutbound
                 ? 'bg-primary text-primary-foreground rounded-tr-none'
-                : 'bg-card text-card-foreground border rounded-tl-none'
+                : 'bg-card text-card-foreground border rounded-tl-none',
+              // Anel de seleção sobre a bolha
+              isSelected && isOutbound && 'ring-2 ring-primary-foreground/30',
+              isSelected && !isOutbound && 'ring-2 ring-primary/30',
             )}
           >
             {/* Quote snippet — mensagem citada */}
@@ -355,7 +478,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
           </div>
 
           {/* Badge de reação — aparece abaixo da bolha */}
-          {message.reaction && (
+          {message.reaction && !active && (
             <button
               onClick={() => onReactRef.current?.('')}
               className={cn(

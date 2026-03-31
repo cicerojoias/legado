@@ -306,6 +306,33 @@ export async function sendReaction(
 }
 
 /**
+ * Deleta (unsend) uma mensagem para todos os participantes via Meta Cloud API.
+ * Só funciona para mensagens enviadas pelo negócio (outbound) dentro da janela permitida (~60h).
+ * Endpoint: DELETE /{message_id}  com body { phone_number_id }
+ *
+ * @param waMessageId - ID da mensagem na Meta (wamid.xxx)
+ * @throws Error se a Meta retornar status != 2xx
+ */
+export async function deleteMessage(waMessageId: string): Promise<void> {
+  const phoneId = getPhoneId()
+  const token = getToken()
+
+  const res = await fetch(`${BASE_URL}/${waMessageId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ phone_number_id: phoneId }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Meta deleteMessage error ${res.status}: ${err}`)
+  }
+}
+
+/**
  * Baixa o binário de uma mídia da Meta em dois passos:
  * 1. Resolve o URL de download usando o media_id
  * 2. Faz o GET autenticado para baixar o buffer
