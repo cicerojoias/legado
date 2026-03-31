@@ -150,7 +150,7 @@ export function ForwardModal({ open, onClose, messageIds, messageCount, onForwar
       {/* ── Backdrop ────────────────────────────────────────────────────────── */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/60 transition-opacity duration-300',
+          'fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300',
           visible ? 'opacity-100' : 'opacity-0'
         )}
         onClick={onClose}
@@ -159,7 +159,7 @@ export function ForwardModal({ open, onClose, messageIds, messageCount, onForwar
       {/* ── Bottom sheet ────────────────────────────────────────────────────── */}
       <div
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-background shadow-2xl',
+          'fixed bottom-0 left-0 right-0 z-[61] flex flex-col rounded-t-2xl bg-background shadow-2xl',
           'transition-transform duration-300 ease-out',
           'max-h-[82dvh]',
           visible ? 'translate-y-0' : 'translate-y-full'
