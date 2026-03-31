@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import type { WaMessage } from '@prisma/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +12,7 @@ import { TemplateSelector } from './TemplateSelector'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 const PAGE_SIZE = 100
+const BOTTOM_THRESHOLD = 150 // px — considera "no fundo" se dentro desse limite
 
 interface ChatWindowProps {
   conversationId: string
@@ -25,10 +27,14 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
 
+  const [pendingCount, setPendingCount] = useState(0)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const isAtBottomRef = useRef(true)
+  const rafRef = useRef<number | null>(null)
 
   const scrollToBottom = useCallback((smooth = true) => {
     const el = scrollContainerRef.current
@@ -41,6 +47,23 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       })
     }
   }, [])
+
+  const handleScroll = useCallback(() => {
+    if (rafRef.current !== null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const el = scrollContainerRef.current
+      if (!el) return
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      isAtBottomRef.current = distanceFromBottom <= BOTTOM_THRESHOLD
+    })
+  }, [])
+
+  const handleJumpToBottom = useCallback(() => {
+    scrollToBottom()
+    setPendingCount(0)
+    fetch(`/api/whatsapp/conversations/${conversationId}/mark-read`, { method: 'POST' }).catch(() => {})
+  }, [conversationId, scrollToBottom])
 
   // Scroll inicial + reprocessar mídias pendentes ao abrir a conversa
   useEffect(() => {
@@ -125,7 +148,11 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
             if (prev.some((m) => m.id === newMsg.id)) return prev
             return [...prev, newMsg]
           })
-          scrollToBottom()
+          if (isAtBottomRef.current) {
+            scrollToBottom()
+          } else if (newMsg.direction === 'inbound') {
+            setPendingCount((prev) => prev + 1)
+          }
         }
       )
       .on(
@@ -184,6 +211,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         const fresh: WaMessage[] = data.conversation?.messages ?? []
         setMessages(fresh)
         setHasMore(data.hasMore ?? false)
+        setPendingCount(0)
         scrollToBottom()
       })
       .catch(() => {})
@@ -192,7 +220,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Área de mensagens — scroll interno */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-2">
+      <div className="relative flex-1 min-h-0">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-4 space-y-2">
         {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
         <div ref={topSentinelRef} className="h-1" />
 
@@ -221,6 +250,18 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           ))
         )}
         <div ref={bottomRef} />
+      </div>
+
+      {/* Botão flutuante "↓ N novas" — visível quando scrollado para cima e há mensagens pendentes */}
+      {pendingCount > 0 && (
+        <button
+          onClick={handleJumpToBottom}
+          className="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 shadow-lg hover:bg-primary/90 transition-colors"
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+          {pendingCount}
+        </button>
+      )}
       </div>
 
       {windowExpired ? (
