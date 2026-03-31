@@ -30,8 +30,22 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Conversa não encontrada' }, { status: 404 })
     }
 
+    // Resolver wa_message_id da mensagem citada (necessário para o campo context da Meta)
+    let contextWaMessageId: string | undefined
+    if (replyToId) {
+      const replyMsg = await prisma.waMessage.findUnique({
+        where: { id: replyToId },
+        select: { wa_message_id: true },
+      })
+      contextWaMessageId = replyMsg?.wa_message_id ?? undefined
+    }
+
     // Enviar via Meta Cloud API
-    const waMessageId = await sendTextMessage(conversation.contact.phone, text.trim())
+    const waMessageId = await sendTextMessage(
+      conversation.contact.phone,
+      text.trim(),
+      contextWaMessageId
+    )
 
     // Persistir mensagem enviada
     const message = await prisma.waMessage.create({

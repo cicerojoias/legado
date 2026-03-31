@@ -16,11 +16,28 @@ function getToken(): string {
 
 /**
  * Envia uma mensagem de texto para um destinatário.
+ * @param contextWaMessageId - wa_message_id da mensagem citada (reply). Deve ser o ID
+ *   retornado pela Meta (formato wamid.xxx), não o ID interno do banco.
  * @returns o wa_message_id retornado pela Meta
  */
-export async function sendTextMessage(to: string, text: string): Promise<string> {
+export async function sendTextMessage(
+  to: string,
+  text: string,
+  contextWaMessageId?: string
+): Promise<string> {
   const phoneId = getPhoneId()
   const token = getToken()
+
+  const payload: Record<string, unknown> = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: text },
+  }
+
+  if (contextWaMessageId) {
+    payload.context = { message_id: contextWaMessageId }
+  }
 
   const res = await fetch(`${BASE_URL}/${phoneId}/messages`, {
     method: 'POST',
@@ -28,12 +45,7 @@ export async function sendTextMessage(to: string, text: string): Promise<string>
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to,
-      type: 'text',
-      text: { body: text },
-    }),
+    body: JSON.stringify(payload),
   })
 
   if (!res.ok) {
