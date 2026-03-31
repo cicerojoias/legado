@@ -51,11 +51,11 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.12.1', data: '31/03/2026', resumo: 'WAB: fix reply — citação aparece corretamente no WhatsApp do cliente' },
     { versao: '0.12.0', data: '31/03/2026', resumo: 'WAB: scroll inteligente com botão flutuante de novas mensagens' },
     { versao: '0.11.0', data: '31/03/2026', resumo: 'WAB: Realtime, não lidas, infinite scroll, reply e busca' },
     { versao: '0.10.0', data: '31/03/2026', resumo: 'WAB: push notifications nativas via Web Push / VAPID' },
     { versao: '0.9.0', data: '31/03/2026', resumo: 'WAB: templates 24h, RBAC, ícone WhatsApp oficial, checks dourados' },
-    { versao: '0.8.0', data: '08/03/2026', resumo: 'RBAC reforçado, hydration fixes, seed 2026' },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export function PerfilContent({
                         <div className="bg-card rounded-xl border p-4 space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Versão</span>
-                                <span className="text-sm font-medium">0.12.0</span>
+                                <span className="text-sm font-medium">0.12.1</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Ambiente</span>
