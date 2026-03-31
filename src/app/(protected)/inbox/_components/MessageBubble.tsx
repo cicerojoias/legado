@@ -252,13 +252,13 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
   return (
     <div ref={wrapperRef} className="relative mb-4">
-      {/* Ícone de reply fixo — aparece conforme o arrasto */}
+      {/* Ícone de swipe-to-reply — mobile only, acompanha o progresso do arrasto */}
       {onReply && (
         <div
-          className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          className="absolute left-3 inset-y-0 flex items-center text-muted-foreground pointer-events-none md:hidden"
           style={{
             opacity: replyProgress,
-            transform: `translateY(-50%) scale(${0.5 + replyProgress * 0.5})`,
+            transform: `scale(${0.5 + replyProgress * 0.5})`,
             transition: snapping ? 'opacity 0.2s, transform 0.2s' : 'none',
           }}
         >
@@ -277,11 +277,11 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
           transition: snapping ? 'transform 0.2s ease-out' : 'none',
         }}
       >
-        {/* Botão de reply no hover (desktop) */}
+        {/* Botão de reply no hover — desktop only */}
         {onReply && (
           <button
             onClick={onReply}
-            className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
+            className="hidden md:inline-flex shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
             title="Responder"
             aria-label="Responder mensagem"
           >
