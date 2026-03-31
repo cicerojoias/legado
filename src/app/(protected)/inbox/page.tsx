@@ -1,32 +1,19 @@
 import { Suspense } from 'react'
 import { MessageCircle } from 'lucide-react'
-import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { ConversationList } from './_components/ConversationList'
+import { ConversationSidebar } from './_components/ConversationSidebar'
 
 export const metadata = { title: 'Inbox — Legado' }
 export const dynamic = 'force-dynamic'
 
-// Página principal do inbox.
-// Mobile: tela cheia com lista de conversas.
-// Desktop: painel esquerdo da UI split-pane (lado direito fica vazio até selecionar).
 export default function InboxPage() {
   return (
     <div className="flex h-full">
-      {/* Lista de conversas — ocupa tela cheia no mobile, coluna no desktop */}
-      <div className="w-full md:w-[360px] md:border-r flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-4 border-b">
-          <WhatsAppIcon className="w-5 h-5 text-primary" />
-          <h1 className="font-semibold text-lg">WhatsApp</h1>
-        </div>
-
-        {/* Lista scrollável */}
-        <div className="flex-1 overflow-y-auto">
-          <Suspense fallback={<ConversationListSkeleton />}>
-            <ConversationList />
-          </Suspense>
-        </div>
-      </div>
+      <ConversationSidebar>
+        <Suspense fallback={<ConversationListSkeleton />}>
+          <ConversationList />
+        </Suspense>
+      </ConversationSidebar>
 
       {/* Coluna de chat — só visível no desktop, vazia até selecionar */}
       <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">

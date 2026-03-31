@@ -8,8 +8,13 @@ export async function POST(req: Request) {
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   try {
-    const body = await req.json() as { conversationId: string; text: string }
-    const { conversationId, text } = body
+    const body = await req.json() as {
+      conversationId: string
+      text: string
+      replyToId?: string
+      replyToSnapshot?: string
+    }
+    const { conversationId, text, replyToId, replyToSnapshot } = body
 
     if (!conversationId || !text?.trim()) {
       return Response.json({ error: 'conversationId e text são obrigatórios' }, { status: 400 })
@@ -39,6 +44,8 @@ export async function POST(req: Request) {
         status: 'sent',
         sent_by: user.id,
         timestamp: new Date(),
+        replyToId: replyToId ?? null,
+        replyToSnapshot: replyToSnapshot ? replyToSnapshot.slice(0, 500) : null,
       },
     })
 

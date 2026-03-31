@@ -38,10 +38,11 @@ model User {
   notif_push     Boolean     @default(false)  // Recebe push notification diária
   notif_horario  String      @default("18:00") // Horário da notificação (HH:MM)
   
-  lancamentos       Lancamento[]
-  logs              Log[]
-  custos_fixos      CustoFixo[]
-  push_subscriptions WaPushSubscription[]
+  lancamentos           Lancamento[]
+  logs                  Log[]
+  custos_fixos          CustoFixo[]
+  push_subscriptions    WaPushSubscription[]
+  conversation_reads    WaConversationRead[]
 
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
@@ -134,7 +135,8 @@ model WaConversation {
   created_at      DateTime   @default(now())
   updated_at      DateTime   @updatedAt
 
-  messages WaMessage[]
+  messages           WaMessage[]
+  conversation_reads WaConversationRead[]
 
   @@index([last_message_at(sort: Desc)])
   @@index([status])
@@ -157,8 +159,30 @@ model WaMessage {
   timestamp       DateTime
   created_at      DateTime       @default(now())
 
+  // Reply
+  replyToId       String?
+  replyTo         WaMessage?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         WaMessage[]    @relation("MessageReply")
+  replyToSnapshot String?        @db.VarChar(500) // snapshot do conteúdo citado no momento do envio
+
   @@index([conversation_id, timestamp(sort: Desc)])
   @@map("wa_messages")
+}
+
+model WaConversationRead {
+  id              String         @id @default(uuid())
+  userId          String
+  conversationId  String
+  lastReadAt      DateTime       @default(now())
+  unreadCount     Int            @default(0)
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation    WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([userId])
+  @@index([conversationId])
+  @@map("wa_conversation_reads")
 }
 
 model WaPushSubscription {

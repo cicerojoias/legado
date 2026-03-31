@@ -21,8 +21,9 @@ function formatTime(date: Date | string | null): string {
 }
 
 export function ConversationItem({ conversation, isActive }: ConversationItemProps) {
-  const { contact, messages, status, last_message_at } = conversation
+  const { contact, messages, status, last_message_at, unreadCount } = conversation
   const lastMsg = messages[0]
+  const hasUnread = unreadCount > 0
   const initials = (contact.name ?? contact.phone)
     .split(' ')
     .slice(0, 2)
@@ -51,28 +52,35 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-semibold text-sm truncate">
+          <p className={cn('text-sm truncate', hasUnread ? 'font-bold' : 'font-semibold')}>
             {contact.name ?? contact.phone}
           </p>
-          <span className="text-xs text-muted-foreground shrink-0">
+          <span className={cn('text-xs shrink-0', hasUnread ? 'text-green-600 font-medium' : 'text-muted-foreground')}>
             {formatTime(last_message_at)}
           </span>
         </div>
-        <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-          {lastMsg && lastMsg.direction === 'outbound' && (
-            <span className="shrink-0 flex items-center">
-              {lastMsg.status === 'read' ? (
-                <CheckCheck className="w-[14px] h-[14px] text-accent" />
-              ) : lastMsg.status === 'delivered' ? (
-                <CheckCheck className="w-[14px] h-[14px]" />
-              ) : (
-                <Check className="w-[14px] h-[14px]" />
-              )}
+        <div className="flex items-center justify-between gap-1 mt-0.5">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
+            {lastMsg && lastMsg.direction === 'outbound' && (
+              <span className="shrink-0 flex items-center">
+                {lastMsg.status === 'read' ? (
+                  <CheckCheck className="w-[14px] h-[14px] text-accent" />
+                ) : lastMsg.status === 'delivered' ? (
+                  <CheckCheck className="w-[14px] h-[14px]" />
+                ) : (
+                  <Check className="w-[14px] h-[14px]" />
+                )}
+              </span>
+            )}
+            <span className={cn('truncate', hasUnread && 'text-foreground font-medium')}>
+              {lastMsg ? lastMsg.content : 'Sem mensagens'}
+            </span>
+          </div>
+          {hasUnread && (
+            <span className="shrink-0 min-w-[20px] h-5 bg-green-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5 leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
-          <span className="truncate">
-            {lastMsg ? lastMsg.content : 'Sem mensagens'}
-          </span>
         </div>
       </div>
     </Link>

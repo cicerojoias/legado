@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import { ConversationItem } from './ConversationItem'
 import type { ConversationWithPreview } from './types'
 
@@ -7,7 +8,11 @@ interface ConversationListProps {
 }
 
 export async function ConversationList({ activeId }: ConversationListProps) {
-  const conversations = await prisma.waConversation.findMany({
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? ''
+
+  const rawConversations = await prisma.waConversation.findMany({
     orderBy: { last_message_at: 'desc' },
     include: {
       contact: true,
@@ -15,9 +20,18 @@ export async function ConversationList({ activeId }: ConversationListProps) {
         orderBy: { timestamp: 'desc' },
         take: 1,
       },
+      conversation_reads: {
+        where: { userId },
+        take: 1,
+      },
     },
     take: 50,
-  }) as ConversationWithPreview[]
+  })
+
+  const conversations: ConversationWithPreview[] = rawConversations.map((conv) => ({
+    ...conv,
+    unreadCount: conv.conversation_reads[0]?.unreadCount ?? 0,
+  }))
 
   if (conversations.length === 0) {
     return (

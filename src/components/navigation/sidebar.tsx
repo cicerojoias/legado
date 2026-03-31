@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText, Sparkles } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWabUnreadTotal } from '@/hooks/use-wab-unread-total';
 import { cn } from '@/lib/utils';
 import { logoutAction } from '@/app/(auth)/logout/actions';
 
 export function Sidebar() {
     const pathname = usePathname();
     const { isAdmin, isSuperAdmin, isLoading } = usePermissions();
+    const wabUnread = useWabUnreadTotal();
 
     const handleLogout = async () => {
         await logoutAction();
@@ -135,6 +137,11 @@ export function Sidebar() {
                         >
                             <WhatsAppIcon className="w-4 h-4" />
                             WAB
+                            {wabUnread > 0 && (
+                                <span className="ml-auto min-w-[20px] h-5 bg-green-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5 leading-none">
+                                    {wabUnread > 99 ? '99+' : wabUnread}
+                                </span>
+                            )}
                         </Link>
                         <Link
                             href="/assistente"

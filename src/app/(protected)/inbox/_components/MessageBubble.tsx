@@ -1,4 +1,4 @@
-import { Check, CheckCheck, FileText, Download } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply } from 'lucide-react'
 import { cn } from '@/lib/utils'
 // Tipo local para evitar erro de exportação do Prisma Client
 interface WaMessage {
@@ -10,10 +10,12 @@ interface WaMessage {
   timestamp: Date | string
   mediaUrl?: string | null
   mimeType?: string | null
+  replyToSnapshot?: string | null
 }
 
 interface MessageBubbleProps {
   message: WaMessage
+  onReply?: () => void
 }
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
@@ -99,10 +101,9 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
   return null
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onReply }: MessageBubbleProps) {
   const isOutbound = message.direction === 'outbound'
-  
-  // Tratamento de Status do WhatsApp
+
   const StatusIcon = () => {
     if (!isOutbound) return null
     if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
@@ -114,10 +115,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div
       className={cn(
-        'group flex w-full mb-2',
-        isOutbound ? 'justify-end' : 'justify-start'
+        'group flex w-full mb-2 items-end gap-1',
+        isOutbound ? 'flex-row-reverse' : 'flex-row'
       )}
     >
+      {/* Botão de reply — aparece no hover (desktop) e em touch */}
+      {onReply && (
+        <button
+          onClick={onReply}
+          className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
+          title="Responder"
+          aria-label="Responder mensagem"
+        >
+          <Reply className="w-4 h-4" />
+        </button>
+      )}
+
       <div
         className={cn(
           'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl shadow-sm transition-all',
@@ -126,10 +139,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : 'bg-card text-card-foreground border rounded-tl-none'
         )}
       >
+        {/* Quote snippet — mensagem citada */}
+        {message.replyToSnapshot && (
+          <div
+            className={cn(
+              'mb-2 pl-2 border-l-2 rounded text-xs line-clamp-2 opacity-80',
+              isOutbound ? 'border-white/60 bg-white/10 px-2 py-1' : 'border-primary/60 bg-primary/5 px-2 py-1'
+            )}
+          >
+            {message.replyToSnapshot}
+          </div>
+        )}
+
         {/* Renderiza Mídia se houver */}
         <MediaBody message={message} isOutbound={isOutbound} />
 
-        {/* Texto da Mensagem (se não for legenda de imagem já renderizada) */}
+        {/* Texto da Mensagem */}
         {message.content && message.type === 'text' && (
           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
             {message.content}
@@ -137,11 +162,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         {/* Rodapé: Hora e Status */}
-        <div
-          className={cn(
-            'flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end'
-          )}
-        >
+        <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
           <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(message.timestamp))}</span>
           <StatusIcon />
         </div>

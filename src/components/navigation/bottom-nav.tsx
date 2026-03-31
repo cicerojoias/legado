@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Home, PieChart, User, Plus } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useWabUnreadTotal } from '@/hooks/use-wab-unread-total';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
 import { Suspense } from 'react';
@@ -14,6 +15,7 @@ export function BottomNav() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
+    const wabUnread = useWabUnreadTotal();
 
     // Loja da URL tem prioridade; se não tiver, usa a lojaPadrao; fallback: JOAO_PESSOA
     const lojaUrl = searchParams.get('loja') as 'JOAO_PESSOA' | 'SANTA_RITA' | null;
@@ -70,6 +72,8 @@ export function BottomNav() {
 
                 const isActive = pathname.startsWith(link.href);
                 const Icon = link.icon;
+                const isWab = link.href === '/inbox';
+                const showBadge = isWab && wabUnread > 0;
 
                 return (
                     <Link
@@ -78,10 +82,15 @@ export function BottomNav() {
                         className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-1"
                     >
                         <div className={cn(
-                            "p-1.5 rounded-full transition-colors flex items-center justify-center",
+                            "relative p-1.5 rounded-full transition-colors flex items-center justify-center",
                             isActive ? "text-primary" : "text-primary/60 hover:text-primary/80"
                         )}>
                             <Icon className="w-5 h-5" />
+                            {showBadge && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                                    {wabUnread > 99 ? '99+' : wabUnread}
+                                </span>
+                            )}
                             {isActive && (
                                 <motion.div
                                     layoutId="bottom-nav-indicator"

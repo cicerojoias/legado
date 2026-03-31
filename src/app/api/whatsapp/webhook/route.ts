@@ -8,6 +8,7 @@ import {
   markWebhookProcessed,
 } from '@/lib/whatsapp/webhook-dedup'
 import { dispatchPushForConversation } from '@/lib/whatsapp/push-dispatcher'
+import { incrementUnreadForConversation } from '@/lib/whatsapp/unread-manager'
 
 // GET: Verificação de Webhook (Facebook/Meta exige isso para validar o endpoint)
 export async function GET(req: NextRequest) {
@@ -138,10 +139,14 @@ export async function POST(req: NextRequest) {
               },
             })
 
-            // Dispara push após a resposta 200 ser enviada à Meta (não bloqueia o webhook)
+            // Dispara push e incrementa unreads após a resposta 200 (não bloqueia o webhook)
             after(() =>
               dispatchPushForConversation(waConversation.id, name, content || '[Mídia]')
                 .catch((err) => console.error('[webhook] push dispatch error:', err))
+            )
+            after(() =>
+              incrementUnreadForConversation(waConversation.id)
+                .catch((err) => console.error('[webhook] unread increment error:', err))
             )
           } catch (msgError) {
             console.error(`[webhook] Error processing message ${msg.id}:`, msgError)

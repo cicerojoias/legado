@@ -5,30 +5,46 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-// GET /api/whatsapp/conversations/[id] — conversa + mensagens paginadas
-export async function GET(_req: Request, { params }: RouteParams) {
+const PAGE_SIZE = 100
+
+// GET /api/whatsapp/conversations/[id]?before=<ISO>
+// Sem before: retorna as últimas PAGE_SIZE mensagens (mais recentes).
+// Com before: retorna PAGE_SIZE mensagens anteriores ao cursor (cursor-based pagination).
+// Resposta inclui hasMore para o cliente saber se deve exibir "carregar mais".
+export async function GET(req: Request, { params }: RouteParams) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   const { id } = await params
+  const { searchParams } = new URL(req.url)
+  const beforeParam = searchParams.get('before')
+  const before = beforeParam ? new Date(beforeParam) : null
 
   const conversation = await prisma.waConversation.findUnique({
     where: { id },
-    include: {
-      contact: true,
-      messages: {
-        orderBy: { timestamp: 'asc' },
-        take: 100,
-      },
-    },
+    include: { contact: true },
   })
 
   if (!conversation) {
     return Response.json({ error: 'Não encontrada' }, { status: 404 })
   }
 
-  return Response.json({ conversation })
+  // Busca PAGE_SIZE + 1 para detectar se há mais páginas (sem COUNT extra)
+  const rawMessages = await prisma.waMessage.findMany({
+    where: {
+      conversation_id: id,
+      ...(before ? { timestamp: { lt: before } } : {}),
+    },
+    orderBy: { timestamp: 'desc' },
+    take: PAGE_SIZE + 1,
+  })
+
+  const hasMore = rawMessages.length > PAGE_SIZE
+  // Retorna no máximo PAGE_SIZE, ordenado ASC para renderização
+  const messages = rawMessages.slice(0, PAGE_SIZE).reverse()
+
+  return Response.json({ conversation: { ...conversation, messages }, hasMore })
 }
 
 // POST /api/whatsapp/conversations/[id]/resolve — marca como resolvida

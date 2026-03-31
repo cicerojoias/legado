@@ -4,9 +4,17 @@ import { useState, useRef, useLayoutEffect, useCallback } from 'react'
 import { Send, Paperclip, Mic, MicOff, X, FileText, Image } from 'lucide-react'
 import { toast } from 'sonner'
 
+interface ReplyContext {
+  id: string
+  content: string
+  direction: string
+}
+
 interface MessageInputProps {
   conversationId: string
   onMessageSent?: () => void
+  replyTo?: ReplyContext | null
+  onClearReply?: () => void
 }
 
 // Tipos MIME aceitos no seletor de arquivo
@@ -21,7 +29,7 @@ interface MediaPreview {
   fileName: string
 }
 
-export function MessageInput({ conversationId, onMessageSent }: MessageInputProps) {
+export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply }: MessageInputProps) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
 
@@ -250,10 +258,16 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
       const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, text: trimmed }),
+        body: JSON.stringify({
+          conversationId,
+          text: trimmed,
+          replyToId: replyTo?.id,
+          replyToSnapshot: replyTo ? replyTo.content.slice(0, 500) : undefined,
+        }),
       })
       if (!res.ok) throw new Error('Falha ao enviar')
       setText('')
+      onClearReply?.()
       onMessageSent?.()
     } catch {
       toast.error('Erro ao enviar mensagem')
@@ -274,6 +288,27 @@ export function MessageInput({ conversationId, onMessageSent }: MessageInputProp
 
   return (
     <div className="border-t bg-background">
+      {/* Barra de citação (reply) */}
+      {replyTo && (
+        <div className="flex items-start gap-2 px-4 pt-2 pb-1">
+          <div className="flex-1 rounded-xl bg-muted/60 border border-l-4 border-l-primary px-3 py-2 min-w-0">
+            <p className="text-xs font-semibold text-primary mb-0.5">
+              {replyTo.direction === 'inbound' ? 'Cliente' : 'Você'}
+            </p>
+            <p className="text-xs text-muted-foreground line-clamp-2 break-words">
+              {replyTo.content || '[Mídia]'}
+            </p>
+          </div>
+          <button
+            onClick={onClearReply}
+            className="mt-1 w-7 h-7 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors shrink-0"
+            aria-label="Cancelar resposta"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Preview da mídia selecionada */}
       {mediaPreview && (
         <div className="flex items-center gap-2 px-4 pt-2 pb-1">
