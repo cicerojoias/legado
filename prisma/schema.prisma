@@ -168,6 +168,9 @@ model WaMessage {
   // Reaction
   reaction        String?        // emoji da reação — null = sem reação
 
+  // Forward
+  forwarded       Boolean        @default(false)
+
   @@index([conversation_id, timestamp(sort: Desc)])
   @@map("wa_messages")
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Copy, Trash2 } from 'lucide-react'
+import { X, Copy, Trash2, Forward } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
+import { ForwardModal } from './ForwardModal'
 
 interface SelectionHeaderOverlayProps {
   /** Nome do contato — exibido como remetente nas mensagens copiadas */
@@ -29,6 +30,7 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [forwardOpen, setForwardOpen] = useState(false)
 
   // ── Copiar mensagens selecionadas ─────────────────────────────────────────
   const handleCopy = async () => {
@@ -124,6 +126,16 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
 
         {/* Ações */}
         <div className="flex items-center gap-1">
+          {/* Encaminhar — sempre disponível */}
+          <button
+            onClick={() => setForwardOpen(true)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            title="Encaminhar mensagens"
+            aria-label="Encaminhar mensagens selecionadas"
+          >
+            <Forward className="w-5 h-5" />
+          </button>
+
           {/* Copiar — sempre disponível */}
           <button
             onClick={handleCopy}
@@ -155,6 +167,15 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
           </button>
         </div>
       </div>
+
+      {/* Modal de encaminhamento */}
+      <ForwardModal
+        open={forwardOpen}
+        onClose={() => setForwardOpen(false)}
+        messageIds={[...selected.keys()]}
+        messageCount={count}
+        onForwarded={clear}
+      />
 
       {/* Dialog de confirmação de deleção */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

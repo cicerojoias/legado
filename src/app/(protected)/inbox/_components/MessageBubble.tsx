@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 
@@ -18,6 +18,7 @@ interface WaMessage {
   replyToSnapshot?: string | null
   reaction?: string | null
   wa_message_id?: string | null
+  forwarded?: boolean | null
 }
 
 interface MessageBubbleProps {
@@ -449,6 +450,17 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
               isSelected && isOutbound && 'ring-2 ring-primary-foreground/30',
             )}
           >
+            {/* Indicador de encaminhamento — igual ao WhatsApp */}
+            {message.forwarded && (
+              <div className={cn(
+                'flex items-center gap-1 mb-1.5 text-[10px] italic',
+                isOutbound ? 'opacity-60' : 'opacity-50'
+              )}>
+                <Forward className="w-3 h-3 shrink-0" />
+                <span>Encaminhada</span>
+              </div>
+            )}
+
             {/* Quote snippet — mensagem citada */}
             {message.replyToSnapshot && (
               <div
