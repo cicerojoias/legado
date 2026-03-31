@@ -257,7 +257,7 @@ export function MessageBubble({ message, onReply }: MessageBubbleProps) {
 
           {/* Rodapé: Hora e Status */}
           <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
-            <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(message.timestamp))}</span>
+            <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
             <StatusIcon />
           </div>
         </div>

@@ -14,10 +14,10 @@ function formatTime(date: Date | string | null): string {
   const now = new Date()
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
 
-  if (diffDays === 0) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  if (diffDays === 0) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' })
   if (diffDays === 1) return 'Ontem'
-  if (diffDays < 7) return d.toLocaleDateString('pt-BR', { weekday: 'short' })
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  if (diffDays < 7) return d.toLocaleDateString('pt-BR', { weekday: 'short', timeZone: 'America/Recife' })
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Recife' })
 }
 
 export function ConversationItem({ conversation, isActive }: ConversationItemProps) {
