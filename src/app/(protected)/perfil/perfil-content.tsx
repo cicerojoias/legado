@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.12.9', data: '31/03/2026', resumo: 'WAB: fix ícone de reply duplicado no mobile — swipe centralizado' },
     { versao: '0.12.8', data: '31/03/2026', resumo: 'WAB: fix picker de reações — direção dinâmica e correção do loop' },
     { versao: '0.12.7', data: '31/03/2026', resumo: 'WAB: reações às mensagens — segurar para reagir com ✅💚🤝🙏' },
     { versao: '0.12.6', data: '31/03/2026', resumo: 'WAB: fix horário das mensagens — fuso America/Recife em lista e chat' },
@@ -196,7 +197,7 @@ export function PerfilContent({
                         <div className="bg-card rounded-xl border p-4 space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Versão</span>
-                                <span className="text-sm font-medium">0.12.8</span>
+                                <span className="text-sm font-medium">0.12.9</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Ambiente</span>
