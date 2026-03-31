@@ -168,6 +168,11 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
     return () => { document.removeEventListener('click', close) }
   }, [showPicker])
 
+  // Fechar picker quando o modo seleção ativa (long press em qualquer mensagem)
+  useEffect(() => {
+    if (active) setShowPicker(false)
+  }, [active])
+
   // Abrir picker de reações — calcula direção conforme espaço disponível
   const openPicker = () => {
     if (!wrapperRef.current) return
@@ -394,14 +399,13 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
               </button>
             )}
 
-            {/* Botão de reação — desktop hover + mobile sempre visível (pequeno) */}
+            {/* Botão de reação — mobile: sempre visível; desktop: aparece no hover */}
             {onReact && (
               <button
                 onClick={(e) => { e.stopPropagation(); openPicker() }}
                 className={cn(
                   'shrink-0 p-1 text-muted-foreground transition-opacity',
-                  // Desktop: aparece no hover
-                  'hidden md:inline-flex opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
+                  'inline-flex md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
                 )}
                 title="Reagir"
                 aria-label="Reagir à mensagem"
