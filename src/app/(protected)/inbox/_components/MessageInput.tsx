@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useLayoutEffect, useCallback } from 'react'
+import { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
 import { Send, Paperclip, Mic, MicOff, X, FileText, Image } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -46,6 +46,20 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Impede que o browser interprete toques na área de padding do input como scroll de página.
+  // React registra onTouchMove como passive, então usar listener nativo com passive:false.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const prevent = (e: TouchEvent) => {
+      if ((e.target as Element)?.closest('textarea')) return // permite scroll no textarea
+      e.preventDefault()
+    }
+    el.addEventListener('touchmove', prevent, { passive: false })
+    return () => el.removeEventListener('touchmove', prevent)
+  }, [])
 
   // Auto-resize do textarea
   useLayoutEffect(() => {
@@ -287,7 +301,7 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
   const isUploading = uploadState === 'uploading'
 
   return (
-    <div className="border-t bg-background">
+    <div ref={containerRef} className="border-t bg-background">
       {/* Barra de citação (reply) */}
       {replyTo && (
         <div className="flex items-start gap-2 px-4 pt-2 pb-1">
