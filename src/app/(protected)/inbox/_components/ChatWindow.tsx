@@ -227,7 +227,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Área de mensagens — scroll interno */}
       <div className="relative flex-1 min-h-0">
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-4 space-y-2">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="h-full overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2">
         {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
         <div ref={topSentinelRef} className="h-1" />
 
