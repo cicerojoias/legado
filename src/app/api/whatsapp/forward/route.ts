@@ -68,6 +68,7 @@ export async function POST(req: Request) {
 
       try {
         let waMessageId = ''
+        let savedMediaUrl: string | null = null
 
         // ── Texto ──────────────────────────────────────────────────────────
         if (msg.type === 'text') {
@@ -88,6 +89,8 @@ export async function POST(req: Request) {
             const newId = await uploadMediaToMeta(buffer, msg.mimeType ?? 'application/octet-stream', `media.${ext}`)
             waMessageId = await sendMediaByMediaId(phone, newId, msg.mimeType ?? 'application/octet-stream', caption)
           }
+          // Reusar proxy URL da mensagem original para exibir na bolha encaminhada
+          savedMediaUrl = msg.mediaUrl ?? null
 
         // ── Mídia outbound (URL no Supabase Storage) ───────────────────────
         } else if (msg.mediaUrl?.startsWith(storagePrefix)) {
@@ -110,6 +113,7 @@ export async function POST(req: Request) {
             : undefined
 
           waMessageId = await sendMediaByMediaId(phone, metaMediaId, msg.mimeType!, caption)
+          savedMediaUrl = msg.mediaUrl
         } else {
           continue // sem mídia acessível — pular
         }
@@ -123,6 +127,7 @@ export async function POST(req: Request) {
             type: msg.type,
             content: msg.content,
             mimeType: msg.mimeType,
+            mediaUrl: savedMediaUrl,
             status: 'sent',
             sent_by: user.id,
             timestamp: new Date(),
