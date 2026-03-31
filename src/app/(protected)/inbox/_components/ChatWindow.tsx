@@ -174,7 +174,13 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           )
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[wab-realtime] subscribed', conversationId)
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[wab-realtime] erro ao subscrever', status, err)
+        }
+      })
 
     channelRef.current = channel
 
