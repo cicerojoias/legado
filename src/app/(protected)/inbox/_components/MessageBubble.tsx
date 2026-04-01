@@ -363,17 +363,14 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
       {/* Linha da mensagem — desliza para direita */}
       <div
-        className={cn(
-          'group flex w-full items-end gap-1',
-          isOutbound ? 'flex-row-reverse' : 'flex-row'
-        )}
+        className="group flex w-full items-end gap-1"
         style={{
           transform: `translateX(${dragX}px)`,
           transition: snapping ? 'transform 0.2s ease-out' : 'none',
         }}
       >
-        {/* Checkmark de seleção — substitui os botões de ação quando selecionado */}
-        {active && (
+        {/* Slot esquerdo: checkmark ou botões para mensagens inbound */}
+        {active && !isOutbound && (
           <div className="shrink-0 flex items-end pb-1 px-1">
             <CheckCircle2
               className={cn(
@@ -383,11 +380,8 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
             />
           </div>
         )}
-
-        {/* Botões de ação (reply + emoji) — desktop hover, ocultos em modo seleção */}
-        {!active && (
+        {!active && !isOutbound && (
           <>
-            {/* Botão de reply no hover — desktop only */}
             {onReply && (
               <button
                 onClick={onReply}
@@ -398,15 +392,10 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
                 <Reply className="w-4 h-4" />
               </button>
             )}
-
-            {/* Botão de reação — mobile: sempre visível; desktop: aparece no hover */}
             {onReact && (
               <button
                 onClick={(e) => { e.stopPropagation(); openPicker() }}
-                className={cn(
-                  'shrink-0 p-1 text-muted-foreground transition-opacity',
-                  'hidden md:inline-flex md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground',
-                )}
+                className="hidden md:inline-flex shrink-0 p-1 text-muted-foreground transition-opacity md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground"
                 title="Reagir"
                 aria-label="Reagir à mensagem"
               >
@@ -416,8 +405,8 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
           </>
         )}
 
-        {/* Bolha + picker de reações */}
-        <div className="relative">
+        {/* Bolha + picker de reações — ml-auto empurra outbound para direita */}
+        <div className={cn('relative', isOutbound && 'ml-auto')}>
           {/* Picker de reações — direção calculada ao abrir */}
           {showPicker && (
             <div
@@ -511,6 +500,42 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
             </button>
           )}
         </div>
+
+        {/* Slot direito: checkmark ou botões para mensagens outbound */}
+        {active && isOutbound && (
+          <div className="shrink-0 flex items-end pb-1 px-1">
+            <CheckCircle2
+              className={cn(
+                'w-5 h-5 transition-colors',
+                isSelected ? 'text-primary fill-primary/20' : 'text-muted-foreground/40'
+              )}
+            />
+          </div>
+        )}
+        {!active && isOutbound && (
+          <>
+            {onReact && (
+              <button
+                onClick={(e) => { e.stopPropagation(); openPicker() }}
+                className="hidden md:inline-flex shrink-0 p-1 text-muted-foreground transition-opacity md:opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground"
+                title="Reagir"
+                aria-label="Reagir à mensagem"
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+            )}
+            {onReply && (
+              <button
+                onClick={onReply}
+                className="hidden md:inline-flex shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground"
+                title="Responder"
+                aria-label="Responder mensagem"
+              >
+                <Reply className="w-4 h-4" />
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
