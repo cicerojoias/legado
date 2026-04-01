@@ -7,6 +7,7 @@ import { ContactHeader } from '../_components/ContactHeader'
 import { ConversationList } from '../_components/ConversationList'
 import { ConversationSidebar } from '../_components/ConversationSidebar'
 import { SelectionProvider } from '../_components/SelectionContext'
+import { InsertTextProvider } from '../_components/InsertTextContext'
 import type { ConversationWithMessages } from '../_components/types'
 
 interface PageProps {
@@ -59,18 +60,20 @@ export default async function ConversationPage({ params }: PageProps) {
 
       {/* Área do chat — ocupa tela cheia no mobile */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        <SelectionProvider>
-          <ContactHeader
-            contact={contact}
-            conversation={conversation}
-            showBackButton
-          />
-          <ChatWindow
-            conversationId={conversationId}
-            initialMessages={messages}
-            initialHasMore={initialHasMore}
-          />
-        </SelectionProvider>
+        <InsertTextProvider>
+          <SelectionProvider>
+            <ContactHeader
+              contact={contact}
+              conversation={conversation}
+              showBackButton
+            />
+            <ChatWindow
+              conversationId={conversationId}
+              initialMessages={messages}
+              initialHasMore={initialHasMore}
+            />
+          </SelectionProvider>
+        </InsertTextProvider>
       </div>
     </div>
   )

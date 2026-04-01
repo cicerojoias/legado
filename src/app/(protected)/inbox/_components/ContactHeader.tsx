@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle, Eraser, Trash2 } from 'lucide-react'
+import { ArrowLeft, Eraser, Trash2, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useSelectionState } from './SelectionContext'
 import { SelectionHeaderOverlay } from './SelectionHeaderOverlay'
+import { OrcamentoModal } from './OrcamentoModal'
+import { useInsertText } from './InsertTextContext'
 
 interface ContactHeaderProps {
   contact: WaContact
@@ -25,38 +27,16 @@ interface ContactHeaderProps {
   showBackButton?: boolean
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  open: 'Aberta',
-  resolved: 'Resolvida',
-  waiting: 'Aguardando',
-}
 
 export function ContactHeader({ contact, conversation, showBackButton }: ContactHeaderProps) {
   const router = useRouter()
   const [resolving, setResolving] = useState(false)
-  const [status, setStatus] = useState(conversation.status)
-
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'clear' | 'delete' | null>(null)
+  const [orcamentoOpen, setOrcamentoOpen] = useState(false)
 
   const { active } = useSelectionState()
-
-  async function handleResolve() {
-    setResolving(true)
-    try {
-      const res = await fetch(`/api/whatsapp/conversations/${conversation.id}`, {
-        method: 'POST',
-      })
-      if (!res.ok) throw new Error()
-      setStatus('resolved')
-      toast.success('Conversa marcada como resolvida')
-      router.refresh()
-    } catch {
-      toast.error('Erro ao resolver conversa')
-    } finally {
-      setResolving(false)
-    }
-  }
+  const { requestInsert } = useInsertText()
 
   async function handleConfirmDelete() {
     if (!dialogType) return
@@ -134,36 +114,22 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
           </p>
         </div>
 
-        {/* Badge de status */}
-        <span
-          className={cn(
-            'text-xs px-2 py-0.5 rounded-full font-medium hidden sm:inline-flex',
-            status === 'open' && 'bg-green-500/10 text-green-600',
-            status === 'resolved' && 'bg-muted text-muted-foreground',
-            status === 'waiting' && 'bg-yellow-500/10 text-yellow-600',
-          )}
-        >
-          {STATUS_LABELS[status] ?? status}
-        </span>
-
         {/* Ações */}
         <div className="flex items-center gap-1">
-          {status === 'open' && (
-            <button
-              onClick={handleResolve}
-              disabled={resolving}
-              className="p-1.5 text-green-600 hover:bg-green-500/10 hover:text-green-700 rounded-lg transition-colors disabled:opacity-40"
-              title="Marcar como resolvida"
-            >
-              <CheckCircle className="w-5 h-5" />
-            </button>
-          )}
+          {/* Orçamento — abre modal de preset de mensagem */}
+          <button
+            onClick={() => setOrcamentoOpen(true)}
+            className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+            title="Criar orçamento"
+          >
+            <Receipt className="w-5 h-5" />
+          </button>
 
           <button
             onClick={() => { setDialogType('clear'); setDialogOpen(true) }}
             disabled={resolving}
             className="p-1.5 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 rounded-lg transition-colors disabled:opacity-40"
-            title="Limpar mensagens (Apenas Limpar)"
+            title="Limpar mensagens"
           >
             <Eraser className="w-5 h-5" />
           </button>
@@ -172,12 +138,18 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
             onClick={() => { setDialogType('delete'); setDialogOpen(true) }}
             disabled={resolving}
             className="p-1.5 text-red-600 hover:bg-red-500/10 hover:text-red-700 rounded-lg transition-colors disabled:opacity-40"
-            title="Excluir conversa (Apagar Tudo)"
+            title="Excluir conversa"
           >
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
+
+      <OrcamentoModal
+        open={orcamentoOpen}
+        onClose={() => setOrcamentoOpen(false)}
+        onInsert={(text) => { requestInsert(text); setOrcamentoOpen(false) }}
+      />
 
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>

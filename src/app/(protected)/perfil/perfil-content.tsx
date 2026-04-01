@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.15.0', data: '31/03/2026', resumo: 'WAB: módulo de orçamentos — botão 📋 no chat abre preset de Banho de Ouro; parcelas auto-calculadas; insere direto no textarea' },
     { versao: '0.14.6', data: '31/03/2026', resumo: 'WAB: fix AudioPlayer — duration 0:00 em proxy streams; load() explícito no mount + onDurationChange/onCanPlay' },
     { versao: '0.14.5', data: '31/03/2026', resumo: 'WAB: fix alinhamento bolhas (max-w no flex item, não no filho); player de áudio customizado (play/pause/barra); deleted message corrigido' },
     { versao: '0.14.4', data: '31/03/2026', resumo: 'WAB: fix alinhamento das bolhas — substituído flex-row-reverse por flex-row + ml-auto; margem esquerda/direita agora sempre consistente' },

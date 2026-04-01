@@ -3,6 +3,7 @@
 import { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
 import { Send, Paperclip, Mic, MicOff, X, FileText, Image } from 'lucide-react'
 import { toast } from 'sonner'
+import { useInsertText } from './InsertTextContext'
 
 interface ReplyContext {
   id: string
@@ -32,6 +33,15 @@ interface MediaPreview {
 export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply }: MessageInputProps) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+
+  // Injeta texto gerado pelo OrcamentoModal no textarea
+  const { pendingText, clearPendingText } = useInsertText()
+  useEffect(() => {
+    if (!pendingText) return
+    setText(pendingText)
+    clearPendingText()
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }, [pendingText, clearPendingText])
 
   // Upload de arquivo
   const [uploadState, setUploadState] = useState<UploadState>('idle')
