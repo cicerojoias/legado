@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.14.6', data: '31/03/2026', resumo: 'WAB: fix AudioPlayer — duration 0:00 em proxy streams; load() explícito no mount + onDurationChange/onCanPlay' },
     { versao: '0.14.5', data: '31/03/2026', resumo: 'WAB: fix alinhamento bolhas (max-w no flex item, não no filho); player de áudio customizado (play/pause/barra); deleted message corrigido' },
     { versao: '0.14.4', data: '31/03/2026', resumo: 'WAB: fix alinhamento das bolhas — substituído flex-row-reverse por flex-row + ml-auto; margem esquerda/direita agora sempre consistente' },
     { versao: '0.14.3', data: '31/03/2026', resumo: 'WAB: fix encaminhar mídia — salva mediaUrl na mensagem encaminhada; imagens/vídeos não aparecem mais como [Imagem indisponível]' },
@@ -205,7 +206,7 @@ export function PerfilContent({
                         <div className="bg-card rounded-xl border p-4 space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Versão</span>
-                                <span className="text-sm font-medium">0.14.5</span>
+                                <span className="text-sm font-medium">0.14.6</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-muted-foreground">Ambiente</span>
