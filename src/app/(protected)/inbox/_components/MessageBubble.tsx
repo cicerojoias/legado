@@ -45,6 +45,21 @@ function AudioPlayer({ src, isOutbound }: { src: string; isOutbound: boolean }) 
   const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement>(null)
 
+  // Força carregamento dos metadados no mount — proxies de stream não disparam
+  // onLoadedMetadata automaticamente sem um load() explícito em mobile
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    // Se duração já disponível (cache do browser), lê imediatamente
+    if (a.duration && isFinite(a.duration)) { setDuration(a.duration); return }
+    a.load()
+  }, [src])
+
+  const syncDuration = () => {
+    const a = audioRef.current
+    if (a && isFinite(a.duration) && a.duration > 0) setDuration(a.duration)
+  }
+
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     const a = audioRef.current
@@ -80,10 +95,9 @@ function AudioPlayer({ src, isOutbound }: { src: string; isOutbound: boolean }) 
           setCurrentTime(a.currentTime)
           setProgress(a.currentTime / a.duration)
         }}
-        onLoadedMetadata={() => {
-          const a = audioRef.current
-          if (a) setDuration(a.duration)
-        }}
+        onLoadedMetadata={syncDuration}
+        onDurationChange={syncDuration}
+        onCanPlay={syncDuration}
       />
       <button
         onClick={toggle}
