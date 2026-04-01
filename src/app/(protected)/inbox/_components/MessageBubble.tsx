@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Play, Pause } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 
@@ -37,6 +37,89 @@ const HEADER_H = 60
 const FOOTER_H = 72
 const PICKER_H = 56
 
+/** Player de áudio customizado — substitui o <audio controls> nativo */
+function AudioPlayer({ src, isOutbound }: { src: string; isOutbound: boolean }) {
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const a = audioRef.current
+    if (!a) return
+    if (playing) { a.pause() } else { void a.play() }
+  }
+
+  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const a = audioRef.current
+    if (!a || !a.duration) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    a.currentTime = ratio * a.duration
+  }
+
+  const fmt = (s: number) => {
+    if (!isFinite(s) || isNaN(s)) return '0:00'
+    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 w-[210px] my-1" onClick={(e) => e.stopPropagation()}>
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0) }}
+        onTimeUpdate={() => {
+          const a = audioRef.current
+          if (!a?.duration) return
+          setCurrentTime(a.currentTime)
+          setProgress(a.currentTime / a.duration)
+        }}
+        onLoadedMetadata={() => {
+          const a = audioRef.current
+          if (a) setDuration(a.duration)
+        }}
+      />
+      <button
+        onClick={toggle}
+        className={cn(
+          'shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors',
+          isOutbound
+            ? 'bg-white/20 hover:bg-white/30 text-primary-foreground'
+            : 'bg-primary/10 hover:bg-primary/20 text-primary'
+        )}
+      >
+        {playing
+          ? <Pause className="w-3.5 h-3.5" />
+          : <Play className="w-3.5 h-3.5 ml-0.5" />
+        }
+      </button>
+      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+        <div
+          className={cn(
+            'h-1 rounded-full cursor-pointer',
+            isOutbound ? 'bg-white/25' : 'bg-muted-foreground/20'
+          )}
+          onClick={seek}
+        >
+          <div
+            className={cn('h-full rounded-full transition-[width]', isOutbound ? 'bg-white/80' : 'bg-primary/70')}
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+        <span className={cn('text-[10px] leading-none tabular-nums', isOutbound ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
+          {fmt(currentTime)} / {fmt(duration)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
   const { mediaUrl, mimeType, content, type } = message
@@ -66,7 +149,7 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
   // ── Áudio ────────────────────────────────────────────────────────────────
   if (type === 'audio' || mimeType?.startsWith('audio/')) {
     return mediaUrl ? (
-      <audio controls src={mediaUrl} className="w-full max-w-[280px] my-1 rounded" preload="metadata" />
+      <AudioPlayer src={mediaUrl} isOutbound={isOutbound} />
     ) : (
       <span className="italic text-muted-foreground text-xs">[Áudio indisponível]</span>
     )
@@ -291,12 +374,12 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   if (message.type === 'deleted') {
     return (
       <div className="relative mb-4">
-        <div className={cn('flex w-full items-end', isOutbound ? 'flex-row-reverse' : 'flex-row')}>
+        <div className="flex w-full items-end">
           <div
             className={cn(
               'px-3 py-2 rounded-2xl max-w-[85%] sm:max-w-[70%]',
               isOutbound
-                ? 'bg-primary/20 text-primary-foreground/60 rounded-tr-none'
+                ? 'bg-primary/20 text-primary-foreground/60 rounded-tr-none ml-auto'
                 : 'bg-card border text-muted-foreground rounded-tl-none'
             )}
           >
@@ -406,7 +489,8 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
         )}
 
         {/* Bolha + picker de reações — ml-auto empurra outbound para direita */}
-        <div className={cn('relative', isOutbound && 'ml-auto')}>
+        {/* max-w aqui (flex item) ancora o percentual ao container, não ao próprio filho */}
+        <div className={cn('relative max-w-[85%] sm:max-w-[70%]', isOutbound && 'ml-auto')}>
           {/* Picker de reações — direção calculada ao abrir */}
           {showPicker && (
             <div
@@ -435,7 +519,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
           <div
             className={cn(
-              'relative max-w-[85%] sm:max-w-[70%] px-3 py-2 rounded-2xl shadow-sm',
+              'relative w-full px-3 py-2 rounded-2xl shadow-sm',
               isOutbound
                 ? 'bg-primary text-primary-foreground rounded-tr-none'
                 : 'bg-card text-card-foreground border rounded-tl-none',

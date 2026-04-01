@@ -335,8 +335,8 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
               </>
             ) : mediaPreview.mimeType.startsWith('audio/') ? (
               <>
-                <Mic className="w-4 h-4 text-green-500 shrink-0" />
-                <audio controls src={mediaPreview.url} className="h-8 max-w-[200px]" />
+                <Mic className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-xs text-muted-foreground">Áudio gravado — pronto para enviar</span>
               </>
             ) : (
               <>
