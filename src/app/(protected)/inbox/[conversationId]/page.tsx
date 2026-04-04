@@ -8,17 +8,18 @@ import { ConversationList } from '../_components/ConversationList'
 import { ConversationSidebar } from '../_components/ConversationSidebar'
 import { SelectionProvider } from '../_components/SelectionContext'
 import { InsertTextProvider } from '../_components/InsertTextContext'
+import { listTags } from '../actions/tag-catalog'
 import type { ConversationWithMessages } from '../_components/types'
 
 interface PageProps {
   params: Promise<{ conversationId: string }>
-  searchParams: Promise<{ filter?: string }>
+  searchParams: Promise<{ filter?: string; tag?: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
 export default async function ConversationPage({ params, searchParams }: PageProps) {
-  const [{ conversationId }, { filter }] = await Promise.all([params, searchParams])
+  const [{ conversationId }, { filter, tag: filterTagId }] = await Promise.all([params, searchParams])
   const filterUnread = filter === 'unread'
 
   // Mark conversation as read para o usuário atual — fire-and-forget, não bloqueia o render
@@ -34,9 +35,11 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     }).catch(() => {})
   }
 
-  const unreadTotal = await prisma.waConversationRead.count({
-    where: { userId, unreadCount: { gt: 0 } },
-  })
+  const [unreadTotal, tags, dbUser] = await Promise.all([
+    prisma.waConversationRead.count({ where: { userId, unreadCount: { gt: 0 } } }),
+    listTags(),
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { role: true } }) : null,
+  ])
 
   const rawMessages = await prisma.waMessage.findMany({
     where: { conversation_id: conversationId },
@@ -48,7 +51,13 @@ export default async function ConversationPage({ params, searchParams }: PagePro
 
   const conversation = await prisma.waConversation.findUnique({
     where: { id: conversationId },
-    include: { contact: true },
+    include: {
+      contact: true,
+      conversation_tags: {
+        include: { tag: true },
+        orderBy: { assignedAt: 'asc' },
+      },
+    },
   }) as (ConversationWithMessages & { messages: typeof messages }) | null
 
   if (!conversation) notFound()
@@ -59,9 +68,9 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     <div className="flex h-full">
       {/* Lista de conversas — oculta no mobile, visível no desktop */}
       <div className="hidden md:flex">
-        <ConversationSidebar activeId={conversationId} unreadTotal={unreadTotal}>
-          <Suspense key={filterUnread ? 'unread' : 'all'} fallback={null}>
-            <ConversationList activeId={conversationId} filterUnread={filterUnread} />
+        <ConversationSidebar activeId={conversationId} unreadTotal={unreadTotal} tags={tags} userRole={dbUser?.role}>
+          <Suspense key={`${filterUnread ? 'unread' : 'all'}-${filterTagId ?? 'notag'}`} fallback={null}>
+            <ConversationList activeId={conversationId} filterUnread={filterUnread} filterTagId={filterTagId} />
           </Suspense>
         </ConversationSidebar>
       </div>
@@ -74,6 +83,8 @@ export default async function ConversationPage({ params, searchParams }: PagePro
               contact={contact}
               conversation={conversation}
               showBackButton
+              currentTags={(conversation as { conversation_tags?: import('../_components/types').TagWithMeta[] }).conversation_tags ?? []}
+              availableTags={dbUser?.role !== 'OPERADOR' ? tags : []}
             />
             <ChatWindow
               conversationId={conversationId}

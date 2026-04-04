@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { Search, X, Zap } from 'lucide-react'
+import { Search, X, Zap, Tag } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { cn } from '@/lib/utils'
 import { TemplatesManagerModal } from './TemplatesManagerModal'
+import { TagsManagerModal } from './TagsManagerModal'
 import { UnreadFilterTabs } from './UnreadFilterTabs'
+import { TagFilterChips } from './TagFilterChips'
+import type { WaTag } from '@prisma/client'
 
 // ─── Tipos das respostas da API ───────────────────────────────────────────────
 interface SearchContact {
@@ -57,15 +60,19 @@ interface ConversationSidebarProps {
   children: React.ReactNode  // ConversationList server component
   activeId?: string
   unreadTotal?: number
+  tags?: WaTag[]
+  userRole?: string
 }
 
-export function ConversationSidebar({ children, activeId, unreadTotal = 0 }: ConversationSidebarProps) {
+export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], userRole }: ConversationSidebarProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN'
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); return }
@@ -106,9 +113,25 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0 }: Con
         >
           <Zap className="w-4 h-4" />
         </button>
+        {isAdmin && (
+          <button
+            onClick={() => setTagsManagerOpen(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            title="Gerenciar tags"
+          >
+            <Tag className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <TemplatesManagerModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+      {isAdmin && (
+        <TagsManagerModal
+          open={tagsManagerOpen}
+          onClose={() => setTagsManagerOpen(false)}
+          initialTags={tags}
+        />
+      )}
 
       {/* Barra de busca */}
       <div className="px-3 py-2 border-b shrink-0">
@@ -135,9 +158,16 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0 }: Con
 
       {/* Tabs de filtro — ocultas durante busca */}
       {!isSearching && (
-        <Suspense fallback={null}>
-          <UnreadFilterTabs unreadTotal={unreadTotal} />
-        </Suspense>
+        <>
+          <Suspense fallback={null}>
+            <UnreadFilterTabs unreadTotal={unreadTotal} />
+          </Suspense>
+          {tags.length > 0 && (
+            <Suspense fallback={null}>
+              <TagFilterChips tags={tags} />
+            </Suspense>
+          )}
+        </>
       )}
 
       {/* Conteúdo scrollável */}

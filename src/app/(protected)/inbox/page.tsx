@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { ConversationList } from './_components/ConversationList'
 import { ConversationSidebar } from './_components/ConversationSidebar'
+import { listTags } from './actions/tag-catalog'
 
 export const metadata = { title: 'Inbox — Legado' }
 export const dynamic = 'force-dynamic'
@@ -11,24 +12,28 @@ export const dynamic = 'force-dynamic'
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>
+  searchParams: Promise<{ filter?: string; tag?: string }>
 }) {
-  const { filter } = await searchParams
+  const { filter, tag: filterTagId } = await searchParams
   const filterUnread = filter === 'unread'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user?.id ?? ''
 
-  const unreadTotal = await prisma.waConversationRead.count({
-    where: { userId, unreadCount: { gt: 0 } },
-  })
+  const [unreadTotal, tags, dbUser] = await Promise.all([
+    prisma.waConversationRead.count({ where: { userId, unreadCount: { gt: 0 } } }),
+    listTags(),
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { role: true } }) : null,
+  ])
+
+  const listKey = `${filterUnread ? 'unread' : 'all'}-${filterTagId ?? 'notag'}`
 
   return (
     <div className="flex h-full">
-      <ConversationSidebar unreadTotal={unreadTotal}>
-        <Suspense key={filterUnread ? 'unread' : 'all'} fallback={<ConversationListSkeleton />}>
-          <ConversationList filterUnread={filterUnread} />
+      <ConversationSidebar unreadTotal={unreadTotal} tags={tags} userRole={dbUser?.role}>
+        <Suspense key={listKey} fallback={<ConversationListSkeleton />}>
+          <ConversationList filterUnread={filterUnread} filterTagId={filterTagId} />
         </Suspense>
       </ConversationSidebar>
 

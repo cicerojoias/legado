@@ -43,6 +43,7 @@ model User {
   custos_fixos          CustoFixo[]
   push_subscriptions    WaPushSubscription[]
   conversation_reads    WaConversationRead[]
+  assigned_tags         ConversationTag[]     @relation("assigned_tags")
 
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
@@ -137,6 +138,7 @@ model WaConversation {
 
   messages           WaMessage[]
   conversation_reads WaConversationRead[]
+  conversation_tags  ConversationTag[]
 
   @@index([last_message_at(sort: Desc)])
   @@index([status])
@@ -204,6 +206,36 @@ model WaPushSubscription {
 
   @@index([userId])
   @@map("wa_push_subscriptions")
+}
+
+model WaTag {
+  id         String   @id @default(uuid())
+  name       String
+  color      String   // "amber"|"rose"|"sky"|"violet"|"orange"|"teal"|"pink"|"indigo"|"lime"|"cyan"
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  conversation_tags ConversationTag[]
+
+  @@unique([name])
+  @@map("wa_tags")
+}
+
+model ConversationTag {
+  id             String   @id @default(uuid())
+  conversationId String
+  tagId          String
+  assignedBy     String?
+  assignedAt     DateTime @default(now())
+
+  conversation   WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tag            WaTag          @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  assignedByUser User?          @relation("assigned_tags", fields: [assignedBy], references: [id], onDelete: SetNull)
+
+  @@unique([conversationId, tagId])
+  @@index([conversationId])
+  @@index([tagId])
+  @@map("conversation_tags")
 }
 
 model WaMessageGeneration {

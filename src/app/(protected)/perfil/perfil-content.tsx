@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.16.0', data: '04/04/2026', resumo: 'WAB: módulo de tags — categorize conversas com labels coloridas; filtro por tag na lista; badges no item; painel de tags no header da conversa; gerenciador CRUD via ícone Tag (ADMIN+)' },
     { versao: '0.15.5', data: '04/04/2026', resumo: 'WAB: menu de templates scrollável — max-height dinâmico (40dvh) com teclado aberto; touch-scroll desbloqueado no menu' },
     { versao: '0.15.4', data: '04/04/2026', resumo: 'WAB: filtro "Não lidas" — tabs Todas/Não lidas abaixo da busca com badge de contagem; ocultas durante pesquisa' },
     { versao: '0.15.3', data: '04/04/2026', resumo: 'WAB: gerenciador de mensagens rápidas — ícone ⚡ no header abre modal CRUD; templates persistidos por dispositivo' },

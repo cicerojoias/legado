@@ -5,7 +5,9 @@ import { ArrowLeft, Eraser, Trash2, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { WaContact, WaConversation } from '@prisma/client'
+import type { WaContact, WaConversation, WaTag } from '@prisma/client'
+import type { TagWithMeta } from './types'
+import { ConversationTagPanel } from './ConversationTagPanel'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +24,14 @@ import { OrcamentoModal } from './OrcamentoModal'
 import { useInsertText } from './InsertTextContext'
 
 interface ContactHeaderProps {
-  contact: WaContact
-  conversation: WaConversation
+  contact:       WaContact
+  conversation:  WaConversation
   showBackButton?: boolean
+  currentTags?:  TagWithMeta[]
+  availableTags?: WaTag[]
 }
 
-
-export function ContactHeader({ contact, conversation, showBackButton }: ContactHeaderProps) {
+export function ContactHeader({ contact, conversation, showBackButton, currentTags = [], availableTags = [] }: ContactHeaderProps) {
   const router = useRouter()
   const [resolving, setResolving] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -112,6 +115,13 @@ export function ContactHeader({ contact, conversation, showBackButton }: Contact
           <p className="text-xs text-muted-foreground">
             {contact.name ? contact.phone : ''}
           </p>
+          {availableTags.length > 0 && (
+            <ConversationTagPanel
+              conversationId={conversation.id}
+              currentTags={currentTags}
+              availableTags={availableTags}
+            />
+          )}
         </div>
 
         {/* Ações */}
