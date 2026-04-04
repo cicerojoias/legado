@@ -75,7 +75,9 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
     const el = containerRef.current
     if (!el) return
     const prevent = (e: TouchEvent) => {
-      if ((e.target as Element)?.closest('textarea')) return // permite scroll no textarea
+      const target = e.target as Element
+      if (target?.closest('textarea')) return // permite scroll no textarea
+      if (target?.closest('[data-template-menu]')) return // permite scroll no menu de templates
       e.preventDefault()
     }
     el.addEventListener('touchmove', prevent, { passive: false })

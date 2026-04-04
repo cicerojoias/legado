@@ -5,9 +5,10 @@ import type { ConversationWithPreview } from './types'
 
 interface ConversationListProps {
   activeId?: string
+  filterUnread?: boolean
 }
 
-export async function ConversationList({ activeId }: ConversationListProps) {
+export async function ConversationList({ activeId, filterUnread }: ConversationListProps) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user?.id ?? ''
@@ -28,17 +29,25 @@ export async function ConversationList({ activeId }: ConversationListProps) {
     take: 50,
   })
 
-  const conversations: ConversationWithPreview[] = rawConversations.map((conv) => ({
-    ...conv,
-    unreadCount: conv.conversation_reads[0]?.unreadCount ?? 0,
-  }))
+  const conversations: ConversationWithPreview[] = rawConversations
+    .map((conv) => ({
+      ...conv,
+      unreadCount: conv.conversation_reads[0]?.unreadCount ?? 0,
+    }))
+    .filter((conv) => !filterUnread || conv.unreadCount > 0)
 
   if (conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm px-8 text-center gap-2 py-16">
-        <p className="text-2xl">💬</p>
-        <p className="font-medium">Nenhuma conversa ainda</p>
-        <p className="text-xs">As mensagens recebidas no WhatsApp aparecerão aqui.</p>
+        <p className="text-2xl">{filterUnread ? '✅' : '💬'}</p>
+        <p className="font-medium">
+          {filterUnread ? 'Nenhuma mensagem não lida' : 'Nenhuma conversa ainda'}
+        </p>
+        <p className="text-xs">
+          {filterUnread
+            ? 'Você está em dia com todas as conversas.'
+            : 'As mensagens recebidas no WhatsApp aparecerão aqui.'}
+        </p>
       </div>
     )
   }

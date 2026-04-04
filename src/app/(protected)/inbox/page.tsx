@@ -1,17 +1,34 @@
 import { Suspense } from 'react'
 import { MessageCircle } from 'lucide-react'
+import { prisma } from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
 import { ConversationList } from './_components/ConversationList'
 import { ConversationSidebar } from './_components/ConversationSidebar'
 
 export const metadata = { title: 'Inbox — Legado' }
 export const dynamic = 'force-dynamic'
 
-export default function InboxPage() {
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>
+}) {
+  const { filter } = await searchParams
+  const filterUnread = filter === 'unread'
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? ''
+
+  const unreadTotal = await prisma.waConversationRead.count({
+    where: { userId, unreadCount: { gt: 0 } },
+  })
+
   return (
     <div className="flex h-full">
-      <ConversationSidebar>
-        <Suspense fallback={<ConversationListSkeleton />}>
-          <ConversationList />
+      <ConversationSidebar unreadTotal={unreadTotal}>
+        <Suspense key={filterUnread ? 'unread' : 'all'} fallback={<ConversationListSkeleton />}>
+          <ConversationList filterUnread={filterUnread} />
         </Suspense>
       </ConversationSidebar>
 

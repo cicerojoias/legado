@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { Search, X, Zap } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { cn } from '@/lib/utils'
 import { TemplatesManagerModal } from './TemplatesManagerModal'
+import { UnreadFilterTabs } from './UnreadFilterTabs'
 
 // ─── Tipos das respostas da API ───────────────────────────────────────────────
 interface SearchContact {
@@ -55,9 +56,10 @@ function highlight(text: string, query: string) {
 interface ConversationSidebarProps {
   children: React.ReactNode  // ConversationList server component
   activeId?: string
+  unreadTotal?: number
 }
 
-export function ConversationSidebar({ children, activeId }: ConversationSidebarProps) {
+export function ConversationSidebar({ children, activeId, unreadTotal = 0 }: ConversationSidebarProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
@@ -130,6 +132,13 @@ export function ConversationSidebar({ children, activeId }: ConversationSidebarP
           )}
         </div>
       </div>
+
+      {/* Tabs de filtro — ocultas durante busca */}
+      {!isSearching && (
+        <Suspense fallback={null}>
+          <UnreadFilterTabs unreadTotal={unreadTotal} />
+        </Suspense>
+      )}
 
       {/* Conteúdo scrollável */}
       <div className="flex-1 overflow-y-auto min-h-0">

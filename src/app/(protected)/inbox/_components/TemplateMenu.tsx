@@ -31,32 +31,37 @@ export function TemplateMenu({ query, onSelect, onClose }: TemplateMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 right-0 mb-1 mx-4 bg-background border rounded-xl shadow-lg overflow-hidden z-50"
+      className="absolute bottom-full left-0 right-0 mb-1 mx-4 bg-background border rounded-xl shadow-lg overflow-hidden z-50 flex flex-col max-h-[40dvh]"
     >
-      <div className="px-3 py-1.5 border-b">
+      <div className="px-3 py-1.5 border-b shrink-0">
         <span className="text-xs text-muted-foreground font-medium">Templates</span>
       </div>
-      {matches.map((t) => (
-        <button
-          key={t.slug}
-          type="button"
-          onMouseDown={(e) => {
-            e.preventDefault() // evita blur no textarea
-            onSelect(t)
-          }}
-          className="w-full flex items-start gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors text-left"
-        >
-          <span className="text-xs font-mono text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
-            /{t.slug}
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-medium leading-tight">{t.label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-              {t.content.split('\n')[0]}
-            </p>
-          </div>
-        </button>
-      ))}
+      <div
+        className="overflow-y-auto overscroll-contain"
+        data-template-menu
+      >
+        {matches.map((t) => (
+          <button
+            key={t.slug}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault() // evita blur no textarea
+              onSelect(t)
+            }}
+            className="w-full flex items-start gap-3 px-3 py-2.5 hover:bg-muted/60 active:bg-muted/80 transition-colors text-left"
+          >
+            <span className="text-xs font-mono text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
+              /{t.slug}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium leading-tight">{t.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                {t.content.split('\n')[0]}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
