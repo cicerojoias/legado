@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { X, Plus, Pencil, Trash2, ChevronLeft, Tag } from 'lucide-react'
+import { X, Plus, Pencil, Trash2, ChevronLeft, Tag, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createTag, updateTag, deleteTag } from '../actions/tag-catalog'
 import { TAG_COLORS } from '../actions/tag-constants'
@@ -293,12 +293,14 @@ export function TagsManagerModal({ open, onClose, initialTags }: TagsManagerModa
                         type="button"
                         onClick={() => setEditing(p => ({ ...p, color }))}
                         className={cn(
-                          'w-10 h-10 rounded-full transition-transform mx-auto flex items-center justify-center',
+                          'w-10 h-10 rounded-full transition-all mx-auto relative flex items-center justify-center',
                           dot,
-                          isSelected ? 'scale-110 ring-3 ring-offset-2 ring-foreground' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                          isSelected ? 'scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'
                         )}
                         title={color}
-                      />
+                      >
+                        {isSelected && <Check className="w-4 h-4 text-white drop-shadow" strokeWidth={3} />}
+                      </button>
                     )
                   })}
                 </div>

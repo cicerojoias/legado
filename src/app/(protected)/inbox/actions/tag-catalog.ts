@@ -10,7 +10,7 @@ import type { TagActionResult } from './tag-constants'
 export type { TagColor, TagActionResult } from './tag-constants'
 
 const CreateTagSchema = z.object({
-  name:  z.string().min(1).max(30).transform(v => v.trim().toLowerCase()),
+  name:  z.string().min(1).max(30).transform(v => v.trim()),
   color: z.enum(TAG_COLORS),
 })
 
