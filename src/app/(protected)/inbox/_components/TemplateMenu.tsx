@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { matchTemplates, Template } from './templates'
+import { Template } from './templates'
+import { useTemplates } from './useTemplates'
 
 interface TemplateMenuProps {
   query: string
@@ -10,6 +11,7 @@ interface TemplateMenuProps {
 }
 
 export function TemplateMenu({ query, onSelect, onClose }: TemplateMenuProps) {
+  const { matchTemplates } = useTemplates()
   const matches = matchTemplates(query)
   const menuRef = useRef<HTMLDivElement>(null)
 

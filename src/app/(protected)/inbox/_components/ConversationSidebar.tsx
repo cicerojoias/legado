@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, X } from 'lucide-react'
+import { Search, X, Zap } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { cn } from '@/lib/utils'
+import { TemplatesManagerModal } from './TemplatesManagerModal'
 
 // ─── Tipos das respostas da API ───────────────────────────────────────────────
 interface SearchContact {
@@ -60,6 +61,7 @@ export function ConversationSidebar({ children, activeId }: ConversationSidebarP
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -94,8 +96,17 @@ export function ConversationSidebar({ children, activeId }: ConversationSidebarP
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0">
         <WhatsAppIcon className="w-5 h-5 text-primary shrink-0" />
-        <h1 className="font-semibold text-base">WhatsApp</h1>
+        <h1 className="font-semibold text-base flex-1">WhatsApp</h1>
+        <button
+          onClick={() => setTemplatesOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Mensagens rápidas"
+        >
+          <Zap className="w-4 h-4" />
+        </button>
       </div>
+
+      <TemplatesManagerModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
 
       {/* Barra de busca */}
       <div className="px-3 py-2 border-b shrink-0">
