@@ -9,6 +9,9 @@ import {
 } from '@/lib/whatsapp/webhook-dedup'
 import { dispatchPushForConversation } from '@/lib/whatsapp/push-dispatcher'
 import { incrementUnreadForConversation } from '@/lib/whatsapp/unread-manager'
+import { sendTextMessage } from '@/lib/whatsapp/meta-client'
+
+const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
 // GET: Verificação de Webhook (Facebook/Meta exige isso para validar o endpoint)
 export async function GET(req: NextRequest) {
@@ -91,7 +94,13 @@ export async function POST(req: NextRequest) {
               create: { phone: waId, name, wa_id: waId },
             })
 
-            // B. Garantir que a conversa existe (um contato = uma conversa)
+            // B. Ler estado anterior da conversa ANTES do upsert (para welcome message)
+            const existingConv = await prisma.waConversation.findUnique({
+              where: { contact_id: waContact.id },
+              select: { id: true, last_message_at: true, welcome_sent_at: true },
+            })
+
+            // C. Garantir que a conversa existe (um contato = uma conversa)
             let waConversation = await prisma.waConversation.upsert({
               where: { contact_id: waContact.id },
               update: {
@@ -161,6 +170,57 @@ export async function POST(req: NextRequest) {
               incrementUnreadForConversation(waConversation.id)
                 .catch((err) => console.error('[webhook] unread increment error:', err))
             )
+
+            // D. Mensagem de boas-vindas automática
+            after(async () => {
+              try {
+                const now = Date.now()
+                const prevActivity = existingConv?.last_message_at
+                const prevWelcome  = existingConv?.welcome_sent_at
+
+                // Janela de 7 dias sem atividade de nenhum dos lados
+                const windowExpired = !prevActivity || (now - prevActivity.getTime() > WELCOME_WINDOW_MS)
+                // Boas-vindas não foi enviada nessa janela
+                const welcomeStale  = !prevWelcome  || (now - prevWelcome.getTime()  > WELCOME_WINDOW_MS)
+
+                if (!windowExpired || !welcomeStale) return
+
+                const settings = await prisma.waSettings.findUnique({ where: { id: 'singleton' } })
+                if (!settings?.welcome_enabled || !settings.welcome_message) return
+
+                // Trava atômica: gravar welcome_sent_at ANTES de enviar para evitar race condition
+                const updated = await prisma.waConversation.updateMany({
+                  where: {
+                    id: waConversation.id,
+                    // Condição de guarda: welcome_sent_at ainda está fora da janela
+                    OR: [
+                      { welcome_sent_at: null },
+                      { welcome_sent_at: { lt: new Date(now - WELCOME_WINDOW_MS) } },
+                    ],
+                  },
+                  data: { welcome_sent_at: new Date(now) },
+                })
+
+                // Se count === 0, outro processo ganhou a corrida — não envia
+                if (updated.count === 0) return
+
+                const waMessageId = await sendTextMessage(waId, settings.welcome_message)
+                await prisma.waMessage.create({
+                  data: {
+                    wa_message_id: waMessageId || undefined,
+                    conversation_id: waConversation.id,
+                    direction: 'outbound',
+                    type: 'text',
+                    content: settings.welcome_message,
+                    status: 'sent',
+                    timestamp: new Date(),
+                  },
+                })
+                console.log(`[webhook] Welcome message sent to ${waId}`)
+              } catch (err) {
+                console.error('[webhook] welcome message error:', err)
+              }
+            })
           } catch (msgError) {
             console.error(`[webhook] Error processing message ${msg.id}:`, msgError)
             // Continue processing other messages instead of failing entire webhook

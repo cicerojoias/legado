@@ -136,6 +136,8 @@ model WaConversation {
   created_at      DateTime   @default(now())
   updated_at      DateTime   @updatedAt
 
+  welcome_sent_at    DateTime?          // trava de dedup para mensagem de boas-vindas
+
   messages           WaMessage[]
   conversation_reads WaConversationRead[]
   conversation_tags  ConversationTag[]
@@ -206,6 +208,15 @@ model WaPushSubscription {
 
   @@index([userId])
   @@map("wa_push_subscriptions")
+}
+
+model WaSettings {
+  id               String   @id @default("singleton")
+  welcome_enabled  Boolean  @default(false)
+  welcome_message  String?  @db.Text
+  updated_at       DateTime @updatedAt
+
+  @@map("wa_settings")
 }
 
 model WaTag {

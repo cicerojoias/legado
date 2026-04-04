@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { Search, X, Zap, Tag } from 'lucide-react'
+import { Search, X, MoreVertical } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { cn } from '@/lib/utils'
 import { TemplatesManagerModal } from './TemplatesManagerModal'
 import { TagsManagerModal } from './TagsManagerModal'
+import { WABSettingsModal } from './WABSettingsModal'
 import { UnreadFilterTabs } from './UnreadFilterTabs'
 import { TagFilterChips } from './TagFilterChips'
-import type { WaTag } from '@prisma/client'
+import type { WaTag, WaSettings } from '@prisma/client'
 
 // ─── Tipos das respostas da API ───────────────────────────────────────────────
 interface SearchContact {
@@ -57,17 +58,19 @@ function highlight(text: string, query: string) {
 }
 
 interface ConversationSidebarProps {
-  children: React.ReactNode  // ConversationList server component
-  activeId?: string
-  unreadTotal?: number
-  tags?: WaTag[]
-  userRole?: string
+  children:         React.ReactNode
+  activeId?:        string
+  unreadTotal?:     number
+  tags?:            WaTag[]
+  userRole?:        string
+  initialSettings?: WaSettings | null
 }
 
-export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], userRole }: ConversationSidebarProps) {
+export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], userRole, initialSettings = null }: ConversationSidebarProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -107,31 +110,28 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
         <WhatsAppIcon className="w-5 h-5 text-primary shrink-0" />
         <h1 className="font-semibold text-base flex-1">WhatsApp</h1>
         <button
-          onClick={() => setTemplatesOpen(true)}
+          onClick={() => setSettingsOpen(true)}
           className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title="Mensagens rápidas"
+          title="Configurações"
         >
-          <Zap className="w-4 h-4" />
+          <MoreVertical className="w-4 h-4" />
         </button>
-        {isAdmin && (
-          <button
-            onClick={() => setTagsManagerOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title="Gerenciar tags"
-          >
-            <Tag className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
       <TemplatesManagerModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
-      {isAdmin && (
-        <TagsManagerModal
-          open={tagsManagerOpen}
-          onClose={() => setTagsManagerOpen(false)}
-          initialTags={tags}
-        />
-      )}
+      <TagsManagerModal
+        open={tagsManagerOpen}
+        onClose={() => setTagsManagerOpen(false)}
+        initialTags={tags}
+      />
+      <WABSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenTemplates={() => setTemplatesOpen(true)}
+        onOpenTags={() => setTagsManagerOpen(true)}
+        tags={tags}
+        initialSettings={initialSettings}
+      />
 
       {/* Barra de busca */}
       <div className="px-3 py-2 border-b shrink-0">

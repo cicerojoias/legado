@@ -9,6 +9,7 @@ import { ConversationSidebar } from '../_components/ConversationSidebar'
 import { SelectionProvider } from '../_components/SelectionContext'
 import { InsertTextProvider } from '../_components/InsertTextContext'
 import { listTags } from '../actions/tag-catalog'
+import { getSettings } from '../actions/settings'
 import type { ConversationWithMessages } from '../_components/types'
 
 interface PageProps {
@@ -35,10 +36,11 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     }).catch(() => {})
   }
 
-  const [unreadTotal, tags, dbUser] = await Promise.all([
+  const [unreadTotal, tags, dbUser, settings] = await Promise.all([
     prisma.waConversationRead.count({ where: { userId, unreadCount: { gt: 0 } } }),
     listTags(),
     userId ? prisma.user.findUnique({ where: { id: userId }, select: { role: true } }) : null,
+    getSettings(),
   ])
 
   const rawMessages = await prisma.waMessage.findMany({
@@ -68,7 +70,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     <div className="flex h-full">
       {/* Lista de conversas — oculta no mobile, visível no desktop */}
       <div className="hidden md:flex">
-        <ConversationSidebar activeId={conversationId} unreadTotal={unreadTotal} tags={tags} userRole={dbUser?.role}>
+        <ConversationSidebar activeId={conversationId} unreadTotal={unreadTotal} tags={tags} userRole={dbUser?.role} initialSettings={settings}>
           <Suspense key={`${filterUnread ? 'unread' : 'all'}-${filterTagId ?? 'notag'}`} fallback={null}>
             <ConversationList activeId={conversationId} filterUnread={filterUnread} filterTagId={filterTagId} />
           </Suspense>
