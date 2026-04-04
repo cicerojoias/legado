@@ -19,7 +19,7 @@ const TYPES: TypeConfig[] = [
   { id: 'banho-ouro', emoji: '🥇', label: 'Banho de Ouro',     available: true  },
   { id: 'alianca',    emoji: '💍', label: 'Aliança',            available: false },
   { id: 'conserto',   emoji: '🔧', label: 'Conserto',           available: false },
-  { id: 'formatura',  emoji: '🎓', label: 'Formatura',          available: false },
+  { id: 'formatura',  emoji: '🎓', label: 'Formatura',          available: true  },
   { id: 'geral',      emoji: '📝', label: 'Orçamento Geral',    available: false },
 ]
 
@@ -56,6 +56,20 @@ function buildBanhoOuro(peca: string, basico: number, inter: number, avanc: numb
 Não cobre mau uso, riscos, atritos constantes ou desgaste natural da camada.`
 }
 
+function buildFormatura(valor: number): string {
+  const parcela = fmtBRL(Math.ceil(valor / 10 * 100) / 100)
+  return `Nesse modelo em ouro 16k fica por R$ ${fmtBRL(valor)}. Feito sob medida exclusivamente para você.
+
+• Prazo de fabricação: até 14 dias (pode variar) ⏳
+• Opcional de símbolo em prata ⚖️
+• Acompanha caixinha 🎁
+• Qualidade e preço de fábrica 🏭
+• Não quebra, feitas sem emenda 🔗
+• Dividimos em até 10x sem juros (10x de R$ ${parcela}) 💳
+
+Se precisar de mais modelos ou quiser tirar dúvidas, estou à disposição! 😁`
+}
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 interface OrcamentoModalProps {
@@ -74,6 +88,9 @@ export function OrcamentoModal({ open, onClose, onInsert }: OrcamentoModalProps)
   const [inter, setInter] = useState('')
   const [avanc, setAvanc] = useState('')
 
+  // Campos de Formatura
+  const [valorFormatura, setValorFormatura] = useState('')
+
   // Animação de entrada/saída
   useEffect(() => {
     if (open) {
@@ -86,11 +103,19 @@ export function OrcamentoModal({ open, onClose, onInsert }: OrcamentoModalProps)
   const basicoNum = parseFloat(basico) || 0
   const interNum  = parseFloat(inter)  || 0
   const avancNum  = parseFloat(avanc)  || 0
+  const valorFormaturaNum = parseFloat(valorFormatura) || 0
 
-  const canConfirm = peca.trim().length > 0 && basicoNum > 0 && interNum > 0 && avancNum > 0
+  const canConfirm =
+    selectedType === 'banho-ouro'
+      ? peca.trim().length > 0 && basicoNum > 0 && interNum > 0 && avancNum > 0
+      : selectedType === 'formatura'
+        ? valorFormaturaNum > 0
+        : false
 
   const preview = canConfirm
-    ? buildBanhoOuro(peca.trim(), basicoNum, interNum, avancNum)
+    ? selectedType === 'banho-ouro'
+      ? buildBanhoOuro(peca.trim(), basicoNum, interNum, avancNum)
+      : buildFormatura(valorFormaturaNum)
     : null
 
   function handleConfirm() {
@@ -99,6 +124,7 @@ export function OrcamentoModal({ open, onClose, onInsert }: OrcamentoModalProps)
     onClose()
     // Reset após envio
     setPeca(''); setBasico(''); setInter(''); setAvanc('')
+    setValorFormatura('')
   }
 
   const priceFields = [
@@ -186,6 +212,53 @@ export function OrcamentoModal({ open, onClose, onInsert }: OrcamentoModalProps)
               ))}
             </div>
           </div>
+
+          {/* Formulário — Formatura */}
+          {selectedType === 'formatura' && (
+            <div className="space-y-4 border-t pt-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Dados do orçamento
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Valor total</label>
+                  {valorFormaturaNum > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      10x de R$ {fmtBRL(Math.ceil(valorFormaturaNum / 10 * 100) / 100)}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none">
+                    R$
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={valorFormatura}
+                    onChange={(e) => setValorFormatura(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-xl border bg-muted/40 pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+
+              {preview && (
+                <div className="border-t pt-4 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Prévia da mensagem
+                  </p>
+                  <div className="rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
+                    <pre className="text-xs leading-relaxed whitespace-pre-wrap break-words font-sans text-foreground/80">
+                      {preview}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Formulário — Banho de Ouro */}
           {selectedType === 'banho-ouro' && (

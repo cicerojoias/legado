@@ -4,6 +4,8 @@ import { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react
 import { Send, Paperclip, Mic, MicOff, X, FileText, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { useInsertText } from './InsertTextContext'
+import { TemplateMenu } from './TemplateMenu'
+import { Template } from './templates'
 
 interface ReplyContext {
   id: string
@@ -57,6 +59,15 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Templates: detecta quando o texto começa com "/"
+  const showTemplateMenu = text.startsWith('/') && !recording && !mediaPreview
+  const templateQuery = showTemplateMenu ? text.slice(1) : ''
+
+  function handleTemplateSelect(template: Template) {
+    setText(template.content)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
 
   // Impede que o browser interprete toques na área de padding do input como scroll de página.
   // React registra onTouchMove como passive, então usar listener nativo com passive:false.
@@ -311,7 +322,7 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
   const isUploading = uploadState === 'uploading'
 
   return (
-    <div ref={containerRef} className="border-t bg-background">
+    <div ref={containerRef} className="border-t bg-background relative">
       {/* Barra de citação (reply) */}
       {replyTo && (
         <div className="flex items-start gap-2 px-4 pt-2 pb-1">
@@ -374,6 +385,15 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
             </span>
           </div>
         </div>
+      )}
+
+      {/* Menu de templates */}
+      {showTemplateMenu && (
+        <TemplateMenu
+          query={templateQuery}
+          onSelect={handleTemplateSelect}
+          onClose={() => setText('')}
+        />
       )}
 
       {/* Input principal */}

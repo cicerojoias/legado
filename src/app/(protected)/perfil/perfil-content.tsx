@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.15.2', data: '04/04/2026', resumo: 'WAB: templates de mensagem — digita / no chat para inserir respostas rápidas; Formatura habilitada no modal de orçamento' },
     { versao: '0.15.1', data: '03/04/2026', resumo: 'PIN: teclado some durante verificação e exibe círculo de loading centralizado' },
     { versao: '0.15.0', data: '31/03/2026', resumo: 'WAB: módulo de orçamentos — botão 📋 no chat abre preset de Banho de Ouro; parcelas auto-calculadas; insere direto no textarea' },
     { versao: '0.14.6', data: '31/03/2026', resumo: 'WAB: fix AudioPlayer — duration 0:00 em proxy streams; load() explícito no mount + onDurationChange/onCanPlay' },
