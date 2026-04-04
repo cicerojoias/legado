@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Delete } from 'lucide-react';
+import { Delete, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
 
@@ -65,7 +65,12 @@ export function PinPad({ onComplete, error, maxLength = 4, disabled = false }: P
                 </motion.p>
             )}
 
-            {/* Teclado Numérico */}
+            {/* Teclado Numérico ou Spinner */}
+            {disabled ? (
+                <div className="flex items-center justify-center h-[272px]">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+            ) : (
             <div className="grid grid-cols-3 gap-4 w-full">
                 {keys.map((key) => {
                     if (key === '') {
@@ -100,6 +105,7 @@ export function PinPad({ onComplete, error, maxLength = 4, disabled = false }: P
                     );
                 })}
             </div>
+            )}
         </div>
     );
 }
