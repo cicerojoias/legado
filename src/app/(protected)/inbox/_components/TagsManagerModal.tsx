@@ -3,9 +3,10 @@
 import { useState, useEffect, useTransition } from 'react'
 import { X, Plus, Pencil, Trash2, ChevronLeft, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createTag, updateTag, deleteTag, TAG_COLORS } from '../actions/tag-catalog'
+import { createTag, updateTag, deleteTag } from '../actions/tag-catalog'
+import { TAG_COLORS } from '../actions/tag-constants'
 import type { WaTag } from '@prisma/client'
-import type { TagColor } from '../actions/tag-catalog'
+import type { TagColor } from '../actions/tag-constants'
 
 // Classes literais para o compilador do Tailwind v4 não purgar
 const TAG_DOT_CLASSES: Record<string, string> = {

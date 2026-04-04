@@ -5,17 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { WaTag } from '@prisma/client'
-
-export const TAG_COLORS = [
-  'amber', 'rose', 'sky', 'violet', 'orange',
-  'teal', 'pink', 'indigo', 'lime', 'cyan',
-] as const
-
-export type TagColor = typeof TAG_COLORS[number]
-
-export type TagActionResult =
-  | { success: true; tag?: WaTag }
-  | { success: false; code: 'NAO_AUTORIZADO' | 'CAMPOS_INVALIDOS' | 'NOME_DUPLICADO' | 'TAG_EM_USO' | 'ERRO_INTERNO'; message?: string }
+import { TAG_COLORS } from './tag-constants'
+import type { TagActionResult } from './tag-constants'
+export type { TagColor, TagActionResult } from './tag-constants'
 
 const CreateTagSchema = z.object({
   name:  z.string().min(1).max(30).transform(v => v.trim().toLowerCase()),
