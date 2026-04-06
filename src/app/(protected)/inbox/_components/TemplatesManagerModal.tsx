@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, Pencil, Trash2, ChevronLeft, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTemplates } from './useTemplates'
@@ -22,8 +23,11 @@ export function TemplatesManagerModal({ open, onClose }: TemplatesManagerModalPr
   const [originalSlug, setOriginalSlug] = useState<string | null>(null) // null = novo
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [mounted, setMounted] = useState(false)
 
   const { templates, addTemplate, updateTemplate, deleteTemplate } = useTemplates()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (open) {
@@ -84,8 +88,9 @@ export function TemplatesManagerModal({ open, onClose }: TemplatesManagerModalPr
   }
 
   if (!open && !visible) return null
+  if (!mounted) return null
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -264,6 +269,7 @@ export function TemplatesManagerModal({ open, onClose }: TemplatesManagerModalPr
           </>
         )}
       </div>
-    </>
+    </>,
+    document.body
   )
 }

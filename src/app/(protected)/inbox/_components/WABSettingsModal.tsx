@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronLeft, ChevronRight, Zap, Tag, MessageCircle, MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { saveWelcomeSettings } from '../actions/settings'
@@ -28,6 +29,7 @@ export function WABSettingsModal({
 }: WABSettingsModalProps) {
   const [visible, setVisible] = useState(false)
   const [screen, setScreen] = useState<Screen>('root')
+  const [mounted, setMounted] = useState(false)
 
   // Welcome message state
   const [welcomeEnabled, setWelcomeEnabled] = useState(initialSettings?.welcome_enabled ?? false)
@@ -37,6 +39,8 @@ export function WABSettingsModal({
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   const { templates } = useTemplates()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (open) {
@@ -80,8 +84,9 @@ export function WABSettingsModal({
   }
 
   if (!open && !visible) return null
+  if (!mounted) return null
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -275,6 +280,7 @@ export function WABSettingsModal({
 
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

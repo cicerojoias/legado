@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, Pencil, Trash2, ChevronLeft, Tag, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createTag, updateTag, deleteTag } from '../actions/tag-catalog'
@@ -59,6 +60,9 @@ export function TagsManagerModal({ open, onClose, initialTags }: TagsManagerModa
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // Sincronizar quando initialTags mudar (revalidatePath propaga novos dados)
   useEffect(() => { setTags(initialTags) }, [initialTags])
@@ -141,8 +145,9 @@ export function TagsManagerModal({ open, onClose, initialTags }: TagsManagerModa
   }
 
   if (!open && !visible) return null
+  if (!mounted) return null
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -334,6 +339,7 @@ export function TagsManagerModal({ open, onClose, initialTags }: TagsManagerModa
           </>
         )}
       </div>
-    </>
+    </>,
+    document.body
   )
 }
