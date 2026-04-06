@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.0', data: '05/04/2026', resumo: 'WAB: resposta automática com IA (GPT-4o Mini) — toggle por conversa no header; histórico das últimas 20 msgs como contexto; roda em background após ack ao Meta' },
     { versao: '0.17.0', data: '04/04/2026', resumo: 'WAB: modal de configurações (⋮) — boas-vindas automática após 7 dias de silêncio (toggle + mensagem configurável); mensagens rápidas e tags migram para dentro do settings; ⚡ e 🏷️ removidos do header' },
     { versao: '0.16.1', data: '04/04/2026', resumo: 'WAB: fix over-scroll no chat (espaço fantasma após teclado); seleção de cor da tag com checkmark branco em vez de ring grosso; nome da tag preserva capitalização' },
     { versao: '0.16.0', data: '04/04/2026', resumo: 'WAB: módulo de tags — categorize conversas com labels coloridas; filtro por tag na lista; badges no item; painel de tags no header da conversa; gerenciador CRUD via ícone Tag (ADMIN+)' },

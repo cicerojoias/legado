@@ -137,6 +137,7 @@ model WaConversation {
   updated_at      DateTime   @updatedAt
 
   welcome_sent_at    DateTime?          // trava de dedup para mensagem de boas-vindas
+  ia_ativa           Boolean    @default(false) // IA responde automaticamente nesta conversa
 
   messages           WaMessage[]
   conversation_reads WaConversationRead[]

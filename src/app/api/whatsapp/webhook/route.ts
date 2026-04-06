@@ -10,6 +10,7 @@ import {
 import { dispatchPushForConversation } from '@/lib/whatsapp/push-dispatcher'
 import { incrementUnreadForConversation } from '@/lib/whatsapp/unread-manager'
 import { sendTextMessage } from '@/lib/whatsapp/meta-client'
+import { maybeRespondWithAI } from '@/lib/whatsapp/ai-responder'
 
 const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -160,6 +161,14 @@ export async function POST(req: NextRequest) {
                 mimeType: mimeType || undefined,
               },
             })
+
+            // Dispara IA para mensagens de texto (após ack ao Meta — não bloqueia)
+            if (msg.type === 'text') {
+              after(() =>
+                maybeRespondWithAI(waConversation.id, waId)
+                  .catch((err) => console.error('[webhook] ai-responder error:', err))
+              )
+            }
 
             // Dispara push e incrementa unreads após a resposta 200 (não bloqueia o webhook)
             after(() =>

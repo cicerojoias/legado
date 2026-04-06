@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Eraser, Trash2, Receipt } from 'lucide-react'
+import { ArrowLeft, Eraser, Trash2, Receipt, Bot } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
+import { toggleIaAtiva } from '../actions/conversation'
 import { cn } from '@/lib/utils'
 import type { WaContact, WaConversation, WaTag } from '@prisma/client'
 import type { TagWithMeta } from './types'
@@ -37,9 +38,25 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'clear' | 'delete' | null>(null)
   const [orcamentoOpen, setOrcamentoOpen] = useState(false)
+  const [iaAtiva, setIaAtiva] = useState(conversation.ia_ativa)
+  const [togglingIa, setTogglingIa] = useState(false)
 
   const { active } = useSelectionState()
   const { requestInsert } = useInsertText()
+
+  async function handleToggleIa() {
+    setTogglingIa(true)
+    setIaAtiva((prev) => !prev) // otimista
+    const result = await toggleIaAtiva(conversation.id)
+    if (result.success) {
+      toast.success(result.ia_ativa ? 'IA ativada nesta conversa' : 'IA desativada')
+      setIaAtiva(result.ia_ativa)
+    } else {
+      setIaAtiva((prev) => !prev) // reverter
+      toast.error('Erro ao alterar IA')
+    }
+    setTogglingIa(false)
+  }
 
   async function handleConfirmDelete() {
     if (!dialogType) return
@@ -126,6 +143,21 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
 
         {/* Ações */}
         <div className="flex items-center gap-1">
+          {/* Toggle IA */}
+          <button
+            onClick={handleToggleIa}
+            disabled={togglingIa}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors disabled:opacity-40',
+              iaAtiva
+                ? 'text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20'
+                : 'text-muted-foreground hover:bg-muted'
+            )}
+            title={iaAtiva ? 'IA ativa — clique para desativar' : 'Ativar resposta automática com IA'}
+          >
+            <Bot className="w-5 h-5" />
+          </button>
+
           {/* Orçamento — abre modal de preset de mensagem */}
           <button
             onClick={() => setOrcamentoOpen(true)}
