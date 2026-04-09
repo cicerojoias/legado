@@ -280,7 +280,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
           <AlertDialogHeader className="items-start text-left">
             <AlertDialogTitle>Ativar IA e responder pendências?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed">
-              A IA vai considerar apenas mensagens das últimas 24 horas, usando o contexto das últimas 15-20 mensagens.
+              A IA vai considerar apenas mensagens das últimas 36 horas, usando o contexto das últimas 15-20 mensagens.
               Se houver mensagens pendentes, ela responderá em mensagens curtas e mais humanas antes de seguir no automático.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -292,7 +292,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
                 {aiPreview?.pendingCount ?? 0} mensagem(ns) sem resposta
               </p>
               <p className="text-xs text-muted-foreground">
-                Janela de 24h · ativação visual antes do primeiro envio
+                Janela de 36h · ativação visual antes do primeiro envio
               </p>
             </div>
 

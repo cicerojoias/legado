@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { prisma } from '@/lib/prisma'
 import { sendTextMessage } from './meta-client'
 
-const WINDOW_MS = 24 * 60 * 60 * 1000
+const WINDOW_MS = 36 * 60 * 60 * 1000
 const MAX_CONTEXT_MESSAGES = 20
 const MAX_CATCH_UP_SEGMENTS = 3
 
