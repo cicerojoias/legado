@@ -27,24 +27,8 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
   const [editDraft, setEditDraft] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const notes = initialNotes
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 767px)')
-
-    const syncFromMedia = () => {
-      const mobile = mediaQuery.matches
-      setIsMobile(mobile)
-      setIsExpanded(!mobile)
-    }
-
-    syncFromMedia()
-
-    mediaQuery.addEventListener('change', syncFromMedia)
-    return () => mediaQuery.removeEventListener('change', syncFromMedia)
-  }, [])
 
   useEffect(() => {
     if (!editingId) return
@@ -67,9 +51,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
           table: 'wa_conversation_notes',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
-          router.refresh()
-        }
+        () => router.refresh()
       )
       .on(
         'postgres_changes',
@@ -79,9 +61,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
           table: 'wa_conversation_notes',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
-          router.refresh()
-        }
+        () => router.refresh()
       )
       .subscribe()
 
@@ -150,37 +130,30 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
   }
 
   const notesCount = notes.length
-  const panelLabel = isMobile
-    ? isExpanded
-      ? 'Ocultar notas internas'
-      : 'Mostrar notas internas'
-    : 'Notas internas'
 
   return (
     <section className="border-b bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-      <div className="px-3 py-3 sm:px-4">
+      <div className="px-3 py-2 sm:px-4">
         <button
           type="button"
           onClick={() => setIsExpanded((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl border bg-background/50 px-3 py-3 text-left transition-colors hover:bg-background/80 md:border-0 md:bg-transparent md:px-0 md:py-0 md:hover:bg-transparent"
+          className="flex w-full items-center justify-between gap-3 rounded-xl border bg-background/60 px-3 py-2.5 text-left transition-colors hover:bg-background/80"
           aria-expanded={isExpanded}
           aria-controls="conversation-notes-panel"
         >
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
               <StickyNote className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-sm font-semibold">{panelLabel}</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {isMobile ? 'Toque para abrir' : 'Interno'}
+              <div className="flex items-center gap-2">
+                <h2 className="truncate text-sm font-semibold">Notas internas</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {isExpanded ? 'Fechar' : 'Abrir'}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {isMobile
-                  ? 'Notas compartilhadas entre atendentes'
-                  : 'Visível para todos os usuários com acesso ao WAB'}
+              <p className="text-[11px] text-muted-foreground">
+                Compartilhadas entre atendentes
               </p>
             </div>
           </div>
@@ -188,7 +161,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
           <div className="flex items-center gap-2 shrink-0">
             <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{notesCount}</span>
             <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform md:hidden ${
+              className={`h-4 w-4 text-muted-foreground transition-transform ${
                 isExpanded ? 'rotate-180' : ''
               }`}
             />
@@ -198,36 +171,36 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
         <div
           id="conversation-notes-panel"
           className={`overflow-hidden transition-all duration-300 ease-out ${
-            isExpanded ? 'mt-3 max-h-[36rem] opacity-100' : 'mt-0 max-h-0 opacity-0 md:mt-3 md:max-h-none md:opacity-100'
+            isExpanded ? 'mt-2 max-h-[30rem] opacity-100' : 'max-h-0 opacity-0'
           }`}
         >
-          <div className="space-y-3">
-            <div className="space-y-2">
+          <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border bg-background/70 p-2.5">
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Escreva uma nota para o próximo atendimento..."
+                placeholder="Escreva uma nota curta para o próximo atendimento..."
                 maxLength={2000}
-                rows={isMobile ? 4 : 3}
-                className="min-h-24 w-full resize-none rounded-2xl border bg-background/90 px-3 py-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/60"
+                rows={3}
+                className="min-h-20 w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/60"
               />
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-muted-foreground">{draft.length}/2000</p>
                 <button
                   onClick={handleCreate}
                   disabled={!draft.trim() || isSaving}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Adicionar nota
+                  Salvar
                 </button>
               </div>
             </div>
 
-            <div className="max-h-[26rem] space-y-2 overflow-y-auto pr-1">
+            <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
               {notesCount === 0 ? (
-                <div className="rounded-2xl border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                  Nenhuma nota ainda. Deixe o próximo atendente com contexto.
+                <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+                  Nenhuma nota ainda.
                 </div>
               ) : (
                 notes.map((note) => {
@@ -236,8 +209,8 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                   const isEdited = new Date(note.updated_at).getTime() - new Date(note.created_at).getTime() > 1000
 
                   return (
-                    <article key={note.id} className="rounded-2xl border bg-background/80 px-3 py-3 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
+                    <article key={note.id} className="rounded-xl border bg-background/80 px-3 py-2.5">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
                             <span className="font-medium text-foreground">{authorName}</span>
@@ -251,10 +224,10 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                               onChange={(e) => setEditDraft(e.target.value)}
                               rows={3}
                               maxLength={2000}
-                              className="mt-2 min-h-24 w-full resize-none rounded-xl border bg-background px-3 py-2 text-sm outline-none transition-shadow focus:ring-2 focus:ring-primary/30"
+                              className="mt-2 min-h-20 w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                             />
                           ) : (
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
+                            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">
                               {note.content}
                             </p>
                           )}
@@ -266,7 +239,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                               <button
                                 onClick={() => handleUpdate(note.id)}
                                 disabled={!editDraft.trim() || isSaving}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-emerald-600 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-emerald-600 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
                                 aria-label="Salvar edição"
                               >
                                 <Check className="h-4 w-4" />
@@ -274,7 +247,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                               <button
                                 onClick={cancelEdit}
                                 disabled={isSaving}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                                 aria-label="Cancelar edição"
                               >
                                 <X className="h-4 w-4" />
@@ -285,7 +258,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                               <button
                                 onClick={() => beginEdit(note)}
                                 disabled={isSaving}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                                 aria-label="Editar nota"
                               >
                                 <PencilLine className="h-4 w-4" />
@@ -293,7 +266,7 @@ export function ConversationNotesPanel({ conversationId, initialNotes }: Convers
                               <button
                                 onClick={() => handleDelete(note.id)}
                                 disabled={isSaving}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-40"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-40"
                                 aria-label="Excluir nota"
                               >
                                 <Trash2 className="h-4 w-4" />
