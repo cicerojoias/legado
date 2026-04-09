@@ -5,6 +5,8 @@ import { sendTextMessage } from './meta-client'
 const WINDOW_MS = 36 * 60 * 60 * 1000
 const MAX_CONTEXT_MESSAGES = 20
 const MAX_CATCH_UP_SEGMENTS = 3
+const CATCH_UP_REPLY_GAP_MIN_MS = 1800
+const CATCH_UP_REPLY_GAP_JITTER_MS = 1200
 
 // Prompt do sistema - edite aqui para ajustar o comportamento da IA
 const SYSTEM_PROMPT = `Você é um representante da Cícero Joias, uma joalheria familiar com mais de 40 anos de tradição, fundada em 1985 pelo mestre ourives Cícero. Atende clientes via WhatsApp com tom caloroso, educado e prestativo - como um especialista de confiança, não um atendente robótico.
@@ -275,7 +277,8 @@ async function sendAiReplies(waId: string, conversationId: string, replies: stri
     if (!reply) continue
 
     if (index > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 700))
+      const gapMs = CATCH_UP_REPLY_GAP_MIN_MS + Math.floor(Math.random() * CATCH_UP_REPLY_GAP_JITTER_MS)
+      await new Promise((resolve) => setTimeout(resolve, gapMs))
     }
 
     const waMessageId = await sendTextMessage(waId, reply)
