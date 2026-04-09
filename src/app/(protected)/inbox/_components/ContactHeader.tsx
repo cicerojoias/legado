@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Eraser, Trash2, Receipt, Bot } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { toggleIaAtiva } from '../actions/conversation'
+import { activateIaWithCatchUpAction, getIaActivationPreview, toggleIaAtiva } from '../actions/conversation'
 import { cn } from '@/lib/utils'
 import type { WaContact, WaConversation, WaTag } from '@prisma/client'
 import type { TagWithMeta } from './types'
@@ -24,6 +24,17 @@ import { SelectionHeaderOverlay } from './SelectionHeaderOverlay'
 import { OrcamentoModal } from './OrcamentoModal'
 import { useInsertText } from './InsertTextContext'
 
+type AiActivationPreview = {
+  pendingCount: number
+  windowStart: string
+  lastOutboundAt: string | null
+  snippets: Array<{
+    id: string
+    content: string | null
+    timestamp: string
+  }>
+}
+
 interface ContactHeaderProps {
   contact:       WaContact
   conversation:  WaConversation
@@ -40,11 +51,31 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
   const [orcamentoOpen, setOrcamentoOpen] = useState(false)
   const [iaAtiva, setIaAtiva] = useState(conversation.ia_ativa)
   const [togglingIa, setTogglingIa] = useState(false)
+  const [aiPreviewOpen, setAiPreviewOpen] = useState(false)
+  const [aiPreview, setAiPreview] = useState<AiActivationPreview | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const { active } = useSelectionState()
   const { requestInsert } = useInsertText()
 
   async function handleToggleIa() {
+    if (!iaAtiva) {
+      setPreviewLoading(true)
+      try {
+        const result = await getIaActivationPreview(conversation.id)
+        if (!result.success) {
+          toast.error('Erro ao preparar a ativação da IA')
+          return
+        }
+
+        setAiPreview(result)
+        setAiPreviewOpen(true)
+      } finally {
+        setPreviewLoading(false)
+      }
+      return
+    }
+
     setTogglingIa(true)
     setIaAtiva((prev) => !prev) // otimista
     const result = await toggleIaAtiva(conversation.id)
@@ -56,6 +87,29 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
       toast.error('Erro ao alterar IA')
     }
     setTogglingIa(false)
+  }
+
+  async function handleConfirmAiActivation() {
+    setTogglingIa(true)
+    try {
+      const result = await activateIaWithCatchUpAction(conversation.id)
+      if (result.success) {
+        setIaAtiva(result.ia_ativa)
+        setAiPreviewOpen(false)
+        router.refresh()
+        toast.success(
+          result.sentCount > 0
+            ? `IA ativada e ${result.sentCount} mensagem(ns) enviada(s)`
+            : result.pendingCount > 0
+              ? 'IA ativada, mas não foi possível responder todas as pendências'
+            : 'IA ativada nesta conversa'
+        )
+      } else {
+        toast.error('Erro ao ativar IA')
+      }
+    } finally {
+      setTogglingIa(false)
+    }
   }
 
   async function handleConfirmDelete() {
@@ -146,7 +200,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
           {/* Toggle IA */}
           <button
             onClick={handleToggleIa}
-            disabled={togglingIa}
+            disabled={togglingIa || previewLoading}
             className={cn(
               'p-1.5 rounded-lg transition-colors disabled:opacity-40',
               iaAtiva
@@ -216,6 +270,68 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
               disabled={resolving}
             >
               Sim, {dialogType === 'delete' ? 'Excluir Chat' : 'Limpar Mensagens'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={aiPreviewOpen} onOpenChange={setAiPreviewOpen}>
+        <AlertDialogContent className="max-h-[calc(100vh-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-2xl p-4 sm:max-w-lg">
+          <AlertDialogHeader className="items-start text-left">
+            <AlertDialogTitle>Ativar IA e responder pendências?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed">
+              A IA vai considerar apenas mensagens das últimas 24 horas, usando o contexto das últimas 15-20 mensagens.
+              Se houver mensagens pendentes, ela responderá em mensagens curtas e mais humanas antes de seguir no automático.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-2xl border bg-muted/30 px-3 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Pendências encontradas</p>
+              <p className="mt-1 text-sm font-medium">
+                {aiPreview?.pendingCount ?? 0} mensagem(ns) sem resposta
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Janela de 24h · ativação visual antes do primeiro envio
+              </p>
+            </div>
+
+            {aiPreview && aiPreview.snippets.length > 0 ? (
+              <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                {aiPreview.snippets.map((snippet) => (
+                  <div key={snippet.id} className="rounded-xl border bg-background px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(snippet.timestamp).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <p className="mt-1 text-sm whitespace-pre-wrap">
+                      {snippet.content ?? '[Sem conteúdo]'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+                Não há pendências para responder agora. A IA ficará ativa para as próximas mensagens.
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel disabled={togglingIa}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="default"
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmAiActivation()
+              }}
+              disabled={togglingIa}
+            >
+              {togglingIa ? 'Ativando...' : aiPreview?.pendingCount ? 'Ativar e responder' : 'Ativar IA'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
