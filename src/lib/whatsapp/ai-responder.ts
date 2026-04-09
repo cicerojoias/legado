@@ -141,8 +141,11 @@ function toChatMessages(history: TextMessageRow[]): OpenAI.Chat.ChatCompletionMe
     }))
 }
 
-function pickLastOutboundAt(history: TextMessageRow[]) {
-  return [...history].reverse().find((message) => message.direction === 'outbound')?.timestamp ?? null
+function pickLastHumanOutboundAt(history: TextMessageRow[]) {
+  return [...history]
+    .reverse()
+    .find((message) => message.direction === 'outbound' && message.sent_by && message.sent_by !== 'ai')
+    ?.timestamp ?? null
 }
 
 function pickPendingMessages(history: TextMessageRow[], cutoffAt: Date | null) {
@@ -299,7 +302,7 @@ async function sendAiReplies(waId: string, conversationId: string, replies: stri
 export async function getAiCatchUpPreview(conversationId: string): Promise<CatchUpPreview> {
   const windowStart = buildWindowStart()
   const history = await fetchRecentTextHistory(conversationId, windowStart)
-  const lastOutboundAt = pickLastOutboundAt(history)
+  const lastOutboundAt = pickLastHumanOutboundAt(history)
   const pending = pickPendingMessages(history, lastOutboundAt)
 
   return {
@@ -351,7 +354,7 @@ export async function maybeRespondWithAI(conversationId: string, waId: string): 
 export async function activateAiWithCatchUp(conversationId: string, waId: string) {
   const windowStart = buildWindowStart()
   const history = await fetchRecentTextHistory(conversationId, windowStart)
-  const lastOutboundAt = pickLastOutboundAt(history)
+  const lastOutboundAt = pickLastHumanOutboundAt(history)
   const pending = pickPendingMessages(history, lastOutboundAt)
   let sentCount = 0
 

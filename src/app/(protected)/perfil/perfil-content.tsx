@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.5', data: '09/04/2026', resumo: 'WAB: correção do preview de ativação da IA — backlog agora considera a última mensagem humana, não qualquer outbound' },
     { versao: '0.18.4', data: '09/04/2026', resumo: 'WAB: IA com confirmação visual e modo pendências — responde backlog das últimas 24h com contexto das últimas 20 msgs, múltiplas mensagens curtas e emojis moderados' },
     { versao: '0.18.3', data: '09/04/2026', resumo: 'WAB: notas internas por conversa — painel recolhível no mobile, visível para todos os atendentes, com criação, edição e exclusão dentro do chat' },
     { versao: '0.18.2', data: '06/04/2026', resumo: 'WAB: system prompt da IA enriquecido com contexto completo da Cícero Joias — serviços, diferenciais, garantias, tom caloroso e regras de escalonamento para humano' },
