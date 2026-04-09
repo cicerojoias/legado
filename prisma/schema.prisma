@@ -44,6 +44,7 @@ model User {
   push_subscriptions    WaPushSubscription[]
   conversation_reads    WaConversationRead[]
   assigned_tags         ConversationTag[]     @relation("assigned_tags")
+  conversation_notes    WaConversationNote[]  @relation("conversation_note_author")
 
   created_at   DateTime    @default(now())
   updated_at   DateTime    @updatedAt
@@ -140,6 +141,7 @@ model WaConversation {
   ia_ativa           Boolean    @default(false) // IA responde automaticamente nesta conversa
 
   messages           WaMessage[]
+  notes              WaConversationNote[]
   conversation_reads WaConversationRead[]
   conversation_tags  ConversationTag[]
 
@@ -261,5 +263,20 @@ model WaMessageGeneration {
   created_at        DateTime @default(now())
 
   @@map("wa_message_generations")
+}
+
+model WaConversationNote {
+  id              String         @id @default(uuid())
+  conversation_id String
+  conversation    WaConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  author_id       String?
+  author          User?          @relation("conversation_note_author", fields: [author_id], references: [id], onDelete: SetNull)
+  content         String         @db.Text
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+  deleted_at      DateTime?
+
+  @@index([conversation_id, deleted_at, created_at])
+  @@map("wa_conversation_notes")
 }
 

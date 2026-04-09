@@ -4,13 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { ChatWindow } from '../_components/ChatWindow'
 import { ContactHeader } from '../_components/ContactHeader'
+import { ConversationNotesPanel } from '../_components/ConversationNotesPanel'
 import { ConversationList } from '../_components/ConversationList'
 import { ConversationSidebar } from '../_components/ConversationSidebar'
 import { SelectionProvider } from '../_components/SelectionContext'
 import { InsertTextProvider } from '../_components/InsertTextContext'
 import { listTags } from '../actions/tag-catalog'
 import { getSettings } from '../actions/settings'
-import type { ConversationWithMessages } from '../_components/types'
+import type { ConversationNoteWithAuthor, ConversationWithMessages } from '../_components/types'
 
 interface PageProps {
   params: Promise<{ conversationId: string }>
@@ -64,6 +65,23 @@ export default async function ConversationPage({ params, searchParams }: PagePro
 
   if (!conversation) notFound()
 
+  const notes = await prisma.waConversationNote.findMany({
+    where: {
+      conversation_id: conversationId,
+      deleted_at: null,
+    },
+    orderBy: { created_at: 'asc' },
+    include: {
+      author: {
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+        },
+      },
+    },
+  }) as ConversationNoteWithAuthor[]
+
   const { contact } = conversation
 
   return (
@@ -88,6 +106,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
               currentTags={(conversation as { conversation_tags?: import('../_components/types').TagWithMeta[] }).conversation_tags ?? []}
               availableTags={dbUser?.role !== 'OPERADOR' ? tags : []}
             />
+            <ConversationNotesPanel conversationId={conversationId} initialNotes={notes} />
             <ChatWindow
               conversationId={conversationId}
               initialMessages={messages}
