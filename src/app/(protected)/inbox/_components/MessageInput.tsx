@@ -315,7 +315,6 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
         }),
       })
       if (!res.ok) throw new Error('Falha ao enviar')
-      setText('')
       onClearReply?.()
       onMessageSent?.()
     } catch {
