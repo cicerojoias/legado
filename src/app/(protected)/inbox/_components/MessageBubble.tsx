@@ -1,9 +1,10 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Play, Pause } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
+import { AudioPlayer } from './AudioPlayer'
 
 // Tipo local para evitar erro de exportação do Prisma Client
 interface WaMessage {
@@ -36,103 +37,6 @@ const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 const HEADER_H = 60
 const FOOTER_H = 72
 const PICKER_H = 56
-
-/** Player de áudio customizado — substitui o <audio controls> nativo */
-function AudioPlayer({ src, isOutbound }: { src: string; isOutbound: boolean }) {
-  const [playing, setPlaying] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const audioRef = useRef<HTMLAudioElement>(null)
-
-  // Força carregamento dos metadados no mount — proxies de stream não disparam
-  // onLoadedMetadata automaticamente sem um load() explícito em mobile
-  useEffect(() => {
-    const a = audioRef.current
-    if (!a) return
-    // Se duração já disponível (cache do browser), lê imediatamente
-    if (a.duration && isFinite(a.duration)) { setDuration(a.duration); return }
-    a.load()
-  }, [src])
-
-  const syncDuration = () => {
-    const a = audioRef.current
-    if (a && isFinite(a.duration) && a.duration > 0) setDuration(a.duration)
-  }
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const a = audioRef.current
-    if (!a) return
-    if (playing) { a.pause() } else { void a.play() }
-  }
-
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const a = audioRef.current
-    if (!a || !a.duration) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-    a.currentTime = ratio * a.duration
-  }
-
-  const fmt = (s: number) => {
-    if (!isFinite(s) || isNaN(s)) return '0:00'
-    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-  }
-
-  return (
-    <div className="flex items-center gap-2.5 w-[210px] my-1" onClick={(e) => e.stopPropagation()}>
-      <audio
-        ref={audioRef}
-        src={src}
-        preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setProgress(0); setCurrentTime(0) }}
-        onTimeUpdate={() => {
-          const a = audioRef.current
-          if (!a?.duration) return
-          setCurrentTime(a.currentTime)
-          setProgress(a.currentTime / a.duration)
-        }}
-        onLoadedMetadata={syncDuration}
-        onDurationChange={syncDuration}
-        onCanPlay={syncDuration}
-      />
-      <button
-        onClick={toggle}
-        className={cn(
-          'shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors',
-          isOutbound
-            ? 'bg-white/20 hover:bg-white/30 text-primary-foreground'
-            : 'bg-primary/10 hover:bg-primary/20 text-primary'
-        )}
-      >
-        {playing
-          ? <Pause className="w-3.5 h-3.5" />
-          : <Play className="w-3.5 h-3.5 ml-0.5" />
-        }
-      </button>
-      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-        <div
-          className={cn(
-            'h-1 rounded-full cursor-pointer',
-            isOutbound ? 'bg-white/25' : 'bg-muted-foreground/20'
-          )}
-          onClick={seek}
-        >
-          <div
-            className={cn('h-full rounded-full transition-[width]', isOutbound ? 'bg-white/80' : 'bg-primary/70')}
-            style={{ width: `${progress * 100}%` }}
-          />
-        </div>
-        <span className={cn('text-[10px] leading-none tabular-nums', isOutbound ? 'text-primary-foreground/60' : 'text-muted-foreground')}>
-          {fmt(currentTime)} / {fmt(duration)}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
@@ -249,6 +153,25 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   useEffect(() => { onReplyRef.current = onReply }, [onReply])
   useEffect(() => { onReactRef.current = onReact }, [onReact])
 
+  const messageRef = useRef({
+    id: message.id,
+    content: message.content,
+    type: message.type,
+    direction: message.direction,
+    timestamp: message.timestamp,
+    wa_message_id: message.wa_message_id ?? null,
+  })
+  useEffect(() => {
+    messageRef.current = {
+      id: message.id,
+      content: message.content,
+      type: message.type,
+      direction: message.direction,
+      timestamp: message.timestamp,
+      wa_message_id: message.wa_message_id ?? null,
+    }
+  }, [message.id, message.content, message.type, message.direction, message.timestamp, message.wa_message_id])
+
   // ── Reaction picker state ─────────────────────────────────────────────────
   // Picker agora é acionado pelo botão Smile (não mais por long press)
   const [showPicker, setShowPicker] = useState(false)
@@ -264,11 +187,6 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
     document.addEventListener('click', close, { once: true })
     return () => { document.removeEventListener('click', close) }
   }, [showPicker])
-
-  // Fechar picker quando o modo seleção ativa (long press em qualquer mensagem)
-  useEffect(() => {
-    if (active) setShowPicker(false)
-  }, [active])
 
   // Abrir picker de reações — calcula direção conforme espaço disponível
   const openPicker = () => {
@@ -305,14 +223,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
         if (activeRef.current) return // selection mode ativo: long press é no-op
 
         // Entra no modo seleção com esta mensagem
-        enterRef.current({
-          id: message.id,
-          content: message.content,
-          type: message.type,
-          direction: message.direction,
-          timestamp: message.timestamp,
-          wa_message_id: message.wa_message_id ?? null,
-        })
+        enterRef.current(messageRef.current)
       }, LONG_PRESS_MS)
     }
 
@@ -350,14 +261,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
       // Tap curto em modo seleção → toggle
       if (!longPressFired && !swiping && activeRef.current) {
-        toggleRef.current({
-          id: message.id,
-          content: message.content,
-          type: message.type,
-          direction: message.direction,
-          timestamp: message.timestamp,
-          wa_message_id: message.wa_message_id ?? null,
-        })
+        toggleRef.current(messageRef.current)
       }
 
       // Swipe completo → reply
@@ -382,7 +286,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
       el.removeEventListener('touchend', onTouchEnd)
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
-  }, []) // refs são estáveis — sem deps necessárias
+  }, [messageRef]) // refs são estáveis — sem deps necessárias
 
   // ── Mensagem apagada — renderização simplificada (após todos os hooks) ─────
   if (message.type === 'deleted') {
@@ -418,20 +322,18 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
   const replyProgress = Math.min(dragX / SWIPE_THRESHOLD, 1)
 
-  // ── Status icon ───────────────────────────────────────────────────────────
-  const StatusIcon = () => {
-    if (!isOutbound) return null
-    if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
-    if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-accent" />
-    if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold">!</span>
-    return <Check className="w-3 h-3 text-muted-foreground" />
-  }
-
   const handleEmojiSelect = (emoji: string) => {
     const next = message.reaction === emoji ? '' : emoji
     onReactRef.current?.(next)
     setShowPicker(false)
   }
+
+  const statusIcon = isOutbound ? (() => {
+    if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
+    if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-accent" />
+    if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold">!</span>
+    return <Check className="w-3 h-3 text-muted-foreground" />
+  })() : null
 
   return (
     <div
@@ -577,7 +479,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
             {/* Rodapé: Hora e Status */}
             <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
               <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
-              <StatusIcon />
+              {statusIcon}
             </div>
           </div>
 
