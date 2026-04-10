@@ -314,7 +314,7 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
