@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useTransition, useState, useCallback } from 'react';
+import { useEffect, useTransition, useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Trash2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { toast } from 'sonner';
 import { TipoLancamento } from '@prisma/client';
 
 import {
@@ -132,7 +131,8 @@ export function EditarLancamentoModal({
     currentUserId,
 }: EditarLancamentoModalProps) {
     const [isPendingDelete, startDeleteTransition] = useTransition();
-    const [inlineError, setInlineError] = useState<string | null>(null);
+    const [inlineFeedback, setInlineFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isEditavel = lancamento
         ? lancamento.usuario_id === currentUserId &&
@@ -159,9 +159,17 @@ export function EditarLancamentoModal({
                 descricao: lancamento.descricao ?? '',
                 metodo_pgto: metodoNormalizado,
             });
-            setInlineError(null);
+            setInlineFeedback(null);
         }
     }, [lancamento, form]);
+
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+            }
+        };
+    }, []);
 
     const handleValorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
         const formatted = formatCurrency(e.target.value);
@@ -169,7 +177,7 @@ export function EditarLancamentoModal({
     }, []);
 
     const onSubmit = async (values: EditarFormValues) => {
-        setInlineError(null);
+        setInlineFeedback(null);
         const formData = new FormData();
         formData.append('id', values.id);
         formData.append('tipo', values.tipo);
@@ -179,10 +187,19 @@ export function EditarLancamentoModal({
 
         const result = await editarLancamento(formData);
         if (result.success) {
-            toast.success('Lançamento atualizado!');
-            onOpenChange(false);
+            setInlineFeedback({
+                type: 'success',
+                message: 'Lançamento atualizado.',
+            });
+            if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = setTimeout(() => {
+                onOpenChange(false);
+            }, 500);
         } else {
-            setInlineError(ERROR_MESSAGES[result.code] ?? 'Erro desconhecido.');
+            setInlineFeedback({
+                type: 'error',
+                message: ERROR_MESSAGES[result.code] ?? 'Erro desconhecido.',
+            });
         }
     };
 
@@ -191,10 +208,19 @@ export function EditarLancamentoModal({
         startDeleteTransition(async () => {
             const result = await deletarLancamento(lancamento.id);
             if (result.success) {
-                toast.success('Lançamento excluído.');
-                onOpenChange(false);
+                setInlineFeedback({
+                    type: 'success',
+                    message: 'Lançamento excluído.',
+                });
+                if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = setTimeout(() => {
+                    onOpenChange(false);
+                }, 500);
             } else {
-                setInlineError(ERROR_MESSAGES[result.code] ?? 'Erro ao excluir.');
+                setInlineFeedback({
+                    type: 'error',
+                    message: ERROR_MESSAGES[result.code] ?? 'Erro ao excluir.',
+                });
             }
         });
     };
@@ -362,8 +388,16 @@ export function EditarLancamentoModal({
                             />
 
                             {/* Erro inline */}
-                            {inlineError && (
-                                <p className="text-sm text-rose-500 font-medium">{inlineError}</p>
+                            {inlineFeedback && (
+                                <p
+                                    className={`text-sm font-medium ${
+                                        inlineFeedback.type === 'success'
+                                            ? 'text-emerald-700'
+                                            : 'text-rose-500'
+                                    }`}
+                                >
+                                    {inlineFeedback.message}
+                                </p>
                             )}
 
                             {/* Botões de ação */}

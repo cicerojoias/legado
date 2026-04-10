@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Loader2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { toast } from 'sonner';
 
 import {
     Dialog,
@@ -108,6 +107,7 @@ export function LancamentoModal({
     defaultLoja?: 'JOAO_PESSOA' | 'SANTA_RITA';
 }) {
     const [open, setOpen] = useState(false);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const searchParams = useSearchParams();
     const tzOffset = -3 * 60 * 60 * 1000;
     const brazilDate = new Date(Date.now() + tzOffset).toISOString().split('T')[0];
@@ -119,7 +119,7 @@ export function LancamentoModal({
             tipo: 'ENTRADA',
             valor: '0,00',
             descricao: '',
-            categoria: '',
+            categoria: 'CONSERTO',
             metodo_pgto: 'PIX',
             loja: defaultLoja ?? '',
             observacao: '',
@@ -149,6 +149,7 @@ export function LancamentoModal({
 
     const onSubmit = async (values: FormValues) => {
         const formData = new FormData();
+        setFeedback(null);
 
         // Converte valor BRL para formato numérico
         const valorNumerico = parseBRLtoNumber(values.valor);
@@ -161,28 +162,46 @@ export function LancamentoModal({
         if (values.observacao) formData.append('observacao', values.observacao);
         formData.set('data_ref', currentDate);
 
-        toast.promise(createLancamento(formData), {
-            loading: 'Salvando...',
-            success: (data) => {
-                if (data.error) throw new Error(data.error);
-                setOpen(false);
-                form.reset({
-                    tipo: 'ENTRADA',
-                    valor: '0,00',
-                    descricao: '',
-                    categoria: '',
-                    metodo_pgto: 'PIX',
-                    loja: defaultLoja ?? '',
-                    observacao: '',
-                });
-                return 'Lançamento registrado com sucesso!';
-            },
-            error: (err) => err.message || 'Erro ao registrar',
-        });
+        try {
+            const result = await createLancamento(formData);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            setFeedback({
+                type: 'success',
+                message: 'Lançamento registrado. Você pode lançar o próximo agora.',
+            });
+            form.reset({
+                tipo: 'ENTRADA',
+                valor: '0,00',
+                descricao: '',
+                categoria: 'CONSERTO',
+                metodo_pgto: 'PIX',
+                loja: defaultLoja ?? '',
+                observacao: '',
+            });
+
+            window.setTimeout(() => {
+                form.setFocus('valor');
+            }, 0);
+        } catch (err) {
+            setFeedback({
+                type: 'error',
+                message: err instanceof Error ? err.message : 'Erro ao registrar',
+            });
+        }
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                setOpen(nextOpen);
+                if (!nextOpen) setFeedback(null);
+            }}
+        >
             <DialogTrigger asChild>
                 <div className="flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all text-primary hover:text-primary/80">
                     <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md shadow-primary/20 mb-1">
@@ -214,6 +233,20 @@ export function LancamentoModal({
                         </DialogDescription>
                     </DialogHeader>
                 </div>
+
+                {feedback && (
+                    <div
+                        role={feedback.type === 'error' ? 'alert' : 'status'}
+                        aria-live="polite"
+                        className={`mx-6 mt-4 rounded-2xl border px-4 py-3 text-sm font-medium ${
+                            feedback.type === 'success'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                : 'border-rose-200 bg-rose-50 text-rose-800'
+                        }`}
+                    >
+                        {feedback.message}
+                    </div>
+                )}
 
                 {/* Form body */}
                 <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-100px)]">
@@ -311,7 +344,7 @@ export function LancamentoModal({
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Pagamento</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Selecione..." />
@@ -336,7 +369,7 @@ export function LancamentoModal({
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Categoria</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Opcional" />
@@ -369,7 +402,6 @@ export function LancamentoModal({
                                             <Select
                                                 onValueChange={field.onChange}
                                                 value={field.value}
-                                                defaultValue={field.value}
                                             >
                                                 <FormControl>
                                                     <SelectTrigger>

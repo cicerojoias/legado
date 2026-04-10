@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Pencil, Trash2, ToggleLeft, ToggleRight, Plus, AlertCircle } from 'lucide-react';
 import { CustoFixoForm } from './custo-fixo-form';
@@ -25,7 +25,15 @@ const LOJA_LABELS: Record<string, string> = {
 const formatBRL = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-function CustoCard({ custo, onEdit }: { custo: CustoFixoItem; onEdit: (c: CustoFixoItem) => void }) {
+function CustoCard({
+    custo,
+    onEdit,
+    onSuccess,
+}: {
+    custo: CustoFixoItem;
+    onEdit: (c: CustoFixoItem) => void;
+    onSuccess: (message: string) => void;
+}) {
     const [isPending, startTransition] = useTransition();
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -43,7 +51,7 @@ function CustoCard({ custo, onEdit }: { custo: CustoFixoItem; onEdit: (c: CustoF
         }
         startTransition(async () => {
             const result = await deletarCustoFixo(custo.id);
-            if (result.success) toast.success('Custo fixo removido.');
+            if (result.success) onSuccess('Custo fixo removido.');
             else toast.error(result.error);
             setConfirmDelete(false);
         });
@@ -148,13 +156,35 @@ interface CustoFixoListProps {
 export function CustoFixoList({ custos, totalMensal }: CustoFixoListProps) {
     const [editando, setEditando] = useState<CustoFixoItem | null>(null);
     const [criando, setCriando] = useState(false);
+    const [feedback, setFeedback] = useState<string | null>(null);
+    const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const ativos   = custos.filter((c) => c.ativo);
     const inativos = custos.filter((c) => !c.ativo);
 
+    useEffect(() => {
+        return () => {
+            if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+        };
+    }, []);
+
+    function handleSuccess(message: string) {
+        setFeedback(message);
+        if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = setTimeout(() => {
+            setFeedback(null);
+        }, 2000);
+    }
+
     return (
         <>
             <div className="flex-1 overflow-y-auto p-4 space-y-5 pb-24">
+                {feedback && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                        {feedback}
+                    </div>
+                )}
+
                 {/* Resumo total */}
                 <div className="bg-[#184434] rounded-xl p-4 text-white">
                     <p className="text-xs font-bold uppercase text-white/60 mb-1">Total mensal (ativos)</p>
@@ -176,7 +206,7 @@ export function CustoFixoList({ custos, totalMensal }: CustoFixoListProps) {
                     <div className="space-y-2">
                         <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-wide ml-1">Ativos</p>
                         {ativos.map((c) => (
-                            <CustoCard key={c.id} custo={c} onEdit={setEditando} />
+                            <CustoCard key={c.id} custo={c} onEdit={setEditando} onSuccess={handleSuccess} />
                         ))}
                     </div>
                 )}
@@ -186,7 +216,7 @@ export function CustoFixoList({ custos, totalMensal }: CustoFixoListProps) {
                     <div className="space-y-2">
                         <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-wide ml-1">Inativos</p>
                         {inativos.map((c) => (
-                            <CustoCard key={c.id} custo={c} onEdit={setEditando} />
+                            <CustoCard key={c.id} custo={c} onEdit={setEditando} onSuccess={handleSuccess} />
                         ))}
                     </div>
                 )}
@@ -194,7 +224,7 @@ export function CustoFixoList({ custos, totalMensal }: CustoFixoListProps) {
                 {custos.length === 0 && (
                     <div className="text-center py-16 text-muted-foreground text-sm">
                         <p className="mb-1 font-medium">Nenhum custo fixo cadastrado.</p>
-                        <p className="text-xs">Clique em "Novo custo fixo" para começar.</p>
+                        <p className="text-xs">Clique em &quot;Novo custo fixo&quot; para começar.</p>
                     </div>
                 )}
             </div>

@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { X, Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,10 +31,21 @@ export function CustoFixoForm({ custo, onClose }: CustoFixoFormProps) {
     const formRef = useRef<HTMLFormElement>(null);
     const [isPending, startTransition] = useTransition();
     const [loja, setLoja] = useState<string>(custo?.loja ?? 'JOAO_PESSOA');
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isEditing = !!custo;
+
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current) {
+                clearTimeout(closeTimerRef.current);
+            }
+        };
+    }, []);
 
     function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        setFeedback(null);
         const formData = new FormData(e.currentTarget);
         formData.set('loja', loja);
 
@@ -45,10 +55,19 @@ export function CustoFixoForm({ custo, onClose }: CustoFixoFormProps) {
                 : await criarCustoFixo(formData);
 
             if (result.success) {
-                toast.success(isEditing ? 'Custo fixo atualizado.' : 'Custo fixo cadastrado.');
-                onClose();
+                setFeedback({
+                    type: 'success',
+                    message: isEditing ? 'Custo fixo atualizado.' : 'Custo fixo cadastrado.',
+                });
+                if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                closeTimerRef.current = setTimeout(() => {
+                    onClose();
+                }, 500);
             } else {
-                toast.error(result.error);
+                setFeedback({
+                    type: 'error',
+                    message: result.error,
+                });
             }
         });
     }
@@ -68,6 +87,20 @@ export function CustoFixoForm({ custo, onClose }: CustoFixoFormProps) {
                         <X className="w-4 h-4 text-muted-foreground" />
                     </button>
                 </div>
+
+                {feedback && (
+                    <div
+                        role={feedback.type === 'error' ? 'alert' : 'status'}
+                        aria-live="polite"
+                        className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                            feedback.type === 'success'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                : 'border-rose-200 bg-rose-50 text-rose-800'
+                        }`}
+                    >
+                        {feedback.message}
+                    </div>
+                )}
 
                 <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                     {isEditing && <input type="hidden" name="id" value={custo.id} />}
