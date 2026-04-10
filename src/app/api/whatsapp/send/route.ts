@@ -30,6 +30,8 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Conversa não encontrada' }, { status: 404 })
     }
 
+    const now = new Date()
+
     // Resolver wa_message_id da mensagem citada (necessário para o campo context da Meta)
     let contextWaMessageId: string | undefined
     if (replyToId) {
@@ -40,41 +42,62 @@ export async function POST(req: Request) {
       contextWaMessageId = replyMsg?.wa_message_id ?? undefined
     }
 
-    // Enviar via Meta Cloud API
-    const waMessageId = await sendTextMessage(
-      conversation.contact.phone,
-      text.trim(),
-      contextWaMessageId
-    )
-
-    // Persistir mensagem enviada
-    const message = await prisma.waMessage.create({
+    // Persistir primeiro como pendente para que o realtime publique a linha imediatamente.
+    const draft = await prisma.waMessage.create({
       data: {
         conversation_id: conversationId,
-        wa_message_id: waMessageId || undefined,
         direction: 'outbound',
         type: 'text',
         content: text.trim(),
-        status: 'sent',
+        status: 'pending',
         sent_by: user.id,
-        timestamp: new Date(),
+        timestamp: now,
         replyToId: replyToId ?? null,
         replyToSnapshot: replyToSnapshot ? replyToSnapshot.slice(0, 500) : null,
       },
     })
 
-    // Atualizar last_message_at da conversa
     await prisma.waConversation.update({
       where: { id: conversationId },
-      data: { last_message_at: new Date() },
+      data: { last_message_at: now },
     })
 
-    return Response.json({ message })
-  } catch (error: any) {
-    console.error('=== ERRO NO ENVIO OUTBOUND (Meta/WhatsApp): ===')
-    console.error(error)
+    try {
+      // Enviar via Meta Cloud API
+      const waMessageId = await sendTextMessage(
+        conversation.contact.phone,
+        text.trim(),
+        contextWaMessageId
+      )
+
+      // Consolidar a mensagem já exibida como "pending" para o status final.
+      const message = await prisma.waMessage.update({
+        where: { id: draft.id },
+        data: {
+          wa_message_id: waMessageId || undefined,
+          status: 'sent',
+        },
+      })
+
+      return Response.json({ message })
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      await prisma.waMessage.update({
+        where: { id: draft.id },
+        data: { status: 'failed' },
+      }).catch(() => {})
+
+      console.error('=== ERRO NO ENVIO OUTBOUND (Meta/WhatsApp): ===')
+      console.error(error)
+      return Response.json(
+        { error: 'Erro ao enviar a mensagem', details: errorMessage },
+        { status: 500 }
+      )
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return Response.json(
-      { error: 'Erro ao enviar a mensagem', details: error.message || error },
+      { error: 'Erro ao enviar a mensagem', details: errorMessage },
       { status: 500 }
     )
   }

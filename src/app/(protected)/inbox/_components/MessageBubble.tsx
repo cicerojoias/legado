@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 import { AudioPlayer } from './AudioPlayer'
@@ -329,6 +329,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   }
 
   const statusIcon = isOutbound ? (() => {
+    if (message.status === 'pending') return <Clock className="w-3 h-3 text-muted-foreground" />
     if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
     if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-accent" />
     if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold">!</span>

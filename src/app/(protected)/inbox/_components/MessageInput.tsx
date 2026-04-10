@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
-import { Send, Paperclip, Mic, MicOff, X, FileText, Image } from 'lucide-react'
+import { Send, Paperclip, Mic, MicOff, X, FileText, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useInsertText } from './InsertTextContext'
 import { TemplateMenu } from './TemplateMenu'
@@ -34,7 +34,8 @@ interface MediaPreview {
 
 export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply }: MessageInputProps) {
   const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
+  const textSendLockRef = useRef(false)
+  const mediaSendLockRef = useRef(false)
 
   // Injeta texto gerado pelo OrcamentoModal no textarea
   const { pendingText, clearPendingText } = useInsertText()
@@ -256,33 +257,40 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
 
   // ── Envio (texto ou mídia) ─────────────────────────────────────────────────
   async function handleSend() {
-    if (sending) return
-
     // Se há mídia em preview, enviar como mensagem de mídia
     if (mediaPreview && uploadState === 'preview') {
-      setSending(true)
+      if (mediaSendLockRef.current) return
+      const previewSnapshot = mediaPreview
+      const captionSnapshot = text
+      mediaSendLockRef.current = true
+      setMediaPreview(null)
+      setUploadState('idle')
+      setText('')
+      setTimeout(() => textareaRef.current?.focus(), 0)
+      setTimeout(() => { mediaSendLockRef.current = false }, 0)
       try {
         const res = await fetch('/api/whatsapp/send-media', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             conversationId,
-            mediaUrl: mediaPreview.url,
-            mimeType: mediaPreview.mimeType,
-            caption: text.trim() || undefined,
+            mediaUrl: previewSnapshot.url,
+            mimeType: previewSnapshot.mimeType,
+            caption: captionSnapshot.trim() || undefined,
           }),
         })
         if (!res.ok) {
           const { error } = await res.json().catch(() => ({}))
           throw new Error(error ?? 'Erro ao enviar mídia.')
         }
-        cancelMedia()
-        setText('')
         onMessageSent?.()
       } catch (err) {
+        setMediaPreview((current) => current ?? previewSnapshot)
+        setUploadState((current) => (current === 'idle' ? 'preview' : current))
+        setText((current) => (current.trim() ? current : captionSnapshot))
         toast.error(err instanceof Error ? err.message : 'Erro ao enviar mídia.')
       } finally {
-        setSending(false)
+        mediaSendLockRef.current = false
       }
       return
     }
@@ -290,7 +298,11 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
     // Caso contrário, enviar texto
     const trimmed = text.trim()
     if (!trimmed) return
-    setSending(true)
+    if (textSendLockRef.current) return
+    textSendLockRef.current = true
+    setText('')
+    setTimeout(() => textareaRef.current?.focus(), 0)
+    setTimeout(() => { textSendLockRef.current = false }, 0)
     try {
       const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
@@ -307,9 +319,10 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
       onClearReply?.()
       onMessageSent?.()
     } catch {
+      setText((current) => (current.trim() ? current : trimmed))
       toast.error('Erro ao enviar mensagem')
     } finally {
-      setSending(false)
+      textSendLockRef.current = false
     }
   }
 
@@ -352,9 +365,9 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
           <div className="flex items-center gap-2 flex-1 rounded-xl bg-muted/60 border px-3 py-2 text-sm">
             {mediaPreview.mimeType.startsWith('image/') ? (
               <>
-                <Image className="w-4 h-4 text-blue-500 shrink-0" />
+                <ImageIcon className="w-4 h-4 text-blue-500 shrink-0" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mediaPreview.url} alt="preview" className="h-12 w-12 rounded object-cover" />
+                <img src={mediaPreview.url} alt="Pré-visualização da imagem" className="h-12 w-12 rounded object-cover" />
               </>
             ) : mediaPreview.mimeType.startsWith('audio/') ? (
               <>
@@ -450,7 +463,7 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
         {(canSend || isUploading) && (
           <button
             onClick={handleSend}
-            disabled={!canSend || sending || isUploading}
+            disabled={!canSend || isUploading}
             className="shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-40 transition-opacity active:scale-95 cursor-pointer hover:bg-primary/90"
             title="Enviar"
           >

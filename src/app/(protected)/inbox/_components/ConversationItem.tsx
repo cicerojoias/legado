@@ -1,7 +1,7 @@
 import type { ConversationWithPreview } from './types'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Check, CheckCheck } from 'lucide-react'
+import { Check, CheckCheck, Clock } from 'lucide-react'
 
 interface ConversationItemProps {
   conversation: ConversationWithPreview
@@ -92,7 +92,9 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
           <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
             {lastMsg && lastMsg.direction === 'outbound' && (
               <span className="shrink-0 flex items-center">
-                {lastMsg.status === 'read' ? (
+                {lastMsg.status === 'pending' ? (
+                  <Clock className="w-[14px] h-[14px]" />
+                ) : lastMsg.status === 'read' ? (
                   <CheckCheck className="w-[14px] h-[14px] text-accent" />
                 ) : lastMsg.status === 'delivered' ? (
                   <CheckCheck className="w-[14px] h-[14px]" />

@@ -263,18 +263,9 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   }, [])
 
   const handleMessageSent = useCallback(() => {
-    // Refetch das últimas 100 após envio (usuário está no fundo — não há perda de contexto)
-    fetch(`/api/whatsapp/conversations/${conversationId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const fresh: WaMessage[] = data.conversation?.messages ?? []
-        setMessages(fresh)
-        setHasMore(data.hasMore ?? false)
-        setPendingCount(0)
-        scrollToBottom()
-      })
-      .catch(() => {})
-  }, [conversationId, scrollToBottom])
+    // O envio já publica INSERT/UPDATE via realtime; só garante que a bolha fique visível.
+    scrollToBottom()
+  }, [scrollToBottom])
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
