@@ -51,7 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
-    { versao: '0.18.20', data: '10/04/2026', resumo: 'WAB: modal de configurações reescrito com Framer Motion AnimatePresence — slide-up confiável sem depender de timing de CSS' },
+    { versao: '0.18.21', data: '10/04/2026', resumo: 'WAB: modal de configurações — corrige import AnimatePresence e layout colapsado (flex-1 sem altura explícita)' },
     { versao: '0.18.16', data: '10/04/2026', resumo: 'Hoje: peso do valor do saldo reduzido de black para semibold' },
     { versao: '0.18.15', data: '10/04/2026', resumo: 'Hoje: fechamento do dia começa fechado por padrão; seta corrigida' },
     { versao: '0.18.14', data: '10/04/2026', resumo: 'Hoje: fechamento do dia recolhível — tap para expandir/recolher detalhes; preferência salva no dispositivo' },
