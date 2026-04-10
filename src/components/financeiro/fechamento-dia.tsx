@@ -19,13 +19,11 @@ interface FechamentoProps {
 const STORAGE_KEY = 'fechamento-expanded';
 
 export function FechamentoDia({ totais }: FechamentoProps) {
-    const [expanded, setExpanded] = useState(true);
-    const [mounted, setMounted] = useState(false);
+    const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved !== null) setExpanded(saved === 'true');
-        setMounted(true);
     }, []);
 
     function toggle() {
@@ -63,7 +61,7 @@ export function FechamentoDia({ totais }: FechamentoProps) {
                 </div>
 
                 <motion.div
-                    animate={{ rotate: expanded ? 180 : 0 }}
+                    animate={{ rotate: expanded ? 0 : 180 }}
                     transition={{ duration: 0.25 }}
                     className="shrink-0 rounded-full border border-white/15 bg-white/10 p-1.5"
                 >
@@ -73,7 +71,7 @@ export function FechamentoDia({ totais }: FechamentoProps) {
 
             {/* Detalhes — expandível */}
             <AnimatePresence initial={false}>
-                {(!mounted || expanded) && (
+                {expanded && (
                     <motion.div
                         key="details"
                         initial={{ height: 0, opacity: 0 }}

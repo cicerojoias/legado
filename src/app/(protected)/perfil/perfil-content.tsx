@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.15', data: '10/04/2026', resumo: 'Hoje: fechamento do dia começa fechado por padrão; seta corrigida' },
     { versao: '0.18.14', data: '10/04/2026', resumo: 'Hoje: fechamento do dia recolhível — tap para expandir/recolher detalhes; preferência salva no dispositivo' },
     { versao: '0.18.13', data: '10/04/2026', resumo: 'WAB: Enter envia mensagem em qualquer dispositivo; Shift+Enter pula linha' },
     { versao: '0.18.12', data: '10/04/2026', resumo: 'Hoje: fechamento do dia no mobile compactado — menos espaço vertical, formas de pagamento em linha única' },
