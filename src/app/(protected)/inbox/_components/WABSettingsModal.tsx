@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { createPortal } from 'react-dom'
-import { X, ChevronLeft, ChevronRight, Zap, Tag, MessageCircle, MoreVertical } from 'lucide-react'
+import { Dialog as DialogPrimitive } from 'radix-ui'
+import { X, ChevronLeft, ChevronRight, Zap, Tag, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { saveWelcomeSettings } from '../actions/settings'
 import { useTemplates } from './useTemplates'
@@ -27,9 +27,7 @@ export function WABSettingsModal({
   tags,
   initialSettings,
 }: WABSettingsModalProps) {
-  const [visible, setVisible] = useState(false)
   const [screen, setScreen] = useState<Screen>('root')
-  const [mounted, setMounted] = useState(false)
 
   // Welcome message state
   const [welcomeEnabled, setWelcomeEnabled] = useState(initialSettings?.welcome_enabled ?? false)
@@ -40,18 +38,15 @@ export function WABSettingsModal({
 
   const { templates } = useTemplates()
 
-  useEffect(() => { setMounted(true) }, [])
-
+  // Reset screen ao fechar
   useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
-    } else {
-      setVisible(false)
-      setTimeout(() => {
+    if (!open) {
+      const id = setTimeout(() => {
         setScreen('root')
         setSaveError('')
         setSaveSuccess(false)
       }, 300)
+      return () => clearTimeout(id)
     }
   }, [open])
 
@@ -76,211 +71,213 @@ export function WABSettingsModal({
   }
 
   function handleToggleWelcome(val: boolean) {
-    if (val && !welcomeMessage.trim()) {
-      // Não ativa sem mensagem — foca no textarea
-      return
-    }
+    if (val && !welcomeMessage.trim()) return
     setWelcomeEnabled(val)
   }
 
-  if (!open && !visible) return null
-  if (!mounted) return null
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogPrimitive.Portal>
+        {/* Backdrop */}
+        <DialogPrimitive.Overlay
+          className={cn(
+            'fixed inset-0 z-[60] bg-black/60',
+            'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+            'duration-300'
+          )}
+        />
 
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div
-        className={cn(
-          'fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300',
-          visible ? 'opacity-100' : 'opacity-0'
-        )}
-        onClick={onClose}
-      />
-
-      {/* Bottom sheet */}
-      <div
-        className={cn(
-          'fixed bottom-0 left-0 right-0 z-[61] flex flex-col rounded-t-2xl bg-background shadow-2xl overflow-hidden',
-          'transition-transform duration-300 ease-out max-h-[92dvh]',
-          visible ? 'translate-y-0' : 'translate-y-full'
-        )}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-        </div>
-
-        {/* Screens container — slide horizontalmente */}
-        <div className="flex flex-1 min-h-0 overflow-hidden relative">
-
-          {/* ── SCREEN ROOT ───────────────────────────────────────── */}
-          <div className={cn(
-            'absolute inset-0 flex flex-col transition-transform duration-300 ease-out',
-            screen === 'root' ? 'translate-x-0' : '-translate-x-full'
-          )}>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 shrink-0">
-              <div className="flex-1">
-                <h2 className="text-base font-semibold">Configurações</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-t shrink-0" />
-
-            {/* Lista de settings */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {/* Seção: Automações */}
-              <p className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Automações
-              </p>
-              <button
-                onClick={() => setScreen('welcome')}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <MessageCircle className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Mensagem de Boas-vindas</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {welcomeEnabled ? 'Ativa — enviada após 7 dias sem contato' : 'Inativa'}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-
-              {/* Seção: Catálogos */}
-              <p className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Catálogos
-              </p>
-              <button
-                onClick={() => { onClose(); setTimeout(onOpenTemplates, 150) }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Mensagens Rápidas</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {templates.length} {templates.length === 1 ? 'mensagem' : 'mensagens'} configuradas
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-              <button
-                onClick={() => { onClose(); setTimeout(onOpenTags, 150) }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Tag className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Tags</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {tags.length} {tags.length === 1 ? 'tag ativa' : 'tags ativas'}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-            </div>
+        {/* Bottom sheet */}
+        <DialogPrimitive.Content
+          className={cn(
+            'fixed bottom-0 left-0 right-0 z-[61]',
+            'flex flex-col rounded-t-2xl bg-background shadow-2xl overflow-hidden',
+            'max-h-[92dvh] outline-none',
+            'data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
+            'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom',
+            'duration-300 ease-out'
+          )}
+          // Evita fechar ao clicar dentro
+          onPointerDownOutside={(e) => {
+            e.preventDefault()
+            onClose()
+          }}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
 
-          {/* ── SCREEN WELCOME ────────────────────────────────────── */}
-          <div className={cn(
-            'absolute inset-0 flex flex-col transition-transform duration-300 ease-out',
-            screen === 'welcome' ? 'translate-x-0' : 'translate-x-full'
-          )}>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3 shrink-0">
-              <button
-                onClick={() => { setScreen('root'); setSaveError(''); setSaveSuccess(false) }}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="flex-1">
-                <h2 className="text-base font-semibold">Mensagem de Boas-vindas</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="border-t shrink-0" />
+          {/* Screens container — slide horizontal */}
+          <div className="flex flex-1 min-h-0 overflow-hidden relative">
 
-            <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-5">
-              {/* Toggle */}
-              <div className="flex items-start justify-between gap-4">
+            {/* ── SCREEN ROOT ───────────────────────────────────────── */}
+            <div className={cn(
+              'absolute inset-0 flex flex-col transition-transform duration-300 ease-out',
+              screen === 'root' ? 'translate-x-0' : '-translate-x-full'
+            )}>
+              {/* Header */}
+              <div className="flex items-center gap-2 px-4 py-3 shrink-0">
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Ativar boas-vindas automática</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Envia automaticamente quando um cliente manda mensagem após{' '}
-                    <strong>7 dias</strong> sem contato de nenhum dos lados.
-                  </p>
+                  <h2 className="text-base font-semibold">Configurações</h2>
                 </div>
                 <button
-                  role="switch"
-                  aria-checked={welcomeEnabled}
-                  onClick={() => handleToggleWelcome(!welcomeEnabled)}
-                  className={cn(
-                    'relative shrink-0 w-12 h-6 rounded-full transition-colors duration-200',
-                    welcomeEnabled ? 'bg-primary' : 'bg-muted-foreground/30',
-                    !welcomeMessage.trim() && 'opacity-40 cursor-not-allowed'
-                  )}
+                  onClick={onClose}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
                 >
-                  <span className={cn(
-                    'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200',
-                    welcomeEnabled ? 'translate-x-6' : 'translate-x-0'
-                  )} />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
+              <div className="border-t shrink-0" />
 
-              {!welcomeMessage.trim() && (
-                <p className="text-xs text-amber-600 -mt-2">
-                  Preencha a mensagem abaixo para ativar o toggle.
+              {/* Lista de settings */}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <p className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Automações
                 </p>
-              )}
+                <button
+                  onClick={() => setScreen('welcome')}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <MessageCircle className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Mensagem de Boas-vindas</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {welcomeEnabled ? 'Ativa — enviada após 7 dias sem contato' : 'Inativa'}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
 
-              {/* Textarea da mensagem */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Mensagem</label>
-                <textarea
-                  value={welcomeMessage}
-                  onChange={e => setWelcomeMessage(e.target.value)}
-                  placeholder="Olá, seja bem-vindo(a) à *Cícero Joias*! ✨..."
-                  maxLength={1000}
-                  rows={7}
-                  className="w-full rounded-xl border bg-muted/40 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/60 leading-relaxed"
-                />
-                <p className="text-xs text-muted-foreground text-right">{welcomeMessage.length}/1000</p>
+                <p className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Catálogos
+                </p>
+                <button
+                  onClick={() => { onClose(); setTimeout(onOpenTemplates, 150) }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Zap className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Mensagens Rápidas</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {templates.length} {templates.length === 1 ? 'mensagem' : 'mensagens'} configuradas
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+                <button
+                  onClick={() => { onClose(); setTimeout(onOpenTags, 150) }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Tag className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Tags</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {tags.length} {tags.length === 1 ? 'tag ativa' : 'tags ativas'}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+              </div>
+            </div>
+
+            {/* ── SCREEN WELCOME ────────────────────────────────────── */}
+            <div className={cn(
+              'absolute inset-0 flex flex-col transition-transform duration-300 ease-out',
+              screen === 'welcome' ? 'translate-x-0' : 'translate-x-full'
+            )}>
+              {/* Header */}
+              <div className="flex items-center gap-2 px-4 py-3 shrink-0">
+                <button
+                  onClick={() => { setScreen('root'); setSaveError(''); setSaveSuccess(false) }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold">Mensagem de Boas-vindas</h2>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="border-t shrink-0" />
+
+              <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-5">
+                {/* Toggle */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Ativar boas-vindas automática</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Envia automaticamente quando um cliente manda mensagem após{' '}
+                      <strong>7 dias</strong> sem contato de nenhum dos lados.
+                    </p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={welcomeEnabled}
+                    onClick={() => handleToggleWelcome(!welcomeEnabled)}
+                    className={cn(
+                      'relative shrink-0 w-12 h-6 rounded-full transition-colors duration-200',
+                      welcomeEnabled ? 'bg-primary' : 'bg-muted-foreground/30',
+                      !welcomeMessage.trim() && 'opacity-40 cursor-not-allowed'
+                    )}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200',
+                      welcomeEnabled ? 'translate-x-6' : 'translate-x-0'
+                    )} />
+                  </button>
+                </div>
+
+                {!welcomeMessage.trim() && (
+                  <p className="text-xs text-amber-600 -mt-2">
+                    Preencha a mensagem abaixo para ativar o toggle.
+                  </p>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Mensagem</label>
+                  <textarea
+                    value={welcomeMessage}
+                    onChange={e => setWelcomeMessage(e.target.value)}
+                    placeholder="Olá, seja bem-vindo(a) à *Cícero Joias*! ✨..."
+                    maxLength={1000}
+                    rows={7}
+                    className="w-full rounded-xl border bg-muted/40 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none placeholder:text-muted-foreground/60 leading-relaxed"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">{welcomeMessage.length}/1000</p>
+                </div>
+
+                {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+                {saveSuccess && <p className="text-sm text-green-600">Salvo com sucesso!</p>}
               </div>
 
-              {saveError && <p className="text-sm text-destructive">{saveError}</p>}
-              {saveSuccess && <p className="text-sm text-green-600">Salvo com sucesso!</p>}
+              <div className="shrink-0 border-t px-4 py-3 bg-background">
+                <button
+                  onClick={handleSaveWelcome}
+                  disabled={isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {isPending ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
             </div>
 
-            <div className="shrink-0 border-t px-4 py-3 bg-background">
-              <button
-                onClick={handleSaveWelcome}
-                disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60"
-              >
-                {isPending ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
           </div>
-
-        </div>
-      </div>
-    </>,
-    document.body
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
 }
