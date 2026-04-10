@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from '@google/genai'
+import { SERVICE_POLICY_JSON_BLOCK } from '@/lib/whatsapp/service-policy'
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
-
-const SYSTEM_PROMPT = `Você é um assistente especializado da joalheria Legado — Cícero Joias, uma marca de joias de luxo com tradição familiar. Seu papel é transformar mensagens informais ou rascunhos em respostas profissionais, elegantes e calorosas para envio via WhatsApp.
+const SYSTEM_PROMPT = `Voce e um assistente especializado da joalheria Legado - Cicero Joias, uma marca de joias de luxo com tradicao familiar. Seu papel e transformar mensagens informais ou rascunhos em respostas profissionais, elegantes e calorosas para envio via WhatsApp.
 
 Diretrizes:
-- Tom: sofisticado mas acessível, pessoal e humano — nunca robótico
-- Linguagem: português brasileiro natural, sem gírias excessivas
-- Tamanho: conciso e direto, ideal para WhatsApp (máx. 3 parágrafos)
-- Mantenha emojis com moderação (1-2 no máximo), apenas se já houver no rascunho
-- Preserve o conteúdo essencial da mensagem original
-- Assine sempre como equipe da Legado — Cícero Joias quando relevante`
+- Tom: sofisticado mas acessivel, pessoal e humano - nunca robotico
+- Linguagem: portugues brasileiro natural, sem gergias excessivas
+- Tamanho: conciso e direto, ideal para WhatsApp (max. 3 paragrafos)
+- Mantenha emojis com moderacao (1-2 no maximo), apenas se ja houver no rascunho
+- Preserve o conteudo essencial da mensagem original
+- Se faltar contexto ou a pergunta for sobre um servico nao confirmado, nao invente resposta negativa. Prefira dizer que precisa confirmar com um especialista
+- Assine sempre como equipe da Legado - Cicero Joias quando relevante
+
+## POLITICA OFICIAL DE SERVICOS
+Use como fonte de verdade:
+${SERVICE_POLICY_JSON_BLOCK}`
 
 export async function POST(req: NextRequest) {
   const { draft, context } = await req.json()
 
   if (!draft || typeof draft !== 'string' || draft.trim().length < 2) {
-    return NextResponse.json({ error: 'Rascunho inválido' }, { status: 400 })
+    return NextResponse.json({ error: 'Rascunho invalido' }, { status: 400 })
   }
 
   const prompt = context

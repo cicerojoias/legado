@@ -1,5 +1,46 @@
 # WhatsApp Module Optimization Changelog
 
+## [0.4.2] - 2026-04-09 (Shared JSON Service Policy)
+
+### Changed
+
+- Extracted the WhatsApp service policy into a shared JSON block in code.
+- Reused the same official policy in both the customer responder and the short-response generator.
+- Reduced drift between prompts by centralizing `fazemos`, `nao_fazemos`, and `depende` rules.
+
+### Impact
+
+- One source of truth for service handling
+- Lower chance of prompt mismatch across reply flows
+- Easier future updates when services change
+
+## [0.4.1] - 2026-04-09 (Service Classification Formalization)
+
+### Changed
+
+- Formalized the AI service policy into three explicit buckets: `fazemos`, `nao fazemos`, and `depende`.
+- Added instructions that services not listed explicitly must not be negated by assumption.
+- Marked ambiguous requests as photo/orcamento/avaliacao cases instead of letting the model guess.
+
+### Impact
+
+- Lower risk of false negatives on customer requests
+- More consistent escalation on ambiguous service questions
+- Better protection against lost leads caused by overconfident refusals
+
+## [0.4.0] - 2026-04-09 (Prompt Knowledge Expansion)
+
+### Changed
+
+- Reworked the main AI system prompt for customer replies to include clearer business context, service facts, escalation rules, and tighter response behavior.
+- Added stronger guidance for short WhatsApp replies, photo-based evaluation, and when to hand off to a human specialist.
+
+### Impact
+
+- Fewer hallucinated details
+- More consistent handoffs for price, schedule, and physical inspection requests
+- Better alignment between customer-facing replies and real service capabilities
+
 ## [0.3.0] - 2026-03-22 (Audio Outbound Fix)
 
 ### Fixed

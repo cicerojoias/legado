@@ -51,6 +51,9 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.11', data: '09/04/2026', resumo: 'WAB: prompt da IA passou a usar bloco JSON oficial de servicos compartilhado entre o atendimento e o gerador de respostas' },
+    { versao: '0.18.10', data: '09/04/2026', resumo: 'WAB: prompt da IA formalizado com mapa oficial de servicos em Fazemos, Nao fazemos e Depende para evitar negativas por suposicao' },
+    { versao: '0.18.9', data: '09/04/2026', resumo: 'WAB: system prompt da IA refinado com contexto operacional mais completo, regras mais fortes de escalonamento e respostas mais consistentes' },
     { versao: '0.18.8', data: '09/04/2026', resumo: 'WAB: IA agora espaça mensagens segmentadas com intervalo humano entre respostas' },
     { versao: '0.18.7', data: '09/04/2026', resumo: 'WAB: janela de elegibilidade da IA ampliada para 36h, mantendo preview e resposta segura do backlog' },
     { versao: '0.18.6', data: '09/04/2026', resumo: 'WAB: módulo de notas compactado — painel recolhível e mais enxuto para ocupar menos espaço no chat' },
