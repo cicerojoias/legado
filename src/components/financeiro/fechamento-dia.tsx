@@ -55,7 +55,7 @@ export function FechamentoDia({ totais }: FechamentoProps) {
                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary-foreground/65">
                         Fechamento do dia
                     </p>
-                    <h2 className="mt-0.5 text-3xl font-black tracking-tight md:text-4xl">
+                    <h2 className="mt-0.5 text-3xl font-semibold tracking-tight md:text-4xl">
                         {formatBRL(totais.saldo)}
                     </h2>
                 </div>
