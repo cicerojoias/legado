@@ -4,7 +4,7 @@ import { z } from "zod";
 export const LojasEnum = z.enum(["JOAO_PESSOA", "SANTA_RITA", "AMBAS"]);
 export const RolesEnum = z.enum(["SUPER_ADMIN", "ADMIN", "OPERADOR"]);
 export const TipoLancamentoEnum = z.enum(["ENTRADA", "SAIDA"]);
-export const MetodosPgtoEnum = z.enum(["PIX", "DINHEIRO", "C_CREDITO", "C_DEBITO"]);
+export const MetodosPgtoEnum = z.enum(["PIX", "C_DEBITO", "C_CREDITO", "ESPECIE", "TON", "DINHEIRO"]);
 
 // Validação Anti-Brute-Force & Sanitização Padrão
 export const LoginSchema = z.object({
@@ -35,8 +35,8 @@ export const CriarLancamentoSchema = z.object({
 });
 
 // Edição de Lançamento: campos mutáveis + id obrigatório
-// metodo_pgto usa z.string() livre (não MetodosPgtoEnum) pois "TON" e outros
-// valores legados existem no banco e devem sobreviver ao ciclo de edição.
+// metodo_pgto usa z.string() livre (não MetodosPgtoEnum) pois valores legados
+// como "TON" e "DINHEIRO" existem no banco e devem sobreviver ao ciclo de edição.
 export const EditarLancamentoSchema = z.object({
     id: z.string().uuid("Formato de ID inválido"),
     tipo: TipoLancamentoEnum,

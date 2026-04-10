@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TipoLancamento } from '@prisma/client';
 import { ArrowDownRight, ArrowUpRight, HandCoins, Lock, Pen } from 'lucide-react';
 import { EditarLancamentoModal, LancamentoParaEditar } from './editar-lancamento-modal';
+import { getMetodoPgtoLabel } from '@/lib/financeiro/metodos-pgto';
 
 const JANELA_24H_MS = 24 * 60 * 60 * 1000;
 
@@ -29,6 +30,15 @@ interface LancamentoListProps {
 export function LancamentoList({ lancamentos, currentUserId, showDate = false }: LancamentoListProps) {
     const [selecionado, setSelecionado] = useState<LancamentoParaEditar | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
+    const [nowMs, setNowMs] = useState(0);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setNowMs(Date.now());
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
 
     const formatTime = (date: Date) => {
         return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(date));
@@ -80,7 +90,7 @@ export function LancamentoList({ lancamentos, currentUserId, showDate = false }:
 
                     const isEditavel =
                         item.usuario_id === currentUserId &&
-                        Date.now() - new Date(item.created_at).getTime() < JANELA_24H_MS;
+                        nowMs - new Date(item.created_at).getTime() < JANELA_24H_MS;
 
                     return (
                         <motion.div
@@ -112,7 +122,7 @@ export function LancamentoList({ lancamentos, currentUserId, showDate = false }:
                                     {item.metodo_pgto && (
                                         <>
                                             <span>•</span>
-                                            <span className="capitalize">{item.metodo_pgto.toLowerCase()}</span>
+                                            <span>{getMetodoPgtoLabel(item.metodo_pgto)}</span>
                                         </>
                                     )}
                                 </div>

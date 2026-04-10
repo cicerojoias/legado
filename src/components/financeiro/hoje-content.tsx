@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { LancamentoList } from '@/components/financeiro/lancamento-list';
 import { FechamentoDia } from '@/components/financeiro/fechamento-dia';
-import { Loja } from '@prisma/client';
+import { Loja, Prisma } from '@prisma/client';
+import { normalizeMetodoPgto } from '@/lib/financeiro/metodos-pgto';
 
 interface HojeContentProps {
     dateStr: string;
@@ -46,26 +46,38 @@ export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentPr
     });
 
     // Mapear os resultados da agregação para o formato esperado pelo componente
-    type TotaisAcc = { entradas: number; saidas: number; pix: number; ton: number; especie: number };
+    type TotaisAcc = { entradas: number; saidas: number; pix: number; debito: number; credito: number; especie: number };
     const totais = stats.reduce(
         (acc: TotaisAcc, curr) => {
             const valor = Number(curr._sum.valor) || 0;
+            const metodo = normalizeMetodoPgto(curr.metodo_pgto);
             if (curr.tipo === 'ENTRADA') {
                 acc.entradas += valor;
-                if (curr.metodo_pgto === 'PIX') acc.pix += valor;
-                else if (curr.metodo_pgto === 'TON') acc.ton += valor;
-                else if (curr.metodo_pgto === 'ESPECIE') acc.especie += valor;
+                if (metodo === 'PIX') acc.pix += valor;
+                else if (metodo === 'C_DEBITO') acc.debito += valor;
+                else if (metodo === 'C_CREDITO') acc.credito += valor;
+                else if (metodo === 'ESPECIE') acc.especie += valor;
             } else {
                 acc.saidas += valor;
             }
             return acc;
         },
-        { entradas: 0, saidas: 0, pix: 0, ton: 0, especie: 0 }
+        { entradas: 0, saidas: 0, pix: 0, debito: 0, credito: 0, especie: 0 }
     );
 
     const saldo = totais.entradas - totais.saidas;
 
-    const serializedLancamentos = lancamentos.map((l: any) => ({
+    type LancamentoComUsuario = Prisma.LancamentoGetPayload<{
+        include: {
+            usuario: {
+                select: {
+                    nome: true;
+                };
+            };
+        };
+    }>;
+
+    const serializedLancamentos = lancamentos.map((l: LancamentoComUsuario) => ({
         ...l,
         valor: Number(l.valor),
     }));

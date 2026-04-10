@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Loja, Prisma, TipoLancamento } from '@prisma/client';
 import { rateLimit } from '@/lib/rate-limit';
 import { DeleteQuerySchema, EditarLancamentoSchema } from '@/lib/validations';
+import { normalizeMetodoPgto } from '@/lib/financeiro/metodos-pgto';
 
 // ─── Schema interno usado apenas por createLancamento ────────────────────────
 const formSchema = z.object({
@@ -87,6 +88,7 @@ export async function createLancamento(formData: FormData) {
         }
 
         const { tipo, valor, descricao, categoria, metodo_pgto, loja: inputLoja, observacao, data_ref } = validatedFields.data;
+        const finalMetodoPgto = normalizeMetodoPgto(metodo_pgto);
 
         // **SECURITY: Blind injeção de Loja**
         // A action desconfia do Client. Se o usuário tem AMBAS as lojas, aceita o Input (se for JP ou SR).
@@ -113,7 +115,7 @@ export async function createLancamento(formData: FormData) {
                 tipo: tipo as TipoLancamento,
                 valor: valor,
                 descricao: `${descricao} ${categoria ? `[${categoria}]` : ''} ${observacao ? `- Obs: ${observacao}` : ''}`.trim(),
-                metodo_pgto,
+                metodo_pgto: finalMetodoPgto,
                 loja: finalLoja,
                 data_ref: finalDataRef,
             }
@@ -277,6 +279,7 @@ export async function editarLancamento(formData: FormData): Promise<MutacaoResul
         };
         const parsed = EditarLancamentoSchema.safeParse(rawData);
         if (!parsed.success) return { success: false, code: 'CAMPOS_INVALIDOS' };
+        const finalMetodoPgto = normalizeMetodoPgto(parsed.data.metodo_pgto);
 
         // 4. Verificar usuário ativo
         const dbUser = await prisma.user.findUnique({
@@ -317,7 +320,7 @@ export async function editarLancamento(formData: FormData): Promise<MutacaoResul
                     tipo:        parsed.data.tipo as TipoLancamento,
                     valor:       parseFloat(parsed.data.valor),
                     descricao:   parsed.data.descricao   ?? null,
-                    metodo_pgto: parsed.data.metodo_pgto ?? null,
+                    metodo_pgto: finalMetodoPgto,
                 },
             });
 
@@ -337,7 +340,7 @@ export async function editarLancamento(formData: FormData): Promise<MutacaoResul
                             tipo:        parsed.data.tipo,
                             valor:       parsed.data.valor,
                             descricao:   parsed.data.descricao   ?? null,
-                            metodo_pgto: parsed.data.metodo_pgto ?? null,
+                            metodo_pgto: finalMetodoPgto,
                         },
                     }),
                     usuario_id: user.id,

@@ -59,7 +59,7 @@ model Lancamento {
   tipo         TipoLancamento
   valor        Decimal        @db.Decimal(10, 2)
   descricao    String?
-  metodo_pgto  String?        // Pix, Cartão, Dinheiro
+  metodo_pgto  String?        // Pix, Débito, Crédito, Dinheiro
   loja         Loja
   data_ref     DateTime       // A data que o lançamento se refere (Dashboard "Hoje")
 

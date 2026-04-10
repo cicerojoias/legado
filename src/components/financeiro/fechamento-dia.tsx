@@ -7,7 +7,8 @@ interface FechamentoProps {
         entradas: number;
         saidas: number;
         pix: number;
-        ton: number;
+        debito: number;
+        credito: number;
         especie: number;
         saldo: number;
     }
@@ -37,14 +38,18 @@ export function FechamentoDia({ totais }: FechamentoProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 relative z-10 pt-4 border-t border-white/10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 relative z-10 pt-4 border-t border-white/10">
                 <div>
                     <p className="text-xs text-primary-foreground/60 uppercase tracking-wider font-semibold mb-1">PIX</p>
                     <p className="font-semibold">{formatBRL(totais.pix)}</p>
                 </div>
                 <div className="text-center">
-                    <p className="text-xs text-primary-foreground/60 uppercase tracking-wider font-semibold mb-1">Cartão</p>
-                    <p className="font-semibold">{formatBRL(totais.ton)}</p>
+                    <p className="text-xs text-primary-foreground/60 uppercase tracking-wider font-semibold mb-1">Débito</p>
+                    <p className="font-semibold">{formatBRL(totais.debito)}</p>
+                </div>
+                <div className="text-center md:text-left">
+                    <p className="text-xs text-primary-foreground/60 uppercase tracking-wider font-semibold mb-1">Crédito</p>
+                    <p className="font-semibold">{formatBRL(totais.credito)}</p>
                 </div>
                 <div className="text-right">
                     <p className="text-xs text-primary-foreground/60 uppercase tracking-wider font-semibold mb-1">Espécie</p>

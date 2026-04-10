@@ -32,6 +32,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    METODOS_ENTRADA,
+    METODOS_SAIDA,
+    METODO_LABELS,
+} from '@/lib/financeiro/metodos-pgto';
 
 import { createLancamento } from '@/app/(protected)/hoje/actions';
 
@@ -68,15 +73,7 @@ const CATEGORIA_LABELS: Record<string, string> = {
     OUTROS: 'Outros',
 };
 
-const METODO_LABELS: Record<string, string> = {
-    PIX: 'PIX',
-    TON: 'TON (Maquininha)',
-    ESPECIE: 'Dinheiro',
-};
-
 const CATEGORIAS = Object.keys(CATEGORIA_LABELS);
-const METODOS_ENTRADA = ['PIX', 'TON', 'ESPECIE'];
-const METODOS_SAIDA = ['PIX', 'ESPECIE'];
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
 const lancamentoSchema = z.object({
@@ -275,7 +272,7 @@ export function LancamentoModal({
                                     }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
-                                        if (form.getValues('metodo_pgto') === 'TON') {
+                                        if (!METODOS_SAIDA.includes(form.getValues('metodo_pgto') as typeof METODOS_SAIDA[number])) {
                                             form.setValue('metodo_pgto', 'PIX');
                                         }
                                     }}

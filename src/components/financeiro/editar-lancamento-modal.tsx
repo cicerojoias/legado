@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useTransition, useState, useCallback, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Trash2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -42,6 +42,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    METODOS_ENTRADA,
+    METODOS_SAIDA,
+    METODO_LABELS,
+    normalizeMetodoPgto,
+} from '@/lib/financeiro/metodos-pgto';
 
 import { editarLancamento, deletarLancamento } from '@/app/(protected)/hoje/actions';
 
@@ -71,15 +77,7 @@ function numberToBRL(value: number): string {
 }
 
 // ─── Labels humanizados ─────────────────────────────────────────────────────
-const METODO_LABELS: Record<string, string> = {
-    PIX: 'PIX',
-    TON: 'TON (Maquininha)',
-    ESPECIE: 'Dinheiro',
-};
-
 const JANELA_24H_MS = 24 * 60 * 60 * 1000;
-const METODOS_ENTRADA = ['PIX', 'TON', 'ESPECIE'];
-const METODOS_SAIDA = ['PIX', 'ESPECIE'];
 const DESC_MAX = 200;
 
 const editarSchema = z.object({
@@ -132,11 +130,12 @@ export function EditarLancamentoModal({
 }: EditarLancamentoModalProps) {
     const [isPendingDelete, startDeleteTransition] = useTransition();
     const [inlineFeedback, setInlineFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [nowMs, setNowMs] = useState(0);
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isEditavel = lancamento
         ? lancamento.usuario_id === currentUserId &&
-          Date.now() - new Date(lancamento.created_at).getTime() < JANELA_24H_MS
+          nowMs - new Date(lancamento.created_at).getTime() < JANELA_24H_MS
         : false;
 
     const form = useForm<EditarFormValues>({
@@ -144,14 +143,17 @@ export function EditarLancamentoModal({
         defaultValues: { id: '', tipo: 'ENTRADA', valor: '', descricao: '', metodo_pgto: 'PIX' },
     });
 
-    const descricaoValue = form.watch('descricao') ?? '';
+    const descricaoValue = useWatch({ control: form.control, name: 'descricao' }) ?? '';
+    const tipoValue = useWatch({ control: form.control, name: 'tipo' }) ?? 'ENTRADA';
 
     // Pré-popula o form sempre que um lancamento diferente é aberto.
     useEffect(() => {
         if (lancamento) {
-            const metodoSalvo = lancamento.metodo_pgto ?? 'PIX';
+            const metodoSalvo = normalizeMetodoPgto(lancamento.metodo_pgto) ?? 'PIX';
             const metodoNormalizado =
-                lancamento.tipo === 'SAIDA' && metodoSalvo === 'TON' ? 'PIX' : metodoSalvo;
+                lancamento.tipo === 'SAIDA' && !METODOS_SAIDA.includes(metodoSalvo as typeof METODOS_SAIDA[number])
+                    ? 'PIX'
+                    : metodoSalvo;
             form.reset({
                 id: lancamento.id,
                 tipo: lancamento.tipo,
@@ -159,9 +161,19 @@ export function EditarLancamentoModal({
                 descricao: lancamento.descricao ?? '',
                 metodo_pgto: metodoNormalizado,
             });
-            setInlineFeedback(null);
+            window.setTimeout(() => {
+                setInlineFeedback(null);
+            }, 0);
         }
     }, [lancamento, form]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setNowMs(Date.now());
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -225,7 +237,7 @@ export function EditarLancamentoModal({
         });
     };
 
-    const isEntrada = form.watch('tipo') === 'ENTRADA';
+    const isEntrada = tipoValue === 'ENTRADA';
     const metodosDisponiveis = isEntrada ? METODOS_ENTRADA : METODOS_SAIDA;
     const isPendingEdit = form.formState.isSubmitting;
     const isAnyPending = isPendingEdit || isPendingDelete;
@@ -263,7 +275,12 @@ export function EditarLancamentoModal({
                 {/* Form body */}
                 <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-100px)]">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                        <form
+                            onSubmit={(e) => {
+                                void form.handleSubmit(onSubmit)(e);
+                            }}
+                            className="space-y-5"
+                        >
                             <input type="hidden" {...form.register('id')} />
 
                             {/* Toggle Tipo */}
@@ -291,7 +308,7 @@ export function EditarLancamentoModal({
                                     }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
-                                        if (form.getValues('metodo_pgto') === 'TON') {
+                                        if (!METODOS_SAIDA.includes(form.getValues('metodo_pgto') as typeof METODOS_SAIDA[number])) {
                                             form.setValue('metodo_pgto', 'PIX');
                                         }
                                     }}

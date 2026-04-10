@@ -1,6 +1,7 @@
 import { TipoLancamento, Loja } from '@prisma/client';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getMetodoPgtoLabel } from '@/lib/financeiro/metodos-pgto';
 
 export interface LancamentoRecente {
     id: string;
@@ -66,7 +67,7 @@ export function RecentesTable({ lancamentos }: { lancamentos: LancamentoRecente[
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 text-xs text-muted-foreground">
-                                    {l.metodo_pgto ?? '—'}
+                                    {getMetodoPgtoLabel(l.metodo_pgto)}
                                 </td>
                                 <td className="px-4 py-3 text-xs text-muted-foreground">
                                     {l.usuario?.nome ?? '—'}
