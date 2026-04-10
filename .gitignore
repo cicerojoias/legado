@@ -59,6 +59,7 @@ README.md
 /*.png
 *.log
 *.txt
+/caixa_joaopessoa/
 
 # default Next.js SVGs (keep manifest.json)
 /public/*.svg
