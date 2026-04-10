@@ -1,13 +1,12 @@
 {
   "name": "legado-app",
-  "version": "0.18.9",
+  "version": "0.18.10",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build --webpack",
     "start": "next start",
-    "lint": "eslint",
-    "import:caixa-joaopessoa": "tsx scripts/importar-caixa-joaopessoa.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
