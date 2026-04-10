@@ -130,7 +130,7 @@ export function EditarLancamentoModal({
 }: EditarLancamentoModalProps) {
     const [isPendingDelete, startDeleteTransition] = useTransition();
     const [inlineFeedback, setInlineFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    const [nowMs, setNowMs] = useState(0);
+    const [nowMs, setNowMs] = useState(() => Date.now());
     const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isEditavel = lancamento
@@ -168,11 +168,11 @@ export function EditarLancamentoModal({
     }, [lancamento, form]);
 
     useEffect(() => {
-        const timer = window.setTimeout(() => {
+        const timer = window.setInterval(() => {
             setNowMs(Date.now());
-        }, 0);
+        }, 30_000);
 
-        return () => window.clearTimeout(timer);
+        return () => window.clearInterval(timer);
     }, []);
 
     useEffect(() => {

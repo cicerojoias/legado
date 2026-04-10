@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Loja, Prisma, TipoLancamento } from '@prisma/client';
 import { rateLimit } from '@/lib/rate-limit';
-import { DeleteQuerySchema, EditarLancamentoSchema } from '@/lib/validations';
+import { DeleteQuerySchema, EditarLancamentoSchema, MetodosPgtoCriacaoEnum } from '@/lib/validations';
 import { normalizeMetodoPgto } from '@/lib/financeiro/metodos-pgto';
 
 // ─── Schema interno usado apenas por createLancamento ────────────────────────
@@ -15,7 +15,7 @@ const formSchema = z.object({
     valor: z.string().transform((val) => Number(val.replace(',', '.'))),
     descricao: z.string().min(1, 'A descrição é obrigatória').max(200),
     categoria: z.string().nullable(),
-    metodo_pgto: z.string().nullable(),
+    metodo_pgto: MetodosPgtoCriacaoEnum.nullable(),
     loja: z.string().optional().nullable(),
     observacao: z.string().optional().nullable(),
     data_ref: z.string().optional().nullable(),

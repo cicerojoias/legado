@@ -30,14 +30,14 @@ interface LancamentoListProps {
 export function LancamentoList({ lancamentos, currentUserId, showDate = false }: LancamentoListProps) {
     const [selecionado, setSelecionado] = useState<LancamentoParaEditar | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [nowMs, setNowMs] = useState(0);
+    const [nowMs, setNowMs] = useState(() => Date.now());
 
     useEffect(() => {
-        const timer = window.setTimeout(() => {
+        const timer = window.setInterval(() => {
             setNowMs(Date.now());
-        }, 0);
+        }, 30_000);
 
-        return () => window.clearTimeout(timer);
+        return () => window.clearInterval(timer);
     }, []);
 
     const formatTime = (date: Date) => {

@@ -84,14 +84,14 @@ export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentPr
 
     return (
         <>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-48">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-[20rem] md:pb-48">
                 <LancamentoList
                     lancamentos={serializedLancamentos}
                     currentUserId={userId}
                 />
             </div>
 
-            <div className="fixed bottom-16 md:bottom-4 left-0 md:left-64 right-0 p-4 md:px-8 z-20 pointer-events-none">
+            <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 md:bottom-4 md:left-64 md:right-0 p-0 md:px-8 z-20 pointer-events-none">
                 <div className="pointer-events-auto max-w-5xl mx-auto">
                     <FechamentoDia totais={{ ...totais, saldo }} />
                 </div>

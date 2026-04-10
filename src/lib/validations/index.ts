@@ -5,6 +5,7 @@ export const LojasEnum = z.enum(["JOAO_PESSOA", "SANTA_RITA", "AMBAS"]);
 export const RolesEnum = z.enum(["SUPER_ADMIN", "ADMIN", "OPERADOR"]);
 export const TipoLancamentoEnum = z.enum(["ENTRADA", "SAIDA"]);
 export const MetodosPgtoEnum = z.enum(["PIX", "C_DEBITO", "C_CREDITO", "ESPECIE", "TON", "DINHEIRO"]);
+export const MetodosPgtoCriacaoEnum = z.enum(["PIX", "C_DEBITO", "C_CREDITO", "ESPECIE"]);
 
 // Validação Anti-Brute-Force & Sanitização Padrão
 export const LoginSchema = z.object({
@@ -29,7 +30,7 @@ export const CriarLancamentoSchema = z.object({
     tipo: TipoLancamentoEnum,
     valor: z.string().regex(/^\d+(\.\d{1,2})?$/, "Valor inválido (ex: 150.50)").refine((val) => parseFloat(val) > 0, "O valor deve ser maior que zero"),
     descricao: z.string().max(100, "A descrição não pode ter mais de 100 caracteres").optional().transform((val) => val === "" ? undefined : val),
-    metodo_pgto: MetodosPgtoEnum.optional(),
+    metodo_pgto: MetodosPgtoCriacaoEnum.optional(),
     loja: LojasEnum,
     // Para evitar bugs de timezone no Client transformamos data para ISO direto no Servidor
 });
