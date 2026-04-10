@@ -51,7 +51,8 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
-    { versao: '0.18.18', data: '10/04/2026', resumo: 'WAB: modal de configurações (3 pontinhos) reescrito com Radix Dialog — animação slide-up funcionando corretamente' },
+    { versao: '0.18.19', data: '10/04/2026', resumo: 'WAB: corrige modal de configurações fechando imediatamente — onPointerDownOutside do trigger disparava onClose' },
+    { versao: '0.18.18', data: '10/04/2026', resumo: 'WAB: modal de configurações (3 pontinhos) reescrito com Radix Dialog — animação slide-up' },
     { versao: '0.18.16', data: '10/04/2026', resumo: 'Hoje: peso do valor do saldo reduzido de black para semibold' },
     { versao: '0.18.15', data: '10/04/2026', resumo: 'Hoje: fechamento do dia começa fechado por padrão; seta corrigida' },
     { versao: '0.18.14', data: '10/04/2026', resumo: 'Hoje: fechamento do dia recolhível — tap para expandir/recolher detalhes; preferência salva no dispositivo' },

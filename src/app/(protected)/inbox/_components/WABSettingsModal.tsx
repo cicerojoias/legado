@@ -98,12 +98,6 @@ export function WABSettingsModal({
             'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom',
             'duration-300 ease-out'
           )}
-          // Evita fechar ao clicar dentro
-          onPointerDownOutside={(e) => {
-            e.preventDefault()
-            onClose()
-          }}
-          onInteractOutside={(e) => e.preventDefault()}
         >
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
