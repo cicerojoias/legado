@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, X, MoreVertical } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
@@ -67,13 +68,13 @@ interface ConversationSidebarProps {
 }
 
 export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], userRole, initialSettings = null }: ConversationSidebarProps) {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0) // Para forçar re-render
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN'
@@ -82,13 +83,13 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   useEffect(() => {
     const handleNewMessage = () => {
       console.log('[wab-sidebar] Nova mensagem detectada - atualizando lista...')
-      // Incrementa key para forçar re-render do children (ConversationList)
-      setRefreshKey(prev => prev + 1)
+      // Usa router.refresh() para re-fetch dos dados do servidor
+      router.refresh()
     }
 
     const handleConversationUpdate = () => {
       console.log('[wab-sidebar] Conversa atualizada - refresh...')
-      setRefreshKey(prev => prev + 1)
+      router.refresh()
     }
 
     window.addEventListener('wab-new-message', handleNewMessage)
@@ -98,7 +99,7 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       window.removeEventListener('wab-new-message', handleNewMessage)
       window.removeEventListener('wab-conversation-update', handleConversationUpdate)
     }
-  }, [])
+  }, [router])
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); return }
@@ -197,8 +198,8 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       <div className="flex-1 overflow-y-auto min-h-0">
         {!isSearching ? (
           // Lista normal de conversas (server component passado como children)
-          // refreshKey força re-render quando chega nova mensagem via Realtime
-          <div key={refreshKey}>{children}</div>
+          // router.refresh() faz re-fetch dos dados do servidor
+          <>{children}</>
         ) : loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
             <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-2" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -18,7 +18,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 export function ConversationListRealtimeSync() {
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const [lastUpdate, setLastUpdate] = useState(0)
 
   useEffect(() => {
     const supabase = createClient()
@@ -47,8 +46,6 @@ export function ConversationListRealtimeSync() {
           window.dispatchEvent(new CustomEvent('wab-new-message', { 
             detail: payload.new 
           }))
-          // Atualiza timestamp para forçar re-render da lista
-          setLastUpdate(Date.now())
         }
       )
       .subscribe((status, err) => {
@@ -71,7 +68,7 @@ export function ConversationListRealtimeSync() {
         supabase.removeChannel(channelRef.current)
       }
     }
-  }, [router])
+  }, [])
 
   return null
 }
