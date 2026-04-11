@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Eraser, Trash2, Receipt, Bot } from 'lucide-react'
+import { ArrowLeft, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { activateIaWithCatchUpAction, getIaActivationPreview, toggleIaAtiva } from '../actions/conversation'
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import type { WaContact, WaConversation, WaTag } from '@prisma/client'
 import type { TagWithMeta } from './types'
 import { ConversationTagPanel } from './ConversationTagPanel'
+import { ConversationActionsModal } from './ConversationActionsModal'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ interface ContactHeaderProps {
 export function ContactHeader({ contact, conversation, showBackButton, currentTags = [], availableTags = [] }: ContactHeaderProps) {
   const router = useRouter()
   const [resolving, setResolving] = useState(false)
+  const [actionsOpen, setActionsOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'clear' | 'delete' | null>(null)
   const [orcamentoOpen, setOrcamentoOpen] = useState(false)
@@ -195,51 +197,26 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
           )}
         </div>
 
-        {/* Ações */}
-        <div className="flex items-center gap-1">
-          {/* Toggle IA */}
-          <button
-            onClick={handleToggleIa}
-            disabled={togglingIa || previewLoading}
-            className={cn(
-              'p-1.5 rounded-lg transition-colors disabled:opacity-40',
-              iaAtiva
-                ? 'text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20'
-                : 'text-muted-foreground hover:bg-muted'
-            )}
-            title={iaAtiva ? 'IA ativa — clique para desativar' : 'Ativar resposta automática com IA'}
-          >
-            <Bot className="w-5 h-5" />
-          </button>
-
-          {/* Orçamento — abre modal de preset de mensagem */}
-          <button
-            onClick={() => setOrcamentoOpen(true)}
-            className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-            title="Criar orçamento"
-          >
-            <Receipt className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => { setDialogType('clear'); setDialogOpen(true) }}
-            disabled={resolving}
-            className="p-1.5 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 rounded-lg transition-colors disabled:opacity-40"
-            title="Limpar mensagens"
-          >
-            <Eraser className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => { setDialogType('delete'); setDialogOpen(true) }}
-            disabled={resolving}
-            className="p-1.5 text-red-600 hover:bg-red-500/10 hover:text-red-700 rounded-lg transition-colors disabled:opacity-40"
-            title="Excluir conversa"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
+        {/* Ações — três pontinhos */}
+        <button
+          onClick={() => setActionsOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+          title="Ações"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
       </div>
+
+      <ConversationActionsModal
+        open={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        iaAtiva={iaAtiva}
+        togglingIa={togglingIa || previewLoading}
+        onToggleIa={handleToggleIa}
+        onOrcamento={() => setOrcamentoOpen(true)}
+        onClear={() => { setDialogType('clear'); setDialogOpen(true) }}
+        onDelete={() => { setDialogType('delete'); setDialogOpen(true) }}
+      />
 
       <OrcamentoModal
         open={orcamentoOpen}
