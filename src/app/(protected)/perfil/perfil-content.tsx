@@ -51,6 +51,8 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.26', data: '11/04/2026', resumo: 'WAB: correção do status de leitura — marca mensagens como lidas na API da Meta ao abrir conversa (dois traços dourados)' },
+    { versao: '0.18.25', data: '11/04/2026', resumo: 'WAB: orçamento de aliança — seleção múltipla de materiais (Prata 990, Ouro 16k, Ouro 18k), cálculo 6x sem juros, largura customizável' },
     { versao: '0.18.24', data: '11/04/2026', resumo: 'Segurança: rate limiter migrado de memória volátil para Upstash Redis — bloqueio de PIN e login agora persiste entre instâncias serverless e cold starts' },
     { versao: '0.18.23', data: '10/04/2026', resumo: 'Hoje: input valor foca e seleciona automaticamente após lançamento — sem precisar clicar' },
     { versao: '0.18.22', data: '10/04/2026', resumo: 'WAB: 4 ícones de ação na conversa condensados em menu de 3 pontinhos (IA, orçamento, limpar, excluir)' },

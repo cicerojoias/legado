@@ -250,12 +250,16 @@ export async function POST(req: NextRequest) {
               errors: JSON.stringify(status.errors),
             })
           }
+          // Atualiza status da mensagem outbound no banco local
+          // (sent -> delivered -> read via webhooks da Meta)
           return prisma.waMessage.updateMany({
             where: { wa_message_id: status.id },
             data: { status: status.status },
           })
         })
       )
+      
+      console.log(`[webhook] ${value.statuses.length} status updates processados`)
     }
 
     // ────────────────────────────────────────────────────────────────────

@@ -84,6 +84,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   useEffect(() => {
     scrollToBottom(false)
     void fetch(`/api/whatsapp/reprocess-media?conversationId=${conversationId}`, { method: 'POST' })
+    // Marca mensagens como lidas ao abrir a conversa
+    fetch(`/api/whatsapp/conversations/${conversationId}/mark-read`, { method: 'POST' }).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Carrega a página anterior (mensagens mais antigas)
