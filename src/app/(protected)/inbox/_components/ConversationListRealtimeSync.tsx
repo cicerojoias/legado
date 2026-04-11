@@ -1,18 +1,24 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 /**
  * Renderiza null. Escuta mudanças em wa_conversations e INSERT em wa_messages
- * via Supabase Realtime e chama router.refresh() para re-render do servidor.
+ * via Supabase Realtime.
+ * 
+ * ATUALIZAÇÃO EM TEMPO REAL SEM REFRESH:
+ * - wa_conversations UPDATE: atualiza estado local da conversa
+ * - wa_messages INSERT: notifica ChatWindow via CustomEvent
+ * 
  * Montado no layout do inbox para cobrir tanto /inbox quanto /inbox/[id].
  */
 export function ConversationListRealtimeSync() {
   const router = useRouter()
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const [lastUpdate, setLastUpdate] = useState(0)
 
   useEffect(() => {
     const supabase = createClient()
@@ -23,18 +29,26 @@ export function ConversationListRealtimeSync() {
       .channel('wab-list-sync')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'wa_conversations' },
+        { event: 'UPDATE', schema: 'public', table: 'wa_conversations' },
         (payload) => {
-          console.log('[wab-realtime-list] wa_conversations changed:', payload.eventType, payload.new)
-          router.refresh()
+          console.log('[wab-realtime-list] wa_conversations UPDATE:', payload.new)
+          // Dispara evento para atualizar lista de conversas
+          window.dispatchEvent(new CustomEvent('wab-conversation-update', { 
+            detail: payload.new 
+          }))
         }
       )
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'wa_messages' },
         (payload) => {
-          console.log('[wab-realtime-list] Nova mensagem recebida:', payload.new)
-          router.refresh()
+          console.log('[wab-realtime-list] Nova mensagem:', payload.new)
+          // Dispara evento global - ChatWindow vai capturar
+          window.dispatchEvent(new CustomEvent('wab-new-message', { 
+            detail: payload.new 
+          }))
+          // Atualiza timestamp para forçar re-render da lista
+          setLastUpdate(Date.now())
         }
       )
       .subscribe((status, err) => {
@@ -46,8 +60,6 @@ export function ConversationListRealtimeSync() {
           console.error('[wab-realtime-list] ⏱️ Timeout ao subscrever')
         } else if (status === 'CLOSED') {
           console.warn('[wab-realtime-list] 🔌 Canal fechado')
-        } else {
-          console.log('[wab-realtime-list] Status:', status)
         }
       })
 

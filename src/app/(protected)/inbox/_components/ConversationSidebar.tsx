@@ -73,9 +73,32 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0) // Para forçar re-render
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN'
+
+  // Escutar eventos de novas mensagens do Realtime
+  useEffect(() => {
+    const handleNewMessage = () => {
+      console.log('[wab-sidebar] Nova mensagem detectada - atualizando lista...')
+      // Incrementa key para forçar re-render do children (ConversationList)
+      setRefreshKey(prev => prev + 1)
+    }
+
+    const handleConversationUpdate = () => {
+      console.log('[wab-sidebar] Conversa atualizada - refresh...')
+      setRefreshKey(prev => prev + 1)
+    }
+
+    window.addEventListener('wab-new-message', handleNewMessage)
+    window.addEventListener('wab-conversation-update', handleConversationUpdate)
+
+    return () => {
+      window.removeEventListener('wab-new-message', handleNewMessage)
+      window.removeEventListener('wab-conversation-update', handleConversationUpdate)
+    }
+  }, [])
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); return }
@@ -174,7 +197,8 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       <div className="flex-1 overflow-y-auto min-h-0">
         {!isSearching ? (
           // Lista normal de conversas (server component passado como children)
-          children
+          // refreshKey força re-render quando chega nova mensagem via Realtime
+          <div key={refreshKey}>{children}</div>
         ) : loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
             <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-2" />
