@@ -8,6 +8,25 @@ const MAX_CONTEXT_MESSAGES = 20
 const MAX_CATCH_UP_SEGMENTS = 3
 const CATCH_UP_REPLY_GAP_MIN_MS = 1800
 const CATCH_UP_REPLY_GAP_JITTER_MS = 1200
+const WELCOME_MENU_WINDOW_MS = 5 * 60 * 1000 // 5 minutos para resposta de menu
+
+// Mapeamento de opções do menu de boas-vindas
+const WELCOME_MENU_OPTIONS: Record<string, string> = {
+  '0': '/0',
+  '1': '/1',
+  '2': '/2',
+  '3': '/3',
+  '4': '/4',
+}
+
+// Templates de resposta automática do menu (fallback se não encontrar no localStorage)
+const MENU_RESPONSE_TEMPLATES: Record<string, string> = {
+  '0': 'Você optou por *Falar com um atendente*! 👥\n\nPor favor, aguarde um momento. Em breve, estaremos à sua disposição. 😊\n\nPara otimizar seu atendimento, sinta-se à vontade para deixar sua mensagem agora. ✨',
+  '1': 'Você escolheu *Alianças, anéis de formatura e joias sob medida*! 💍\n\n• *Prazo de fabricação:* até 7 dias (pode variar). ⏳\n• *Gravação interna gratuita.* ✍️\n• *Acompanha caixinha de veludo.* 🎁\n• *Qualidade e preço de fábrica.* 🏭\n• *Não quebra, feitas sem emenda.* 🔗\n\nEnvie fotos ou um modelo de referência para orçamento, ou solicite o catálogo. ✨',
+  '2': 'Você escolheu *Banho de Ouro Premium*! 🔸\n\n• *Básico* 🥉 – sem garantia\n• *Intermediário* 🥈 – garantia de 6 meses\n• *Avançado* 🥇 – garantia de 1 ano\n\n• *Prazo de serviço:* sob consulta (depende da demanda) ⏳\n• *Preço:* sob consulta (varia conforme a peça)\n\nEnvie foto da peça para podermos lhe enviar o orçamento. 📸',
+  '3': 'Você escolheu *Joias, Relógios e Óculos*! 💎\n\n• *Joias:* brincos, cordões, pulseiras, tornozeleiras, pingentes e anéis (masculinos & femininos) 🔸\n• *Relógios:* diversos modelos com garantia de 1 ano – consulte disponibilidade ⌚\n• *Óculos:* armações modernas e lentes sob medida 👓\n\nEnvie o nome do produto ou solicite nosso catálogo para receber mais detalhes. ✨',
+  '4': 'Você escolheu *Consertos Profissionais*! ✨\n\n• *Relógios:* Troca de pilha, troca de peças, ajuste de pulseiras e mais. ⌚\n\n• *Óculos:* Conserto de armações, troca de peças, soldas e mais. 👓\n\n• *Joias:* Soldas, ajustes, restaurações, troca de abotoaduras e mais. 💍\n\nEnvie uma foto da peça para que possamos informar o orçamento. 📸',
+}
 
 // Prompt do sistema - edite aqui para ajustar o comportamento da IA
 const SYSTEM_PROMPT = `Voce e o atendente virtual oficial da Cicer Joias (Legado), uma joalheria familiar com mais de 40 anos de tradicao, fundada em 1985 pelo mestre ourives Cicer.
@@ -297,16 +316,31 @@ export async function getAiCatchUpPreview(conversationId: string): Promise<Catch
 export async function maybeRespondWithAI(conversationId: string, waId: string): Promise<void> {
   const conversation = await prisma.waConversation.findUnique({
     where: { id: conversationId },
-    select: { ia_ativa: true },
+    select: { ia_ativa: true, welcome_sent_at: true },
   })
-  if (!conversation?.ia_ativa) return
 
+  // Verifica se é uma resposta de menu automático (funciona mesmo com IA desativada)
   const history = await prisma.waMessage.findMany({
     where: { conversation_id: conversationId, type: 'text' },
     orderBy: { timestamp: 'desc' },
     take: MAX_CONTEXT_MESSAGES,
     select: { direction: true, content: true, timestamp: true, sent_by: true, id: true },
   }) as TextMessageRow[]
+
+  // Tenta processar como resposta de menu primeiro
+  const menuResponse = await tryHandleWelcomeMenu(
+    conversationId,
+    waId,
+    history,
+    conversation?.welcome_sent_at ?? null
+  )
+  if (menuResponse) {
+    console.log(`[ai-responder] Menu automático processado para ${waId}`)
+    return
+  }
+
+  // Se não é menu ou IA está desativada, retorna
+  if (!conversation?.ia_ativa) return
 
   const aiReply = await generateSingleReply(history.reverse())
   if (!aiReply) return
@@ -354,3 +388,76 @@ export async function activateAiWithCatchUp(conversationId: string, waId: string
     sentCount,
   }
 }
+
+/**
+ * Tenta processar uma resposta como seleção de menu automático
+ * Funciona mesmo com IA desativada se a resposta for 0-4 após boas-vindas
+ */
+async function tryHandleWelcomeMenu(
+  conversationId: string,
+  waId: string,
+  history: TextMessageRow[],
+  welcomeSentAt: Date | null
+): Promise<boolean> {
+  // Precisamos de welcome_sent_at para validar
+  if (!welcomeSentAt) return false
+
+  const now = new Date()
+  const welcomeAge = now.getTime() - welcomeSentAt.getTime()
+
+  // Verifica se está dentro da janela de 5 minutos
+  if (welcomeAge > WELCOME_MENU_WINDOW_MS) return false
+
+  // Pega a última mensagem inbound
+  const lastInbound = [...history]
+    .reverse()
+    .find((m) => m.direction === 'inbound' && m.content)
+
+  if (!lastInbound?.content) return false
+
+  // Normaliza o conteúdo: remove espaços, converte para lowercase
+  const normalized = lastInbound.content.trim().toLowerCase()
+
+  // Verifica se é uma opção de menu (0, 1, 2, 3, 4 ou /0, /1, /2, /3, /4)
+  const menuMatch = normalized.match(/^\/?(\d)$/)
+  if (!menuMatch) return false
+
+  const option = menuMatch[1]
+  if (!WELCOME_MENU_OPTIONS[option]) return false
+
+  // Verifica se houve uma mensagem de boas-vindas outbound após welcome_sent_at
+  const welcomeMessage = history.find(
+    (m) =>
+      m.direction === 'outbound' &&
+      m.timestamp >= welcomeSentAt &&
+      m.content &&
+      (m.content.includes('1️⃣') || m.content.includes('1\u20E3')) &&
+      (m.content.includes('2️⃣') || m.content.includes('2\u20E3'))
+  )
+
+  // Se não encontrou mensagem de boas-vindas com menu, não processa
+  if (!welcomeMessage) return false
+
+  // Obtém a mensagem de resposta do template
+  const responseText = MENU_RESPONSE_TEMPLATES[option]
+  if (!responseText) return false
+
+  // Envia a resposta automática
+  const waMessageId = await sendTextMessage(waId, responseText)
+  await prisma.waMessage.create({
+    data: {
+      wa_message_id: waMessageId || undefined,
+      conversation_id: conversationId,
+      direction: 'outbound',
+      type: 'text',
+      content: responseText,
+      status: 'sent',
+      timestamp: new Date(),
+      sent_by: 'ai', // Marca como resposta automática
+    },
+  })
+
+  console.log(`[ai-responder] Menu option ${option} - resposta automática enviada para ${waId}`)
+  return true
+}
+
