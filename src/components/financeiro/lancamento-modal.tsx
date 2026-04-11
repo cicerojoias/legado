@@ -105,6 +105,8 @@ export function LancamentoModal({
 }) {
     const [open, setOpen] = useState(false);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [focusTrigger, setFocusTrigger] = useState(0);
+    const valorInputRef = useRef<HTMLInputElement>(null);
     const searchParams = useSearchParams();
     const tzOffset = -3 * 60 * 60 * 1000;
     const brazilDate = new Date(Date.now() + tzOffset).toISOString().split('T')[0];
@@ -122,6 +124,13 @@ export function LancamentoModal({
             observacao: '',
         },
     });
+
+    // Foca e seleciona o input de valor após submit bem-sucedido
+    useEffect(() => {
+        if (focusTrigger === 0) return;
+        valorInputRef.current?.focus();
+        valorInputRef.current?.select();
+    }, [focusTrigger]);
 
     // Sincroniza o campo loja quando defaultLoja muda OU quando o modal abre.
     // Race condition: usePermissions carrega async — se o modal abrir antes de terminar,
@@ -180,9 +189,7 @@ export function LancamentoModal({
                 observacao: '',
             });
 
-            window.setTimeout(() => {
-                form.setFocus('valor');
-            }, 0);
+            setFocusTrigger((n) => n + 1);
         } catch (err) {
             setFeedback({
                 type: 'error',
@@ -304,7 +311,10 @@ export function LancamentoModal({
                                                     onChange={(e) => handleValorChange(e, field.onChange)}
                                                     onBlur={field.onBlur}
                                                     name={field.name}
-                                                    ref={field.ref}
+                                                    ref={(el) => {
+                                                        field.ref(el);
+                                                        (valorInputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+                                                    }}
                                                 />
                                             </div>
                                         </FormControl>
