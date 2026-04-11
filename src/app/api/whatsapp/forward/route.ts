@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   // ── Rate limit ────────────────────────────────────────────────────────────
-  const rl = rateLimit(`forward:${user.id}`, 20, 15)
+  const rl = await rateLimit(`forward:${user.id}`, 20, 15)
   if (!rl.success) return Response.json({ error: rl.message }, { status: 429 })
 
   // ── Parse body ────────────────────────────────────────────────────────────

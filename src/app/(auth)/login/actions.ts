@@ -11,7 +11,7 @@ export async function loginAction(formData: FormData) {
     const password = formData.get('password') as string;
 
     // Apply Rate Limiting based on email
-    const limitCheck = rateLimit(`login:${email}`);
+    const limitCheck = await rateLimit(`login:${email}`);
     if (!limitCheck.success) {
         return {
             success: false,

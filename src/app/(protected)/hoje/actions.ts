@@ -155,7 +155,7 @@ export async function deletarLancamento(id: string): Promise<MutacaoResult> {
         if (!user) return { success: false, code: 'NAO_AUTORIZADO' };
 
         // 2. Rate limit por userId — 30 mutations/min, 15min lockout
-        const rl = rateLimit(`mutacao:${user.id}`, MUTACAO_MAX_RPM);
+        const rl = await rateLimit(`mutacao:${user.id}`, MUTACAO_MAX_RPM);
         if (!rl.success) return { success: false, code: 'RATE_LIMIT', message: rl.message };
 
         // 3. Validação de formato do ID (UUID v4)
@@ -264,7 +264,7 @@ export async function editarLancamento(formData: FormData): Promise<MutacaoResul
         if (!user) return { success: false, code: 'NAO_AUTORIZADO' };
 
         // 2. Rate limit (mesma chave que deletar — compartilha o bucket de mutations)
-        const rl = rateLimit(`mutacao:${user.id}`, MUTACAO_MAX_RPM);
+        const rl = await rateLimit(`mutacao:${user.id}`, MUTACAO_MAX_RPM);
         if (!rl.success) return { success: false, code: 'RATE_LIMIT', message: rl.message };
 
         // 3. Validação via EditarLancamentoSchema

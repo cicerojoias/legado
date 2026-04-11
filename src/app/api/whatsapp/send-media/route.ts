@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   // 2. Rate limit: 30 envios / 15 min por usuÃ¡rio (igual Ã s mutations financeiras)
-  const rl = rateLimit(`send-media:${user.id}`, 30, 15)
+  const rl = await rateLimit(`send-media:${user.id}`, 30, 15)
   if (!rl.success) return Response.json({ error: rl.message }, { status: 429 })
 
   // 3. Parse do body

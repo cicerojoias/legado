@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // Rate limit: 30 req/min por usuário
-    const rl = rateLimit(`wab-search:${user.id}`, 30, 1)
+    const rl = await rateLimit(`wab-search:${user.id}`, 30, 1)
     if (!rl.success) return NextResponse.json({ error: 'Muitas buscas. Aguarde.' }, { status: 429 })
 
     const raw = req.nextUrl.searchParams.get('q') ?? ''

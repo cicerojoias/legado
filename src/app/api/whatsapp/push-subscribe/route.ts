@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit: 10 subscriptions / 15 min per user (device registrations, not high frequency)
-  const rl = rateLimit(`push-subscribe:${dbUser.id}`, 10, 15)
+  const rl = await rateLimit(`push-subscribe:${dbUser.id}`, 10, 15)
   if (!rl.success) {
     return NextResponse.json({ error: rl.message }, { status: 429 })
   }

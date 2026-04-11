@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Serena MCP (estado local, não versionado)
+.serena/
+
 # dependencies
 /node_modules
 /.pnp
@@ -78,3 +81,6 @@ test.out
 # Arquivos de contexto e testes locais
 PROMPT_NEXT_CHAT.md
 tests/
+
+.vercel
+.env*.local

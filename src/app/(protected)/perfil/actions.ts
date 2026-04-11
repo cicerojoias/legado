@@ -60,7 +60,7 @@ export async function trocarPinAction(formData: FormData): Promise<ActionResult>
         const { dbUser } = ctx;
 
         // Rate limit
-        const rl = rateLimit(`pin-change:${dbUser.id}`, 5);
+        const rl = await rateLimit(`pin-change:${dbUser.id}`, 5);
         if (!rl.success) return { success: false, error: rl.message ?? 'Muitas tentativas.' };
 
         // Zod
@@ -182,7 +182,7 @@ export async function alterarSenhaAction(formData: FormData): Promise<ActionResu
         const { supabase, dbUser } = ctx;
 
         // Rate limit
-        const rl = rateLimit(`senha:${dbUser.id}`, 5);
+        const rl = await rateLimit(`senha:${dbUser.id}`, 5);
         if (!rl.success) return { success: false, error: rl.message ?? 'Muitas tentativas.' };
 
         // Zod

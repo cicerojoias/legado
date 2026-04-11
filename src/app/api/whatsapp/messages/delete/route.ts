@@ -13,7 +13,7 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // ── Rate limiting: 10 deletes / 15 min por usuário ─────────────────────────
-  const rl = rateLimit(`wa-delete:${user.id}`, 10, 15)
+  const rl = await rateLimit(`wa-delete:${user.id}`, 10, 15)
   if (!rl.success) {
     return NextResponse.json({ error: rl.message }, { status: 429 })
   }
