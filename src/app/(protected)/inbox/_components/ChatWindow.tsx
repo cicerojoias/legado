@@ -148,6 +148,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   useEffect(() => {
     const supabase = createClient()
 
+    console.log(`[wab-realtime-chat] Subscrevendo conversa: ${conversationId}`)
+
     const channel = supabase
       .channel(`wab-chat-${conversationId}`)
       .on(
@@ -161,6 +163,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         (payload) => {
           // Append direto — preserva mensagens antigas já carregadas via loadMore
           const newMsg = payload.new as unknown as WaMessage
+          console.log(`[wab-realtime-chat] Nova mensagem na conversa ${conversationId}:`, newMsg)
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev
             return [...prev, newMsg]
@@ -207,16 +210,19 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[wab-realtime] subscribed', conversationId)
+          console.log(`[wab-realtime-chat] ✅ Inscrito na conversa ${conversationId}`)
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[wab-realtime] erro ao subscrever', status, err)
+          console.error(`[wab-realtime-chat] ❌ Erro ao subscrever conversa ${conversationId}:`, status, err)
         }
       })
 
     channelRef.current = channel
 
     return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current)
+      if (channelRef.current) {
+        console.log(`[wab-realtime-chat] Limpando canal da conversa ${conversationId}`)
+        supabase.removeChannel(channelRef.current)
+      }
     }
   }, [conversationId, scrollToBottom])
 
