@@ -149,9 +149,16 @@ export function PerfilContent({
                         <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{nome}</p>
                             <p className="text-sm text-muted-foreground truncate">{email}</p>
-                            <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
-                                {ROLE_LABELS[role] ?? role}
-                            </span>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                <span className="inline-block text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                                    {ROLE_LABELS[role] ?? role}
+                                </span>
+                                {lojaAutorizada === 'AMBAS' && (
+                                    <span className="inline-block text-xs px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">
+                                        Ambas as lojas
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </motion.div>

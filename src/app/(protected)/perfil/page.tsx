@@ -29,15 +29,17 @@ export default async function PerfilPage() {
     return (
         <div className="min-h-full">
             <Suspense fallback={null}>
-                <PerfilContent
-                    nome={dbUser.nome}
-                    email={dbUser.email}
-                    role={dbUser.role}
-                    lojaAutorizada={dbUser.lojaAutorizada}
-                    lojaPadrao={dbUser.lojaPadrao}
-                    notifPush={dbUser.notif_push}
-                    notifHorario={dbUser.notif_horario}
-                />
+                <div className="mx-auto max-w-2xl px-4 md:px-0">
+                    <PerfilContent
+                        nome={dbUser.nome}
+                        email={dbUser.email}
+                        role={dbUser.role}
+                        lojaAutorizada={dbUser.lojaAutorizada}
+                        lojaPadrao={dbUser.lojaPadrao}
+                        notifPush={dbUser.notif_push}
+                        notifHorario={dbUser.notif_horario}
+                    />
+                </div>
             </Suspense>
         </div>
     );
