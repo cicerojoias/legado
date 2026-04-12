@@ -46,9 +46,7 @@ next-env.d.ts
 /src/generated/prisma
 
 # docs & internal
-/docs/
 CHANGELOG.md
-README.md
 
 # seeds & scripts
 /prisma/seed*.ts
@@ -77,10 +75,12 @@ README.md
 /tmp/
 test.out
 
-
 # Arquivos de contexto e testes locais
 PROMPT_NEXT_CHAT.md
 tests/
+
+# Archive documentation
+docs/archive/
 
 .vercel
 .env*.local
