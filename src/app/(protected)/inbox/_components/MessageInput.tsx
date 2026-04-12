@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
-import { Send, Paperclip, Mic, MicOff, X, FileText, Image as ImageIcon } from 'lucide-react'
+import { Send, Paperclip, Mic, MicOff, X, FileText, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useInsertText } from './InsertTextContext'
 import { TemplateMenu } from './TemplateMenu'
@@ -18,6 +18,7 @@ interface MessageInputProps {
   onMessageSent?: () => void
   replyTo?: ReplyContext | null
   onClearReply?: () => void
+  onOpenAssistente?: () => void
 }
 
 // Tipos MIME aceitos no seletor de arquivo
@@ -32,7 +33,7 @@ interface MediaPreview {
   fileName: string
 }
 
-export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply }: MessageInputProps) {
+export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply, onOpenAssistente }: MessageInputProps) {
   const [text, setText] = useState('')
   const textSendLockRef = useRef(false)
   const mediaSendLockRef = useRef(false)
@@ -420,6 +421,16 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
           className="hidden"
           onChange={handleFileSelected}
         />
+
+        {/* Botão Assistente IA */}
+        <button
+          onClick={onOpenAssistente}
+          disabled={recording || isUploading || !!mediaPreview}
+          className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-purple-500/10 hover:text-purple-500 transition-colors disabled:opacity-30 cursor-pointer"
+          title="Assistente IA"
+        >
+          <Sparkles className="w-[18px] h-[18px]" />
+        </button>
 
         {/* Botão de anexo (clip) */}
         <button

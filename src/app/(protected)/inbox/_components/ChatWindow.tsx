@@ -10,7 +10,9 @@ import { createClient } from '@/lib/supabase/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TemplateSelector } from './TemplateSelector'
+import { AssistenteModal } from './AssistenteModal'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
+import { useInsertText } from './InsertTextContext'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
@@ -29,12 +31,26 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
+  const [assistenteOpen, setAssistenteOpen] = useState(false)
 
   const [pendingCount, setPendingCount] = useState(0)
   const reactingRef = useRef<Set<string>>(new Set())
 
   const { active: selectionActive, selected: selectedMessages } = useSelectionState()
   const { clear: clearSelection } = useSelectionActions()
+  const { requestInsert } = useInsertText()
+
+  // Extrair contexto das ultimas 10 mensagens para o Assistente IA
+  const conversationContext = useMemo(() => {
+    const lastMessages = messages.slice(-10)
+    return lastMessages
+      .filter((msg) => msg.content) // Apenas mensagens com conteudo textual
+      .map((msg) => {
+        const sender = msg.direction === 'inbound' ? 'Cliente' : 'Atendente'
+        return `[${sender}]: ${msg.content}`
+      })
+      .join('\n\n')
+  }, [messages])
 
   // Barra de reação flutuante — só quando exatamente 1 mensagem selecionada
   const reactionBarMsgId = selectionActive && selectedMessages.size === 1
@@ -354,8 +370,17 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           onMessageSent={handleMessageSent}
           replyTo={replyTo}
           onClearReply={() => setReplyTo(null)}
+          onOpenAssistente={() => setAssistenteOpen(true)}
         />
       )}
+
+      {/* Modal do Assistente IA */}
+      <AssistenteModal
+        open={assistenteOpen}
+        onClose={() => setAssistenteOpen(false)}
+        onAccept={(text: string) => requestInsert(text)}
+        conversationContext={conversationContext || undefined}
+      />
     </div>
   )
 }
