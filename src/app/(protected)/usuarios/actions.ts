@@ -47,7 +47,7 @@ function revalidateAll() {
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-// ─── 1. Alterar Loja e Ativo de uma vez (Modal de Edição) ───────────────────
+// ─── 1. Alterar Loja, Role e Ativo de uma vez (Modal de Edição) ─────────────
 // Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → $transaction { read → write → audit }
 
 export async function editUserAction(formData: FormData): Promise<ActionResult> {
@@ -59,6 +59,7 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
             userId: formData.get('userId') as string,
             lojaAutorizada: formData.get('lojaAutorizada') as string,
             ativo: formData.get('ativo') === 'true',
+            role: formData.get('role') as string | undefined,
         };
 
         const parsed = EditarUsuarioSchema.safeParse(raw);
@@ -71,20 +72,31 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
             return { success: false, error: 'Você não pode desativar sua própria conta.' };
         }
 
+        // Guard: SUPER_ADMIN não pode alterar sua própria role
+        if (parsed.data.userId === admin.userId && parsed.data.role && parsed.data.role !== 'SUPER_ADMIN') {
+            return { success: false, error: 'Você não pode alterar sua própria role.' };
+        }
+
         await prisma.$transaction(async (tx) => {
             const target = await tx.user.findUnique({
                 where: { id: parsed.data.userId },
-                select: { id: true, nome: true, lojaAutorizada: true, ativo: true },
+                select: { id: true, nome: true, lojaAutorizada: true, ativo: true, role: true },
             });
 
             if (!target) throw new Error('Usuário não encontrado.');
 
+            const updateData: { lojaAutorizada: Loja; ativo: boolean; role?: 'SUPER_ADMIN' | 'ADMIN' | 'OPERADOR' } = {
+                lojaAutorizada: parsed.data.lojaAutorizada as Loja,
+                ativo: parsed.data.ativo,
+            };
+
+            if (parsed.data.role) {
+                updateData.role = parsed.data.role;
+            }
+
             await tx.user.update({
                 where: { id: parsed.data.userId },
-                data: { 
-                    lojaAutorizada: parsed.data.lojaAutorizada as Loja,
-                    ativo: parsed.data.ativo 
-                },
+                data: updateData,
             });
 
             await tx.log.create({
@@ -96,7 +108,9 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
                         loja_antes: target.lojaAutorizada,
                         loja_depois: parsed.data.lojaAutorizada,
                         ativo_antes: target.ativo,
-                        ativo_depois: parsed.data.ativo
+                        ativo_depois: parsed.data.ativo,
+                        role_antes: target.role,
+                        role_depois: parsed.data.role || target.role,
                     }),
                     usuario_id: admin.userId,
                 },

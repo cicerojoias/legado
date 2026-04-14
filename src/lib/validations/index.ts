@@ -115,6 +115,7 @@ export const EditarUsuarioSchema = z.object({
     userId: z.string().uuid("ID de usuário inválido"),
     lojaAutorizada: LojasEnum,
     ativo: z.boolean(),
+    role: RolesEnum.optional(),
 });
 
 export const ExcluirUsuarioSchema = z.object({

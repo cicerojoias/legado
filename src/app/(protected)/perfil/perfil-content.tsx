@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.28', data: '14/04/2026', resumo: 'Usuários: edição de role (ADMIN/OPERADOR) — Super Admin pode alterar nível de acesso dos usuários no modal de edição' },
     { versao: '0.18.27', data: '12/04/2026', resumo: 'Assistente IA integrado ao chat — botão ✨ no MessageInput gera mensagens contextuais com opções aceitar/editar/rejeitar, injetando direto no campo de texto' },
     { versao: '0.18.26', data: '11/04/2026', resumo: 'WAB: correção do status de leitura — marca mensagens como lidas na API da Meta ao abrir conversa (dois traços dourados)' },
     { versao: '0.18.25', data: '11/04/2026', resumo: 'WAB: orçamento de aliança — seleção múltipla de materiais (Prata 990, Ouro 16k, Ouro 18k), cálculo 6x sem juros, largura customizável' },

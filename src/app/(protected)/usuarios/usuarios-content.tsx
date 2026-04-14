@@ -241,6 +241,24 @@ function EditUserModal({
                             </Select>
                         </div>
 
+                        <div className="space-y-3">
+                            <Label htmlFor="role">Nível de Acesso (Role)</Label>
+                            <Select name="role" defaultValue={usuario.role} disabled={isPending || isSuperAdmin}>
+                                <SelectTrigger id="role" className="w-full">
+                                    <SelectValue placeholder="Selecione a role..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ADMIN">Admin</SelectItem>
+                                    <SelectItem value="OPERADOR">Operador</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {isSuperAdmin && (
+                                <p className="text-xs text-muted-foreground">
+                                    Super Admin não pode ter a role alterada.
+                                </p>
+                            )}
+                        </div>
+
                         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                             <div className="space-y-0.5">
                                 <Label className="text-base">Acesso ao Sistema</Label>
