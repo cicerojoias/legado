@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { editUserAction, deleteUserAction } from './actions';
-import { User, Shield, MapPin, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { editUserAction, deleteUserAction, criarUsuarioAction } from './actions';
+import { User, Shield, MapPin, Pencil, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
+
+import { Input } from '@/components/ui/input';
 
 import {
   Dialog,
@@ -64,27 +66,38 @@ const LOJA_LABELS: Record<string, string> = {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function UsuariosContent({ usuarios }: UsuariosContentProps) {
-    if (usuarios.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                <User className="w-12 h-12 mb-3 opacity-20" />
-                <p>Nenhum usuário ativo encontrado.</p>
-            </div>
-        );
-    }
+    const [isCriarOpen, setIsCriarOpen] = useState(false);
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {usuarios.map((usuario, index) => (
-                <motion.div
-                    key={usuario.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                >
-                    <UsuarioCard usuario={usuario} />
-                </motion.div>
-            ))}
+            <Button
+                onClick={() => setIsCriarOpen(true)}
+                className="w-full flex items-center gap-2"
+                variant="outline"
+            >
+                <UserPlus className="w-4 h-4" />
+                Novo Usuário
+            </Button>
+
+            {usuarios.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                    <User className="w-12 h-12 mb-3 opacity-20" />
+                    <p>Nenhum usuário ativo encontrado.</p>
+                </div>
+            ) : (
+                usuarios.map((usuario, index) => (
+                    <motion.div
+                        key={usuario.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                    >
+                        <UsuarioCard usuario={usuario} />
+                    </motion.div>
+                ))
+            )}
+
+            <CriarUsuarioModal isOpen={isCriarOpen} setIsOpen={setIsCriarOpen} />
         </div>
     );
 }
@@ -294,6 +307,103 @@ function EditUserModal({
                         </Button>
                         <Button type="submit" disabled={isPending}>
                             {isPending ? 'Salvando...' : 'Salvar Alterações'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// ─── Modal de Criação (CriarUsuarioModal) ───────────────────────────────────
+
+function CriarUsuarioModal({
+    isOpen,
+    setIsOpen,
+}: {
+    isOpen: boolean;
+    setIsOpen: (o: boolean) => void;
+}) {
+    const [isPending, startTransition] = useTransition();
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        startTransition(async () => {
+            const result = await criarUsuarioAction(formData);
+            if (result.success) {
+                toast.success('Usuário criado com sucesso.');
+                setIsOpen(false);
+                (e.target as HTMLFormElement).reset();
+            } else {
+                toast.error(result.error || 'Erro ao criar usuário.');
+            }
+        });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => !isPending && setIsOpen(open)}>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Novo Usuário</DialogTitle>
+                        <DialogDescription>
+                            Cria a conta no sistema de autenticação e no banco de dados automaticamente.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="nome">Nome</Label>
+                            <Input id="nome" name="nome" placeholder="Ex: Jordson" required disabled={isPending} />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email">E-mail</Label>
+                            <Input id="email" name="email" type="email" placeholder="email@gmail.com" required disabled={isPending} />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="senha">Senha inicial</Label>
+                            <Input id="senha" name="senha" type="password" placeholder="Mínimo 8 caracteres" required disabled={isPending} />
+                            <p className="text-xs text-muted-foreground">O usuário poderá alterar a senha pelo perfil.</p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="role">Nível de Acesso</Label>
+                            <Select name="role" defaultValue="OPERADOR" disabled={isPending}>
+                                <SelectTrigger id="role" className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ADMIN">Admin</SelectItem>
+                                    <SelectItem value="OPERADOR">Operador</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="lojaAutorizada">Loja</Label>
+                            <Select name="lojaAutorizada" defaultValue="JOAO_PESSOA" disabled={isPending}>
+                                <SelectTrigger id="lojaAutorizada" className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="JOAO_PESSOA">João Pessoa</SelectItem>
+                                    <SelectItem value="SANTA_RITA">Santa Rita</SelectItem>
+                                    <SelectItem value="AMBAS">Ambas</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isPending}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending ? 'Criando...' : 'Criar Usuário'}
                         </Button>
                     </DialogFooter>
                 </form>

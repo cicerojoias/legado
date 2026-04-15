@@ -5,7 +5,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { Loja } from '@prisma/client';
-import { EditarUsuarioLojaSchema, EditarUsuarioAtivoSchema, EditarUsuarioSchema, ExcluirUsuarioSchema } from '@/lib/validations';
+import { EditarUsuarioLojaSchema, EditarUsuarioAtivoSchema, EditarUsuarioSchema, ExcluirUsuarioSchema, CriarUsuarioSchema } from '@/lib/validations';
 
 // ─── Infraestrutura ─────────────────────────────────────────────────────────
 
@@ -224,6 +224,93 @@ export async function deleteUserAction(formData: FormData): Promise<ActionResult
     } catch (error) {
         console.error('[deleteUserAction] Erro fatal:', error);
         return { success: false, error: 'Ocorreu um erro interno. Tente novamente.' };
+    }
+}
+
+// ─── 3. Criar Novo Usuário (Supabase Auth + Prisma) ─────────────────────────
+// Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → Auth API create → $transaction { insert + audit }
+
+export async function criarUsuarioAction(formData: FormData): Promise<ActionResult> {
+    try {
+        const admin = await getSuperAdmin();
+        if (!admin) return { success: false, error: 'Não autorizado.' };
+
+        const raw = {
+            nome: formData.get('nome') as string,
+            email: formData.get('email') as string,
+            senha: formData.get('senha') as string,
+            role: formData.get('role') as string,
+            lojaAutorizada: formData.get('lojaAutorizada') as string,
+        };
+
+        const parsed = CriarUsuarioSchema.safeParse(raw);
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
+        }
+
+        const supabaseAdmin = getSupabaseAdmin();
+        if (!supabaseAdmin || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return { success: false, error: 'Configuração incompleta: SUPABASE_SERVICE_ROLE_KEY ausente.' };
+        }
+
+        // 1. Criar no Supabase Auth
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: parsed.data.email,
+            password: parsed.data.senha,
+            email_confirm: true,
+        });
+
+        if (authError || !authData.user) {
+            const msg = authError?.message ?? 'Erro desconhecido no Auth.';
+            if (msg.includes('already been registered') || msg.includes('already exists')) {
+                return { success: false, error: 'Este e-mail já está cadastrado no sistema de autenticação.' };
+            }
+            return { success: false, error: `Erro ao criar credenciais: ${msg}` };
+        }
+
+        const newUserId = authData.user.id;
+
+        // 2. Inserir em public.users dentro de transaction
+        try {
+            await prisma.$transaction(async (tx) => {
+                await tx.user.create({
+                    data: {
+                        id: newUserId,
+                        nome: parsed.data.nome,
+                        email: parsed.data.email,
+                        role: parsed.data.role,
+                        lojaAutorizada: parsed.data.lojaAutorizada as Loja,
+                        ativo: true,
+                    },
+                });
+
+                await tx.log.create({
+                    data: {
+                        acao: 'USUARIO_CRIADO',
+                        detalhe: JSON.stringify({
+                            targetId: newUserId,
+                            nome: parsed.data.nome,
+                            email: parsed.data.email,
+                            role: parsed.data.role,
+                            loja: parsed.data.lojaAutorizada,
+                        }),
+                        usuario_id: admin.userId,
+                    },
+                });
+            });
+        } catch (dbError) {
+            // Rollback: remover do Auth se falhou no banco
+            await supabaseAdmin.auth.admin.deleteUser(newUserId);
+            console.error('[criarUsuarioAction] Erro BD, Auth revertido:', dbError);
+            return { success: false, error: 'Erro ao salvar no banco de dados. Tente novamente.' };
+        }
+
+        revalidateAll();
+        return { success: true };
+
+    } catch (error) {
+        console.error('[criarUsuarioAction] Erro fatal:', error);
+        return { success: false, error: 'Erro interno. Tente novamente.' };
     }
 }
 

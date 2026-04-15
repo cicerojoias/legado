@@ -121,3 +121,11 @@ export const EditarUsuarioSchema = z.object({
 export const ExcluirUsuarioSchema = z.object({
     userId: z.string().uuid("ID de usuário inválido"),
 });
+
+export const CriarUsuarioSchema = z.object({
+    nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres.").max(80),
+    email: z.string().email("E-mail inválido."),
+    senha: z.string().min(8, "Senha deve ter ao menos 8 caracteres."),
+    role: z.enum(["ADMIN", "OPERADOR"]),
+    lojaAutorizada: LojasEnum,
+});
