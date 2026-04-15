@@ -147,6 +147,20 @@ export async function POST(req: NextRequest) {
               `[webhook] msg type=${type} mediaId=${mediaId || 'N/A'} mediaUrl=${mediaUrl || 'null'}`
             )
 
+            // Contexto de resposta — quando o cliente cita uma mensagem no WhatsApp dele
+            let replyToId: string | undefined
+            let replyToSnapshot: string | undefined
+            if (msg.context?.id) {
+              const quoted = await prisma.waMessage.findUnique({
+                where: { wa_message_id: msg.context.id },
+                select: { id: true, content: true, type: true },
+              })
+              if (quoted) {
+                replyToId = quoted.id
+                replyToSnapshot = (quoted.content || `[${quoted.type}]`).slice(0, 500)
+              }
+            }
+
             await prisma.waMessage.create({
               data: {
                 wa_message_id: msg.id,
@@ -159,6 +173,8 @@ export async function POST(req: NextRequest) {
                 mediaUrl,
                 mediaId: mediaId || undefined,
                 mimeType: mimeType || undefined,
+                replyToId,
+                replyToSnapshot,
               },
             })
 
