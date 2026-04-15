@@ -14,7 +14,7 @@ import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
 export function BottomNav() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
+    const { isGerente, isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
     const wabUnread = useWabUnreadTotal();
 
     // Loja da URL tem prioridade; se não tiver, usa a lojaPadrao; fallback: JOAO_PESSOA
@@ -28,12 +28,20 @@ export function BottomNav() {
     let links = [];
 
     if (!isLoading && isAdmin) {
-        // Admin: 5 itens (Hoje, Inbox, Registrar (centro), Relatórios, Perfil)
+        // Admin+: 5 itens (Hoje, WAB, Registrar, Relatórios, Perfil)
         links = [
             { href: '/hoje', icon: Home, label: 'Hoje' },
             { href: '/inbox', icon: WhatsAppIcon, label: 'WAB' },
             { href: '#', icon: Plus, label: 'Registrar' },
             { href: '/relatorios', icon: PieChart, label: 'Relatórios' },
+            { href: '/perfil', icon: User, label: 'Perfil' },
+        ];
+    } else if (!isLoading && isGerente) {
+        // Gerente: 4 itens (Hoje, WAB, Registrar, Perfil)
+        links = [
+            { href: '/hoje', icon: Home, label: 'Hoje' },
+            { href: '/inbox', icon: WhatsAppIcon, label: 'WAB' },
+            { href: '#', icon: Plus, label: 'Registrar' },
             { href: '/perfil', icon: User, label: 'Perfil' },
         ];
     } else {
