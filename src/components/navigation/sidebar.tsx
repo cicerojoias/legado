@@ -11,7 +11,7 @@ import { logoutAction } from '@/app/(auth)/logout/actions';
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { isAdmin, isSuperAdmin, isLoading } = usePermissions();
+    const { isGerente, isAdmin, isSuperAdmin, isLoading } = usePermissions();
     const wabUnread = useWabUnreadTotal();
 
     const handleLogout = async () => {
@@ -41,20 +41,23 @@ export function Sidebar() {
                     Hoje
                 </Link>
 
-                {/* Admin routes */}
+                {/* Lançamentos — visível para GERENTE+ */}
+                {!isLoading && isGerente && (
+                    <Link
+                        href="/lancamentos"
+                        className={cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                            pathname === '/lancamentos' ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                        )}
+                    >
+                        <FileText className="w-4 h-4" />
+                        Lançamentos
+                    </Link>
+                )}
+
+                {/* Gestão — visível apenas para ADMIN+ */}
                 {!isLoading && isAdmin && (
                     <>
-                        <Link
-                            href="/lancamentos"
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                                pathname === '/lancamentos' ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-                            )}
-                        >
-                            <FileText className="w-4 h-4" />
-                            Lançamentos
-                        </Link>
-
                         <div className="pt-4 pb-1">
                             <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Gestão</p>
                         </div>
@@ -122,8 +125,8 @@ export function Sidebar() {
                     </>
                 )}
 
-                {/* Comunicação — visível para admin */}
-                {!isLoading && isAdmin && (
+                {/* Comunicação — visível para GERENTE+ */}
+                {!isLoading && isGerente && (
                     <>
                         <div className="pt-4 pb-1">
                             <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Comunicação</p>

@@ -71,10 +71,14 @@ export async function updateSession(request: NextRequest) {
         // RBAC: proteger rotas gerenciais por role
         const pathname = request.nextUrl.pathname;
         const isWhatsAppApi = pathname.startsWith('/api/whatsapp/') && !pathname.startsWith('/api/whatsapp/webhook');
-        const isAdminRoute = pathname.startsWith('/relatorios') || pathname.startsWith('/lancamentos') || pathname.startsWith('/inbox') || isWhatsAppApi;
+        // GERENTE+: lançamentos, inbox e APIs WhatsApp
+        const isGerenteRoute = pathname.startsWith('/lancamentos') || pathname.startsWith('/inbox') || isWhatsAppApi;
+        // ADMIN+: relatórios
+        const isAdminRoute = pathname.startsWith('/relatorios');
+        // SUPER_ADMIN apenas
         const isSuperAdminRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/custos-fixos') || pathname.startsWith('/usuarios') || pathname.startsWith('/logs');
 
-        if (hasVerifiedPin && (isAdminRoute || isSuperAdminRoute)) {
+        if (hasVerifiedPin && (isGerenteRoute || isAdminRoute || isSuperAdminRoute)) {
             const { data: dbUser } = await supabase
                 .from('users')
                 .select('role')
@@ -82,6 +86,12 @@ export async function updateSession(request: NextRequest) {
                 .single();
 
             const role = dbUser?.role as string | undefined;
+
+            if (isGerenteRoute && role !== 'GERENTE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+                const url = request.nextUrl.clone();
+                url.pathname = '/hoje';
+                return NextResponse.redirect(url);
+            }
 
             if (isAdminRoute && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
                 const url = request.nextUrl.clone();

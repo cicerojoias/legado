@@ -14,6 +14,7 @@ interface PermissionState {
     lojaAutorizada: LojaValue;
     lojaPadrao: 'JOAO_PESSOA' | 'SANTA_RITA' | null;
     isLoading: boolean;
+    isGerente: boolean;
     isAdmin: boolean;
     isSuperAdmin: boolean;
 }
@@ -24,6 +25,7 @@ export function usePermissions(): PermissionState {
         lojaAutorizada: null,
         lojaPadrao: null,
         isLoading: true,
+        isGerente: false,
         isAdmin: false,
         isSuperAdmin: false,
     });
@@ -55,6 +57,7 @@ export function usePermissions(): PermissionState {
                     lojaAutorizada: data.lojaAutorizada as LojaValue,
                     lojaPadrao: (data.lojaPadrao as 'JOAO_PESSOA' | 'SANTA_RITA' | null) ?? null,
                     isLoading: false,
+                    isGerente: role === 'GERENTE' || role === 'ADMIN' || role === 'SUPER_ADMIN',
                     isAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN',
                     isSuperAdmin: role === 'SUPER_ADMIN',
                 });

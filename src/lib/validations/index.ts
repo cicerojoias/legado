@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Dicionários Reutilizáveis
 export const LojasEnum = z.enum(["JOAO_PESSOA", "SANTA_RITA", "AMBAS"]);
-export const RolesEnum = z.enum(["SUPER_ADMIN", "ADMIN", "OPERADOR"]);
+export const RolesEnum = z.enum(["SUPER_ADMIN", "ADMIN", "GERENTE", "OPERADOR"]);
 export const TipoLancamentoEnum = z.enum(["ENTRADA", "SAIDA"]);
 export const MetodosPgtoEnum = z.enum(["PIX", "C_DEBITO", "C_CREDITO", "ESPECIE", "TON", "DINHEIRO"]);
 export const MetodosPgtoCriacaoEnum = z.enum(["PIX", "C_DEBITO", "C_CREDITO", "ESPECIE"]);
@@ -126,6 +126,6 @@ export const CriarUsuarioSchema = z.object({
     nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres.").max(80),
     email: z.string().email("E-mail inválido."),
     senha: z.string().min(8, "Senha deve ter ao menos 8 caracteres."),
-    role: z.enum(["ADMIN", "OPERADOR"]),
+    role: z.enum(["ADMIN", "GERENTE", "OPERADOR"]),
     lojaAutorizada: LojasEnum,
 });

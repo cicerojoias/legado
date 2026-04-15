@@ -85,7 +85,7 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
 
             if (!target) throw new Error('Usuário não encontrado.');
 
-            const updateData: { lojaAutorizada: Loja; ativo: boolean; role?: 'SUPER_ADMIN' | 'ADMIN' | 'OPERADOR' } = {
+            const updateData: { lojaAutorizada: Loja; ativo: boolean; role?: 'SUPER_ADMIN' | 'ADMIN' | 'GERENTE' | 'OPERADOR' } = {
                 lojaAutorizada: parsed.data.lojaAutorizada as Loja,
                 ativo: parsed.data.ativo,
             };
@@ -278,7 +278,7 @@ export async function criarUsuarioAction(formData: FormData): Promise<ActionResu
                         id: newUserId,
                         nome: parsed.data.nome,
                         email: parsed.data.email,
-                        role: parsed.data.role,
+                        role: parsed.data.role as 'ADMIN' | 'GERENTE' | 'OPERADOR',
                         lojaAutorizada: parsed.data.lojaAutorizada as Loja,
                         ativo: true,
                     },

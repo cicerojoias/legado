@@ -54,6 +54,7 @@ interface UsuariosContentProps {
 const ROLE_LABELS: Record<string, string> = {
     SUPER_ADMIN: 'Super Admin',
     ADMIN: 'Admin',
+    GERENTE: 'Gerente',
     OPERADOR: 'Operador',
 };
 
@@ -262,6 +263,7 @@ function EditUserModal({
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="ADMIN">Admin</SelectItem>
+                                    <SelectItem value="GERENTE">Gerente</SelectItem>
                                     <SelectItem value="OPERADOR">Operador</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -407,6 +409,7 @@ function CriarUsuarioModal({
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="ADMIN">Admin</SelectItem>
+                                    <SelectItem value="GERENTE">Gerente</SelectItem>
                                     <SelectItem value="OPERADOR">Operador</SelectItem>
                                 </SelectContent>
                             </Select>
