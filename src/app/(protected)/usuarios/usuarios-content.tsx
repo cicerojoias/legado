@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { editUserAction, deleteUserAction, criarUsuarioAction } from './actions';
+import { editUserAction, deleteUserAction, criarUsuarioAction, vincularUsuarioAuthAction } from './actions';
 import { User, Shield, MapPin, Pencil, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
@@ -325,33 +325,60 @@ function CriarUsuarioModal({
     setIsOpen: (o: boolean) => void;
 }) {
     const [isPending, startTransition] = useTransition();
+    const [modo, setModo] = useState<'novo' | 'vincular'>('novo');
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        const action = modo === 'novo' ? criarUsuarioAction : vincularUsuarioAuthAction;
 
         startTransition(async () => {
-            const result = await criarUsuarioAction(formData);
+            const result = await action(formData);
             if (result.success) {
-                toast.success('Usuário criado com sucesso.');
+                toast.success(modo === 'novo' ? 'Usuário criado com sucesso.' : 'Usuário vinculado com sucesso.');
                 setIsOpen(false);
-                (e.target as HTMLFormElement).reset();
             } else {
-                toast.error(result.error || 'Erro ao criar usuário.');
+                toast.error(result.error || 'Erro ao processar.');
             }
         });
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !isPending && setIsOpen(open)}>
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!isPending) { setIsOpen(open); if (!open) setModo('novo'); } }}>
             <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Novo Usuário</DialogTitle>
                         <DialogDescription>
-                            Cria a conta no sistema de autenticação e no banco de dados automaticamente.
+                            {modo === 'novo'
+                                ? 'Cria conta no Auth e no banco automaticamente.'
+                                : 'Vincula uma conta já existente no Auth ao banco de dados.'}
                         </DialogDescription>
                     </DialogHeader>
+
+                    {/* Toggle de modo */}
+                    <div className="flex rounded-lg border overflow-hidden mt-4">
+                        <button
+                            type="button"
+                            onClick={() => setModo('novo')}
+                            className={cn(
+                                'flex-1 py-2 text-sm font-medium transition-colors',
+                                modo === 'novo' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                            )}
+                        >
+                            Criar novo
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setModo('vincular')}
+                            className={cn(
+                                'flex-1 py-2 text-sm font-medium transition-colors',
+                                modo === 'vincular' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                            )}
+                        >
+                            Já existe no Auth
+                        </button>
+                    </div>
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-1.5">
@@ -364,11 +391,13 @@ function CriarUsuarioModal({
                             <Input id="email" name="email" type="email" placeholder="email@gmail.com" required disabled={isPending} />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="senha">Senha inicial</Label>
-                            <Input id="senha" name="senha" type="password" placeholder="Mínimo 8 caracteres" required disabled={isPending} />
-                            <p className="text-xs text-muted-foreground">O usuário poderá alterar a senha pelo perfil.</p>
-                        </div>
+                        {modo === 'novo' && (
+                            <div className="space-y-1.5">
+                                <Label htmlFor="senha">Senha inicial</Label>
+                                <Input id="senha" name="senha" type="password" placeholder="Mínimo 8 caracteres" required disabled={isPending} />
+                                <p className="text-xs text-muted-foreground">O usuário poderá alterar a senha pelo perfil.</p>
+                            </div>
+                        )}
 
                         <div className="space-y-1.5">
                             <Label htmlFor="role">Nível de Acesso</Label>
@@ -403,7 +432,7 @@ function CriarUsuarioModal({
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={isPending}>
-                            {isPending ? 'Criando...' : 'Criar Usuário'}
+                            {isPending ? 'Processando...' : modo === 'novo' ? 'Criar Usuário' : 'Vincular Usuário'}
                         </Button>
                     </DialogFooter>
                 </form>

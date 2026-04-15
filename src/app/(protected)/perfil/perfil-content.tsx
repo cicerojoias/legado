@@ -51,7 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
-    { versao: '0.18.30', data: '15/04/2026', resumo: 'Usuários: botão "Novo Usuário" cria conta no Supabase Auth + banco em uma ação — sem precisar acessar o painel do Supabase' },
+    { versao: '0.18.31', data: '15/04/2026', resumo: 'Usuários: modal "Novo Usuário" com dois modos — criar do zero (Auth + banco) ou vincular conta já existente no Auth pelo e-mail' },
     { versao: '0.18.29', data: '15/04/2026', resumo: 'Assistente IA: migrado de Gemini para GPT-4o, endpoint protegido com autenticação, módulo /assistente removido — IA do atendente consolidada no WAB' },
     { versao: '0.18.28', data: '14/04/2026', resumo: 'Usuários: edição de role (ADMIN/OPERADOR) — Super Admin pode alterar nível de acesso dos usuários no modal de edição' },
     { versao: '0.18.27', data: '12/04/2026', resumo: 'Assistente IA integrado ao chat — botão ✨ no MessageInput gera mensagens contextuais com opções aceitar/editar/rejeitar, injetando direto no campo de texto' },

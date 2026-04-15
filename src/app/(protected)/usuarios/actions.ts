@@ -314,6 +314,83 @@ export async function criarUsuarioAction(formData: FormData): Promise<ActionResu
     }
 }
 
+// ─── 4. Vincular usuário já existente no Supabase Auth ──────────────────────
+// Caso: usuário foi criado manualmente no Auth mas não tem registro em public.users
+
+export async function vincularUsuarioAuthAction(formData: FormData): Promise<ActionResult> {
+    try {
+        const admin = await getSuperAdmin();
+        if (!admin) return { success: false, error: 'Não autorizado.' };
+
+        const email = (formData.get('email') as string)?.trim().toLowerCase();
+        const nome = (formData.get('nome') as string)?.trim();
+        const role = formData.get('role') as string;
+        const lojaAutorizada = formData.get('lojaAutorizada') as string;
+
+        if (!email || !nome || !role || !lojaAutorizada) {
+            return { success: false, error: 'Todos os campos são obrigatórios.' };
+        }
+
+        const supabaseAdmin = getSupabaseAdmin();
+        if (!supabaseAdmin || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return { success: false, error: 'Configuração incompleta: SUPABASE_SERVICE_ROLE_KEY ausente.' };
+        }
+
+        // Busca o UUID pelo email via API admin
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`, {
+            headers: {
+                apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+                Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+        });
+
+        if (!res.ok) return { success: false, error: 'Erro ao consultar o Supabase Auth.' };
+
+        const body = await res.json();
+        const users: { id: string; email: string }[] = body.users ?? [];
+        const found = users.find((u) => u.email?.toLowerCase() === email);
+
+        if (!found) {
+            return { success: false, error: `Nenhum usuário com e-mail "${email}" encontrado no Auth. Crie a conta primeiro.` };
+        }
+
+        // Verifica se já existe no banco
+        const existing = await prisma.user.findUnique({ where: { id: found.id } });
+        if (existing) {
+            return { success: false, error: 'Este usuário já possui perfil no banco de dados.' };
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.user.create({
+                data: {
+                    id: found.id,
+                    nome,
+                    email,
+                    role: role as 'ADMIN' | 'OPERADOR',
+                    lojaAutorizada: lojaAutorizada as Loja,
+                    ativo: true,
+                },
+            });
+
+            await tx.log.create({
+                data: {
+                    acao: 'USUARIO_VINCULADO',
+                    detalhe: JSON.stringify({ targetId: found.id, nome, email, role, loja: lojaAutorizada }),
+                    usuario_id: admin.userId,
+                },
+            });
+        });
+
+        revalidateAll();
+        return { success: true };
+
+    } catch (error) {
+        console.error('[vincularUsuarioAuthAction] Erro:', error);
+        return { success: false, error: 'Erro interno. Tente novamente.' };
+    }
+}
+
 // ─── Actions Antigas (Mantidas p/ Compatibilidade se necessário) ────────────
 
 export async function alterarLojaUsuario(formData: FormData): Promise<ActionResult> {
