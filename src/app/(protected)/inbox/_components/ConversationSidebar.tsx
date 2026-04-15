@@ -77,8 +77,6 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN'
-
   // Escutar eventos de novas mensagens do Realtime
   useEffect(() => {
     const handleNewMessage = () => {

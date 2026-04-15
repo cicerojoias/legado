@@ -40,7 +40,7 @@ interface Usuario {
     id: string;
     nome: string;
     email: string;
-    role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERADOR';
+    role: 'SUPER_ADMIN' | 'ADMIN' | 'GERENTE' | 'OPERADOR';
     lojaAutorizada: 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS';
     ativo: boolean;
 }
@@ -136,6 +136,7 @@ function UsuarioCard({ usuario }: { usuario: Usuario }) {
                                     "text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1",
                                     usuario.role === 'SUPER_ADMIN' && "bg-amber-100 text-amber-800",
                                     usuario.role === 'ADMIN' && "bg-primary/10 text-primary",
+                                    usuario.role === 'GERENTE' && "bg-blue-100 text-blue-700",
                                     usuario.role === 'OPERADOR' && "bg-muted text-muted-foreground"
                                 )}>
                                     <Shield className="w-3 h-3" />

@@ -45,6 +45,7 @@ type OpenSection = 'pin' | 'senha' | 'notificacoes' | 'lojaPadrao' | null;
 const ROLE_LABELS: Record<string, string> = {
     SUPER_ADMIN: 'Super Admin',
     ADMIN: 'Administrador',
+    GERENTE: 'Gerente',
     OPERADOR: 'Operador',
 };
 
