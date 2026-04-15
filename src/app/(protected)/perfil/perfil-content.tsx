@@ -123,6 +123,7 @@ export function PerfilContent({
     notifHorario 
 }: PerfilContentProps) {
     const [openSection, setOpenSection] = useState<OpenSection>(null);
+    const isGerente = role === 'GERENTE' || role === 'ADMIN' || role === 'SUPER_ADMIN';
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
     const isSuperAdmin = role === 'SUPER_ADMIN';
 
@@ -197,26 +198,31 @@ export function PerfilContent({
                 </div>
 
                 {/* Notificações — ADMIN+ */}
-                {isAdmin && (
+                {isGerente && (
                     <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
                             Notificações
                         </p>
 
-                        {/* Toggle WAB push — inline, sem expansão */}
+                        {/* Toggle WAB push — visível para GERENTE+ */}
                         <WabNotificacoesToggle />
 
-                        <SectionButton
-                            icon={<Bell className="w-4 h-4" />}
-                            label="Resumo diário (financeiro)"
-                            isOpen={openSection === 'notificacoes'}
-                            onClick={() => toggleSection('notificacoes')}
-                        />
-                        {openSection === 'notificacoes' && (
-                            <NotificacoesForm
-                                initialPush={notifPush}
-                                initialHorario={notifHorario}
-                            />
+                        {/* Resumo diário financeiro — apenas ADMIN+ */}
+                        {isAdmin && (
+                            <>
+                                <SectionButton
+                                    icon={<Bell className="w-4 h-4" />}
+                                    label="Resumo diário (financeiro)"
+                                    isOpen={openSection === 'notificacoes'}
+                                    onClick={() => toggleSection('notificacoes')}
+                                />
+                                {openSection === 'notificacoes' && (
+                                    <NotificacoesForm
+                                        initialPush={notifPush}
+                                        initialHorario={notifHorario}
+                                    />
+                                )}
+                            </>
                         )}
                     </div>
                 )}
