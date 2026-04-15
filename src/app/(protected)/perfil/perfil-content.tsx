@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.29', data: '15/04/2026', resumo: 'Assistente IA: migrado de Gemini para GPT-4o, endpoint protegido com autenticação, módulo /assistente removido — IA do atendente consolidada no WAB' },
     { versao: '0.18.28', data: '14/04/2026', resumo: 'Usuários: edição de role (ADMIN/OPERADOR) — Super Admin pode alterar nível de acesso dos usuários no modal de edição' },
     { versao: '0.18.27', data: '12/04/2026', resumo: 'Assistente IA integrado ao chat — botão ✨ no MessageInput gera mensagens contextuais com opções aceitar/editar/rejeitar, injetando direto no campo de texto' },
     { versao: '0.18.26', data: '11/04/2026', resumo: 'WAB: correção do status de leitura — marca mensagens como lidas na API da Meta ao abrir conversa (dois traços dourados)' },

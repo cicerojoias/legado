@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenAI } from '@google/genai'
+import OpenAI from 'openai'
 import { SERVICE_POLICY_JSON_BLOCK } from '@/lib/whatsapp/service-policy'
+import { createClient } from '@/lib/supabase/server'
 
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 const SYSTEM_PROMPT = `Voce e o assistente de IA integrado do WhatsApp da joalheria Legado - Cicero Joias, uma marca de joias de luxo com tradicao familiar. Seu papel e gerar mensagens profissionais, elegantes e calorosas baseadas no prompt do atendente e no contexto da conversa.
 
@@ -20,6 +21,10 @@ Use como fonte de verdade:
 ${SERVICE_POLICY_JSON_BLOCK}`
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { prompt, conversationContext } = await req.json()
 
@@ -39,12 +44,17 @@ export async function POST(req: NextRequest) {
       fullPrompt = `Instrucao do atendente:\n${prompt}`
     }
 
-    const result = await genai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: SYSTEM_PROMPT + '\n\n' + fullPrompt,
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: fullPrompt },
+      ],
+      max_tokens: 400,
+      temperature: 0.7,
     })
 
-    const generated = result.text?.trim() ?? ''
+    const generated = completion.choices[0]?.message?.content?.trim() ?? ''
     
     if (!generated) {
       return NextResponse.json(

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText, Sparkles } from 'lucide-react';
+import { Home, PieChart, Settings, LogOut, FileText, LayoutDashboard, Wrench, Users, ScrollText } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useWabUnreadTotal } from '@/hooks/use-wab-unread-total';
@@ -142,16 +142,6 @@ export function Sidebar() {
                                     {wabUnread > 99 ? '99+' : wabUnread}
                                 </span>
                             )}
-                        </Link>
-                        <Link
-                            href="/assistente"
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                                pathname.startsWith('/assistente') ? "bg-primary text-primary-foreground font-medium" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-                            )}
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            Assistente IA
                         </Link>
                     </>
                 )}
