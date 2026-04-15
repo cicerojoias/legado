@@ -52,6 +52,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.33', data: '15/04/2026', resumo: 'WAB: confirmação de leitura — ticks ficam azuis (✓✓ azul) quando o cliente lê a mensagem; tooltip "Lida pelo cliente" ao passar o mouse' },
     { versao: '0.18.32', data: '15/04/2026', resumo: 'RBAC: role GERENTE criada — acessa hoje, lançamentos, WAB e perfil; sem acesso a relatórios, custos fixos, usuários e logs' },
     { versao: '0.18.31', data: '15/04/2026', resumo: 'Usuários: modal "Novo Usuário" com dois modos — criar do zero (Auth + banco) ou vincular conta já existente no Auth pelo e-mail' },
     { versao: '0.18.29', data: '15/04/2026', resumo: 'Assistente IA: migrado de Gemini para GPT-4o, endpoint protegido com autenticação, módulo /assistente removido — IA do atendente consolidada no WAB' },

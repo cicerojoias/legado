@@ -329,11 +329,11 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
   }
 
   const statusIcon = isOutbound ? (() => {
-    if (message.status === 'pending') return <Clock className="w-3 h-3 text-muted-foreground" />
-    if (message.status === 'delivered') return <CheckCheck className="w-3 h-3 text-muted-foreground" />
-    if (message.status === 'read') return <CheckCheck className="w-3 h-3 text-accent" />
-    if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold">!</span>
-    return <Check className="w-3 h-3 text-muted-foreground" />
+    if (message.status === 'pending') return <span title="Aguardando envio"><Clock className="w-3 h-3 opacity-50" /></span>
+    if (message.status === 'delivered') return <span title="Entregue"><CheckCheck className="w-3 h-3 opacity-60" /></span>
+    if (message.status === 'read') return <span title="Lida pelo cliente"><CheckCheck className="w-3.5 h-3.5 text-blue-300" /></span>
+    if (message.status === 'failed') return <span className="text-[10px] text-destructive font-bold" title="Falha no envio">!</span>
+    return <span title="Enviada"><Check className="w-3 h-3 opacity-50" /></span>
   })() : null
 
   return (
@@ -478,8 +478,8 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
             )}
 
             {/* Rodapé: Hora e Status */}
-            <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70 justify-end">
-              <span>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
+            <div className="flex items-center gap-1 mt-1 justify-end">
+              <span className="text-[10px] opacity-70">{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
               {statusIcon}
             </div>
           </div>
