@@ -1,13 +1,11 @@
 'use client';
 
-import { useTransition, useEffect, Suspense } from 'react';
+import { useActionState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
-import { LoginSchema } from '@/lib/validations';
-import { loginAction } from './actions';
+import { resetPasswordAction } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,42 +18,41 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
-type LoginFormValues = z.infer<typeof LoginSchema>;
-
-function LoginForm() {
-    const [isPending, startTransition] = useTransition();
-    const searchParams = useSearchParams();
-
-    useEffect(() => {
-        if (searchParams.get('message') === 'senha_atualizada') {
-            toast.success('Senha atualizada com sucesso. Faça login para continuar.');
-        }
-        if (searchParams.get('error') === 'link_invalido') {
-            toast.error('Link inválido ou expirado. Solicite um novo.');
-        }
-    }, [searchParams]);
-
-    const form = useForm<LoginFormValues>({
-        resolver: zodResolver(LoginSchema),
-        defaultValues: {
-            email: '',
-            password: '',
-        },
+const Schema = z
+    .object({
+        password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
+        confirmPassword: z.string(),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+        message: 'As senhas não coincidem',
+        path: ['confirmPassword'],
     });
 
-    function onSubmit(data: LoginFormValues) {
-        startTransition(async () => {
-            const formData = new FormData();
-            formData.append('email', data.email);
-            formData.append('password', data.password);
+type FormValues = z.infer<typeof Schema>;
 
-            const result = await loginAction(formData);
+export default function ResetPasswordPage() {
+    const [isPending, startTransition] = useTransition();
+    const [state, formAction] = useActionState(resetPasswordAction, null);
 
-            if (result && !result.success) {
-                toast.error(result.message);
-                // We use a toast to present the error generically without stack traces.
-            }
+    const form = useForm<FormValues>({
+        resolver: zodResolver(Schema),
+        defaultValues: { password: '', confirmPassword: '' },
+    });
+
+    useEffect(() => {
+        if (state && !state.success) {
+            toast.error(state.message);
+        }
+    }, [state]);
+
+    function onSubmit(data: FormValues) {
+        startTransition(() => {
+            const fd = new FormData();
+            fd.append('password', data.password);
+            fd.append('confirmPassword', data.confirmPassword);
+            formAction(fd);
         });
     }
 
@@ -71,24 +68,22 @@ function LoginForm() {
                         className="object-contain rounded-lg"
                         priority
                     />
-                    <CardDescription>Acesse sua conta para continuar</CardDescription>
+                    <CardDescription>Defina sua nova senha</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <FormField
                                 control={form.control}
-                                name="email"
+                                name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>E-mail</FormLabel>
+                                        <FormLabel>Nova senha</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="seu@email.com"
-                                                type="email"
-                                                autoCapitalize="none"
-                                                autoComplete="email"
-                                                autoCorrect="off"
+                                                type="password"
+                                                placeholder="••••••••"
+                                                autoComplete="new-password"
                                                 disabled={isPending}
                                                 {...field}
                                             />
@@ -99,15 +94,15 @@ function LoginForm() {
                             />
                             <FormField
                                 control={form.control}
-                                name="password"
+                                name="confirmPassword"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Senha</FormLabel>
+                                        <FormLabel>Confirmar senha</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="••••••••"
                                                 type="password"
-                                                autoComplete="current-password"
+                                                placeholder="••••••••"
+                                                autoComplete="new-password"
                                                 disabled={isPending}
                                                 {...field}
                                             />
@@ -117,20 +112,12 @@ function LoginForm() {
                                 )}
                             />
                             <Button type="submit" className="w-full" disabled={isPending}>
-                                {isPending ? 'Entrando...' : 'Entrar'}
+                                {isPending ? 'Salvando...' : 'Salvar nova senha'}
                             </Button>
                         </form>
                     </Form>
                 </CardContent>
             </Card>
         </div>
-    );
-}
-
-export default function LoginPage() {
-    return (
-        <Suspense fallback={null}>
-            <LoginForm />
-        </Suspense>
     );
 }

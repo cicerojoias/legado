@@ -99,9 +99,11 @@ const DESC_MAX = 200;
 export function LancamentoModal({
     canSelectLoja = false,
     defaultLoja,
+    children,
 }: {
     canSelectLoja?: boolean;
     defaultLoja?: 'JOAO_PESSOA' | 'SANTA_RITA';
+    children?: React.ReactNode;
 }) {
     const [open, setOpen] = useState(false);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -207,12 +209,14 @@ export function LancamentoModal({
             }}
         >
             <DialogTrigger asChild>
-                <div className="flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all text-primary hover:text-primary/80">
-                    <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md shadow-primary/20 mb-1">
-                        <Plus className="w-5 h-5" />
+                {children ? children : (
+                    <div className="flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all text-primary hover:text-primary/80">
+                        <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md shadow-primary/20 mb-1">
+                            <Plus className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
                     </div>
-                    <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
-                </div>
+                )}
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] p-0 overflow-hidden gap-0" showCloseButton={false} onInteractOutside={(e) => e.preventDefault()}>
                 {/* Header verde escuro */}

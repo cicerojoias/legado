@@ -3,6 +3,8 @@ import { LancamentoList } from '@/components/financeiro/lancamento-list';
 import { FechamentoDia } from '@/components/financeiro/fechamento-dia';
 import { Loja, Prisma } from '@prisma/client';
 import { normalizeMetodoPgto } from '@/lib/financeiro/metodos-pgto';
+import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
+import { Plus } from 'lucide-react';
 
 interface HojeContentProps {
     dateStr: string;
@@ -91,9 +93,19 @@ export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentPr
                 />
             </div>
 
-            <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 md:bottom-4 md:left-64 md:right-0 p-0 md:px-8 z-20 pointer-events-none">
-                <div className="pointer-events-auto max-w-5xl mx-auto">
-                    <FechamentoDia totais={{ ...totais, saldo }} />
+            <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 md:bottom-4 md:left-64 md:right-0 p-0 md:px-8 z-20 pointer-events-none flex justify-center">
+                <div className="pointer-events-auto w-full max-w-5xl flex items-end gap-3 md:gap-4 mx-auto">
+                    <div className="flex-1">
+                        <FechamentoDia totais={{ ...totais, saldo }} />
+                    </div>
+                    
+                    <div className="hidden md:flex shrink-0">
+                        <LancamentoModal defaultLoja={targetLoja as 'JOAO_PESSOA' | 'SANTA_RITA'}>
+                            <button className="aspect-square h-[92px] rounded-[28px] bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 hover:scale-105 transition-all shadow-xl active:scale-95 shadow-green-900/10">
+                                <Plus className="w-10 h-10" strokeWidth={3} />
+                            </button>
+                        </LancamentoModal>
+                    </div>
                 </div>
             </div>
         </>

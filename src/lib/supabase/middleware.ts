@@ -35,9 +35,10 @@ export async function updateSession(request: NextRequest) {
     const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth');
     const isSandboxRoute = request.nextUrl.pathname.startsWith('/sandbox');
     const isPinRoute = request.nextUrl.pathname.startsWith('/pin') || request.nextUrl.pathname.startsWith('/setup-pin');
+    const isResetPasswordRoute = request.nextUrl.pathname.startsWith('/reset-password');
 
     // Protect all routes: Se não tem usuário e não é rota pública, vai pro login
-    if (!user && !isAuthRoute && !isSandboxRoute) {
+    if (!user && !isAuthRoute && !isSandboxRoute && !isResetPasswordRoute) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
         return NextResponse.redirect(url);
@@ -55,7 +56,7 @@ export async function updateSession(request: NextRequest) {
         }
 
         // Se está tentando acessar uma rota protegida (como /hoje), está logado no Supabase, MAS não validou o PIN
-        if (!hasVerifiedPin && !isPinRoute && !isSandboxRoute) {
+        if (!hasVerifiedPin && !isPinRoute && !isSandboxRoute && !isResetPasswordRoute) {
             const url = request.nextUrl.clone();
             url.pathname = '/pin';
             return NextResponse.redirect(url);
