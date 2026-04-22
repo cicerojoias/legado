@@ -69,11 +69,16 @@ const CATEGORIA_LABELS: Record<string, string> = {
     ANEL_FORMATURA: 'Anel de Formatura',
     CONSERTO: 'Conserto',
     VENDA: 'Venda',
-    DESPESA_FIXA: 'Despesa Fixa',
     OUTROS: 'Outros',
+    DESPESA_FIXA: 'Despesa Fixa',
+    FORNECEDOR: 'Fornecedor',
+    MANUTENCAO: 'Manutenção',
+    TRANSPORTE_FRETE: 'Transporte / Frete',
+    MARKETING: 'Marketing',
 };
 
-const CATEGORIAS = Object.keys(CATEGORIA_LABELS);
+const CATEGORIAS_ENTRADA = ['BANHO_OURO', 'ALIANCA', 'ANEL_FORMATURA', 'CONSERTO', 'VENDA', 'OUTROS'];
+const CATEGORIAS_SAIDA = ['DESPESA_FIXA', 'FORNECEDOR', 'MANUTENCAO', 'TRANSPORTE_FRETE', 'MARKETING'];
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
 const lancamentoSchema = z.object({
@@ -149,6 +154,7 @@ export function LancamentoModal({
     const isEntrada = form.watch('tipo') === 'ENTRADA';
     const descricaoValue = form.watch('descricao') ?? '';
     const metodosDisponiveis = isEntrada ? METODOS_ENTRADA : METODOS_SAIDA;
+    const categoriasDisponiveis = isEntrada ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
 
     const handleValorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
         const formatted = formatCurrency(e.target.value);
@@ -269,7 +275,7 @@ export function LancamentoModal({
                                             ? 'bg-emerald-600 text-white shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
-                                    onClick={() => form.setValue('tipo', 'ENTRADA')}
+                                    onClick={() => { form.setValue('tipo', 'ENTRADA'); form.setValue('categoria', 'CONSERTO'); }}
                                 >
                                     <ArrowUpRight className="w-4 h-4" />
                                     Entrada
@@ -283,6 +289,7 @@ export function LancamentoModal({
                                     }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
+                                        form.setValue('categoria', 'DESPESA_FIXA');
                                         if (!METODOS_SAIDA.includes(form.getValues('metodo_pgto') as typeof METODOS_SAIDA[number])) {
                                             form.setValue('metodo_pgto', 'PIX');
                                         }
@@ -387,7 +394,7 @@ export function LancamentoModal({
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {CATEGORIAS.map((c) => (
+                                                    {categoriasDisponiveis.map((c) => (
                                                         <SelectItem key={c} value={c}>
                                                             {CATEGORIA_LABELS[c] ?? c}
                                                         </SelectItem>
