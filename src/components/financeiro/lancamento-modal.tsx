@@ -156,6 +156,10 @@ export function LancamentoModal({
     const metodosDisponiveis = isEntrada ? METODOS_ENTRADA : METODOS_SAIDA;
     const categoriasDisponiveis = isEntrada ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
 
+    useEffect(() => {
+        form.setValue('categoria', isEntrada ? 'CONSERTO' : 'DESPESA_FIXA');
+    }, [isEntrada, form]);
+
     const handleValorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
         const formatted = formatCurrency(e.target.value);
         onChange(formatted);
@@ -275,7 +279,7 @@ export function LancamentoModal({
                                             ? 'bg-emerald-600 text-white shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
-                                    onClick={() => { form.setValue('tipo', 'ENTRADA'); form.setValue('categoria', 'CONSERTO'); }}
+                                    onClick={() => form.setValue('tipo', 'ENTRADA')}
                                 >
                                     <ArrowUpRight className="w-4 h-4" />
                                     Entrada
@@ -289,7 +293,6 @@ export function LancamentoModal({
                                     }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
-                                        form.setValue('categoria', 'DESPESA_FIXA');
                                         if (!METODOS_SAIDA.includes(form.getValues('metodo_pgto') as typeof METODOS_SAIDA[number])) {
                                             form.setValue('metodo_pgto', 'PIX');
                                         }
