@@ -408,10 +408,8 @@ async function tryHandleWelcomeMenu(
   // Verifica se está dentro da janela de 5 minutos
   if (welcomeAge > WELCOME_MENU_WINDOW_MS) return false
 
-  // Pega a última mensagem inbound
-  const lastInbound = [...history]
-    .reverse()
-    .find((m) => m.direction === 'inbound' && m.content)
+  // history vem em ordem desc (mais recente primeiro), então o primeiro inbound é o mais novo
+  const lastInbound = history.find((m) => m.direction === 'inbound' && m.content)
 
   if (!lastInbound?.content) return false
 

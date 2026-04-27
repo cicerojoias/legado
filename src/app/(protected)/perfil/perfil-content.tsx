@@ -52,6 +52,7 @@ const ROLE_LABELS: Record<string, string> = {
 // ─── Changelog resumido (SUPER_ADMIN) ───────────────────────────────────────
 
 const CHANGELOG_RESUMIDO = [
+    { versao: '0.18.37', data: '27/04/2026', resumo: 'WAB: fix resposta automática do menu — quando cliente respondia "1" ou "2" após o welcome, lookup pegava a inbound mais antiga (orçamento, etc.) em vez da mensagem digitada; reverse() indevido removido em tryHandleWelcomeMenu' },
     { versao: '0.18.36', data: '22/04/2026', resumo: 'Lançamentos: categorias separadas por tipo — Entrada (Conserto, Banho de Ouro, Aliança, etc.) e Saída (Despesa Fixa, Fornecedor, Manutenção, Transporte/Frete, Marketing); padrão muda automaticamente ao trocar o tipo' },
     { versao: '0.18.34', data: '15/04/2026', resumo: 'WAB: quando cliente cita uma mensagem no WhatsApp dele, a bolha de resposta exibe o trecho citado — webhook passa a processar o campo context da Meta' },
     { versao: '0.18.33', data: '15/04/2026', resumo: 'WAB: confirmação de leitura — ticks ficam azuis (✓✓ azul) quando o cliente lê a mensagem; tooltip "Lida pelo cliente" ao passar o mouse' },
