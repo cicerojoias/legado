@@ -1,0 +1,50 @@
+name: Daily Financial Summary Cron
+
+on:
+  schedule:
+    # Executa todos os dias às 18:00 UTC (15:00 BRT durante horário padrão, 14:00 BRT durante horário de verão)
+    # Ajuste o horário conforme necessário: https://crontab.guru/
+    - cron: '0 18 * * *'
+  
+  # Permite execução manual para testes
+  workflow_dispatch:
+
+jobs:
+  trigger-daily-summary:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Daily Summary Notification
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Iniciando disparo do resumo diário..."
+          
+          # Verifica se as variáveis estão configuradas
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "❌ ERRO: APP_URL e CRON_SECRET devem estar configurados nos secrets do repositório"
+            exit 1
+          fi
+          
+          # Faz a requisição para a API
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${APP_URL}/api/cron/daily-summary" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json")
+          
+          # Extrai o código HTTP e o body da resposta
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "Código HTTP: $HTTP_CODE"
+          echo "Resposta: $BODY"
+          
+          # Verifica se foi sucesso
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Resumo diário enviado com sucesso!"
+            echo "Detalhes: $BODY"
+          else
+            echo "❌ Falha ao enviar resumo diário"
+            echo "Erro: $BODY"
+            exit 1
+          fi
