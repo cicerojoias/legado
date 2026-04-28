@@ -53,6 +53,7 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
             alt="imagem"
             className="max-w-full rounded-lg object-cover max-h-64 w-full"
             loading="lazy"
+            draggable={false}
           />
         ) : (
           <span className="italic text-muted-foreground text-xs">[Imagem indisponível]</span>
@@ -280,10 +281,80 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
     el.addEventListener('touchmove', onTouchMove, { passive: false })
     el.addEventListener('touchend', onTouchEnd, { passive: true })
 
+    // ── Mouse listeners: long press desktop ─────────────────────────────────
+    let mouseDown = false
+    let mouseLongPressFired = false
+    let mouseStartX = 0
+    let mouseStartY = 0
+
+    const onMouseDown = (e: MouseEvent) => {
+      // Apenas botão esquerdo
+      if (e.button !== 0) return
+      if (showPickerRef.current) return
+      // Ignorar clicks em elementos interativos (botões, links, áudio, vídeo)
+      const target = e.target as HTMLElement
+      if (target.closest('button, a, input, textarea, video, audio, [role="button"]')) return
+
+      mouseDown = true
+      mouseLongPressFired = false
+      mouseStartX = e.clientX
+      mouseStartY = e.clientY
+
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null
+        mouseLongPressFired = true
+        if (activeRef.current) return
+        enterRef.current(messageRef.current)
+      }, LONG_PRESS_MS)
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!mouseDown) return
+      const dx = e.clientX - mouseStartX
+      const dy = e.clientY - mouseStartY
+      if ((Math.abs(dx) > 8 || Math.abs(dy) > 8) && longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+    }
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (!mouseDown) return
+      mouseDown = false
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+      // Em modo seleção: click simples toggla
+      if (!mouseLongPressFired && activeRef.current) {
+        const target = e.target as HTMLElement
+        if (target.closest('button, a, input, textarea, video, audio, [role="button"]')) return
+        toggleRef.current(messageRef.current)
+      }
+    }
+
+    const onMouseLeave = () => {
+      if (!mouseDown) return
+      mouseDown = false
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+    }
+
+    el.addEventListener('mousedown', onMouseDown)
+    el.addEventListener('mousemove', onMouseMove)
+    el.addEventListener('mouseup', onMouseUp)
+    el.addEventListener('mouseleave', onMouseLeave)
+
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('mousedown', onMouseDown)
+      el.removeEventListener('mousemove', onMouseMove)
+      el.removeEventListener('mouseup', onMouseUp)
+      el.removeEventListener('mouseleave', onMouseLeave)
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [messageRef]) // refs são estáveis — sem deps necessárias

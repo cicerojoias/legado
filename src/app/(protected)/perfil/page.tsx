@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.39', data: '28/04/2026', resumo: 'WAB: long press no desktop — apertar e segurar mouse sobre mensagem/imagem ativa modo de seleção (igual ao mobile); imagens não disparam mais drag nativo' },
     { versao: '0.18.38', data: '27/04/2026', resumo: 'Perfil: changelog migrado para Server Component — reduz bundle JS do cliente; type guard isAuthError substitui (as any) nos erros do Supabase Auth' },
     { versao: '0.18.37', data: '27/04/2026', resumo: 'WAB: fix resposta automática do menu — quando cliente respondia "1" ou "2" após o welcome, lookup pegava a inbound mais antiga (orçamento, etc.) em vez da mensagem digitada; reverse() indevido removido em tryHandleWelcomeMenu' },
     { versao: '0.18.36', data: '22/04/2026', resumo: 'Lançamentos: categorias separadas por tipo — Entrada (Conserto, Banho de Ouro, Aliança, etc.) e Saída (Despesa Fixa, Fornecedor, Manutenção, Transporte/Frete, Marketing); padrão muda automaticamente ao trocar o tipo' },
