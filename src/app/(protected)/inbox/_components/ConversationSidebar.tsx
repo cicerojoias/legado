@@ -193,7 +193,7 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       )}
 
       {/* Conteúdo scrollável */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div id="conversation-list-scroll" className="flex-1 overflow-y-auto min-h-0">
         {!isSearching ? (
           // Lista normal de conversas (server component passado como children)
           // router.refresh() faz re-fetch dos dados do servidor

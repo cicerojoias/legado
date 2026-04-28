@@ -83,10 +83,10 @@ README.md      # README deve ser versionado
 | `framer-motion` | ✅ Em uso | 8 componentes (animações de UI) |
 | `openai` | ✅ Em uso | `src/lib/whatsapp/ai-responder.ts` |
 | `@google/genai` | ✅ Em uso | `src/app/api/whatsapp/generate/route.ts` |
-| `@tanstack/react-virtual` | ⚠️ Verificado | Não encontrado em uso ativo |
+| `@tanstack/react-virtual` | ✅ Em uso | `src/app/(protected)/inbox/_components/VirtualizedConversationList.tsx` |
 
-**Ação recomendada:**
-- Monitorar `@tanstack/react-virtual` - se não estiver sendo usado em listas longas, considerar remoção futura
+**Status resolvido:**
+- `@tanstack/react-virtual` agora em uso ativo desde v0.18.20 (virtualização da lista de conversas no inbox)
 
 ### ✅ Fase 4: Otimizações de Build e Configuração
 
@@ -151,9 +151,7 @@ README.md      # README deve ser versionado
 ## 🎯 Próximos Passos Recomendados
 
 ### Otimizações Futuras
-1. **Monitorar `@tanstack/react-virtual`**
-   - Se não estiver em uso, remover em próxima cleanup
-   - Comando: `grep -r "@tanstack/react-virtual" src/`
+1. ~~**Monitorar `@tanstack/react-virtual`**~~ ✅ Resolvido — em uso no `VirtualizedConversationList` desde v0.18.20
 
 2. **Implementar testes unitários**
    - Pasta `tests/` existe mas está vazia

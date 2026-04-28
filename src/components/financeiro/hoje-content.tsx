@@ -31,27 +31,12 @@ export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentPr
         }
     });
 
-    // Busca as agregações (totais) diretamente no banco para performance
-    const stats = await prisma.lancamento.groupBy({
-        by: ['tipo', 'metodo_pgto'],
-        where: {
-            loja: targetLoja as Loja,
-            data_ref: {
-                gte: startOfDay,
-                lte: endOfDay,
-            },
-            deletado_at: null,
-        },
-        _sum: {
-            valor: true
-        }
-    });
-
-    // Mapear os resultados da agregação para o formato esperado pelo componente
+    // Totais calculados a partir dos lançamentos já carregados
+    // Elimina o segundo full scan que usava groupBy (fix #5)
     type TotaisAcc = { entradas: number; saidas: number; pix: number; debito: number; credito: number; especie: number };
-    const totais = stats.reduce(
+    const totais = lancamentos.reduce(
         (acc: TotaisAcc, curr) => {
-            const valor = Number(curr._sum.valor) || 0;
+            const valor = Number(curr.valor) || 0;
             const metodo = normalizeMetodoPgto(curr.metodo_pgto);
             if (curr.tipo === 'ENTRADA') {
                 acc.entradas += valor;

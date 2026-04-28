@@ -19,3 +19,25 @@ export const prisma =
     })
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+
+// Graceful shutdown: libera conexões do pool no SIGTERM (deploys, scale-to-zero)
+// Evita que conexões órfãs acumulem até o limite do pooler do Supabase
+function gracefulShutdown(signal: string) {
+    console.log(`[prisma] ${signal} recebido — encerrando pool de conexões...`)
+    void prisma.$disconnect().then(() => {
+        pool.end().then(() => {
+            console.log('[prisma] Pool encerrado com sucesso')
+            process.exit(0)
+        }).catch((err) => {
+            console.error('[prisma] Erro ao encerrar pool:', err)
+            process.exit(1)
+        })
+    }).catch((err) => {
+        console.error('[prisma] Erro ao desconectar Prisma:', err)
+        pool.end().catch(() => {})
+        process.exit(1)
+    })
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))

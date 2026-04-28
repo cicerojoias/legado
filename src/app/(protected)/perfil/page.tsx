@@ -2,7 +2,75 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { PerfilContent } from './perfil-content';
+import { PerfilContent, type ChangelogEntry } from './perfil-content';
+
+// ─── Changelog resumido (SUPER_ADMIN) — definido no Server Component ────────
+// para evitar peso no bundle JS do cliente.
+
+const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.37', data: '27/04/2026', resumo: 'WAB: fix resposta automática do menu — quando cliente respondia "1" ou "2" após o welcome, lookup pegava a inbound mais antiga (orçamento, etc.) em vez da mensagem digitada; reverse() indevido removido em tryHandleWelcomeMenu' },
+    { versao: '0.18.36', data: '22/04/2026', resumo: 'Lançamentos: categorias separadas por tipo — Entrada (Conserto, Banho de Ouro, Aliança, etc.) e Saída (Despesa Fixa, Fornecedor, Manutenção, Transporte/Frete, Marketing); padrão muda automaticamente ao trocar o tipo' },
+    { versao: '0.18.34', data: '15/04/2026', resumo: 'WAB: quando cliente cita uma mensagem no WhatsApp dele, a bolha de resposta exibe o trecho citado — webhook passa a processar o campo context da Meta' },
+    { versao: '0.18.33', data: '15/04/2026', resumo: 'WAB: confirmação de leitura — ticks ficam azuis (✓✓ azul) quando o cliente lê a mensagem; tooltip "Lida pelo cliente" ao passar o mouse' },
+    { versao: '0.18.32', data: '15/04/2026', resumo: 'RBAC: role GERENTE criada — acessa hoje, lançamentos, WAB e perfil; sem acesso a relatórios, custos fixos, usuários e logs' },
+    { versao: '0.18.31', data: '15/04/2026', resumo: 'Usuários: modal "Novo Usuário" com dois modos — criar do zero (Auth + banco) ou vincular conta já existente no Auth pelo e-mail' },
+    { versao: '0.18.29', data: '15/04/2026', resumo: 'Assistente IA: migrado de Gemini para GPT-4o, endpoint protegido com autenticação, módulo /assistente removido — IA do atendente consolidada no WAB' },
+    { versao: '0.18.28', data: '14/04/2026', resumo: 'Usuários: edição de role (ADMIN/OPERADOR) — Super Admin pode alterar nível de acesso dos usuários no modal de edição' },
+    { versao: '0.18.27', data: '12/04/2026', resumo: 'Assistente IA integrado ao chat — botão ✨ no MessageInput gera mensagens contextuais com opções aceitar/editar/rejeitar, injetando direto no campo de texto' },
+    { versao: '0.18.26', data: '11/04/2026', resumo: 'WAB: correção do status de leitura — marca mensagens como lidas na API da Meta ao abrir conversa (dois traços dourados)' },
+    { versao: '0.18.25', data: '11/04/2026', resumo: 'WAB: orçamento de aliança — seleção múltipla de materiais (Prata 990, Ouro 16k, Ouro 18k), cálculo 6x sem juros, largura customizável' },
+    { versao: '0.18.24', data: '11/04/2026', resumo: 'Segurança: rate limiter migrado de memória volátil para Upstash Redis — bloqueio de PIN e login agora persiste entre instâncias serverless e cold starts' },
+    { versao: '0.18.23', data: '10/04/2026', resumo: 'Hoje: input valor foca e seleciona automaticamente após lançamento — sem precisar clicar' },
+    { versao: '0.18.22', data: '10/04/2026', resumo: 'WAB: 4 ícones de ação na conversa condensados em menu de 3 pontinhos (IA, orçamento, limpar, excluir)' },
+    { versao: '0.18.21', data: '10/04/2026', resumo: 'WAB: modal de configurações — corrige import AnimatePresence e layout colapsado (flex-1 sem altura explícita)' },
+    { versao: '0.18.16', data: '10/04/2026', resumo: 'Hoje: peso do valor do saldo reduzido de black para semibold' },
+    { versao: '0.18.15', data: '10/04/2026', resumo: 'Hoje: fechamento do dia começa fechado por padrão; seta corrigida' },
+    { versao: '0.18.14', data: '10/04/2026', resumo: 'Hoje: fechamento do dia recolhível — tap para expandir/recolher detalhes; preferência salva no dispositivo' },
+    { versao: '0.18.13', data: '10/04/2026', resumo: 'WAB: Enter envia mensagem em qualquer dispositivo; Shift+Enter pula linha' },
+    { versao: '0.18.12', data: '10/04/2026', resumo: 'Hoje: fechamento do dia no mobile compactado — menos espaço vertical, formas de pagamento em linha única' },
+    { versao: '0.18.11', data: '09/04/2026', resumo: 'WAB: prompt da IA passou a usar bloco JSON oficial de servicos compartilhado entre o atendimento e o gerador de respostas' },
+    { versao: '0.18.10', data: '09/04/2026', resumo: 'WAB: prompt da IA formalizado com mapa oficial de servicos em Fazemos, Nao fazemos e Depende para evitar negativas por suposicao' },
+    { versao: '0.18.9', data: '09/04/2026', resumo: 'WAB: system prompt da IA refinado com contexto operacional mais completo, regras mais fortes de escalonamento e respostas mais consistentes' },
+    { versao: '0.18.8', data: '09/04/2026', resumo: 'WAB: IA agora espaça mensagens segmentadas com intervalo humano entre respostas' },
+    { versao: '0.18.7', data: '09/04/2026', resumo: 'WAB: janela de elegibilidade da IA ampliada para 36h, mantendo preview e resposta segura do backlog' },
+    { versao: '0.18.6', data: '09/04/2026', resumo: 'WAB: módulo de notas compactado — painel recolhível e mais enxuto para ocupar menos espaço no chat' },
+    { versao: '0.18.5', data: '09/04/2026', resumo: 'WAB: correção do preview de ativação da IA — backlog agora considera a última mensagem humana, não qualquer outbound' },
+    { versao: '0.18.4', data: '09/04/2026', resumo: 'WAB: IA com confirmação visual e modo pendências — responde backlog das últimas 24h com contexto das últimas 20 msgs, múltiplas mensagens curtas e emojis moderados' },
+    { versao: '0.18.3', data: '09/04/2026', resumo: 'WAB: notas internas por conversa — painel recolhível no mobile, visível para todos os atendentes, com criação, edição e exclusão dentro do chat' },
+    { versao: '0.18.2', data: '06/04/2026', resumo: 'WAB: system prompt da IA enriquecido com contexto completo da Cícero Joias — serviços, diferenciais, garantias, tom caloroso e regras de escalonamento para humano' },
+    { versao: '0.18.1', data: '06/04/2026', resumo: 'WAB: modais (configurações, tags, templates) migrados para React Portal — corrige bottom sheet não aparecendo no Chrome Android' },
+    { versao: '0.18.0', data: '05/04/2026', resumo: 'WAB: resposta automática com IA (GPT-4o Mini) — toggle por conversa no header; histórico das últimas 20 msgs como contexto; roda em background após ack ao Meta' },
+    { versao: '0.17.0', data: '04/04/2026', resumo: 'WAB: modal de configurações (⋮) — boas-vindas automática após 7 dias de silêncio (toggle + mensagem configurável); mensagens rápidas e tags migram para dentro do settings; ⚡ e 🏷️ removidos do header' },
+    { versao: '0.16.1', data: '04/04/2026', resumo: 'WAB: fix over-scroll no chat (espaço fantasma após teclado); seleção de cor da tag com checkmark branco em vez de ring grosso; nome da tag preserva capitalização' },
+    { versao: '0.16.0', data: '04/04/2026', resumo: 'WAB: módulo de tags — categorize conversas com labels coloridas; filtro por tag na lista; badges no item; painel de tags no header da conversa; gerenciador CRUD via ícone Tag (ADMIN+)' },
+    { versao: '0.15.5', data: '04/04/2026', resumo: 'WAB: menu de templates scrollável — max-height dinâmico (40dvh) com teclado aberto; touch-scroll desbloqueado no menu' },
+    { versao: '0.15.4', data: '04/04/2026', resumo: 'WAB: filtro "Não lidas" — tabs Todas/Não lidas abaixo da busca com badge de contagem; ocultas durante pesquisa' },
+    { versao: '0.15.3', data: '04/04/2026', resumo: 'WAB: gerenciador de mensagens rápidas — ícone ⚡ no header abre modal CRUD; templates persistidos por dispositivo' },
+    { versao: '0.15.2', data: '04/04/2026', resumo: 'WAB: templates de mensagem — digita / no chat para inserir respostas rápidas; Formatura habilitada no modal de orçamento' },
+    { versao: '0.15.1', data: '03/04/2026', resumo: 'PIN: teclado some durante verificação e exibe círculo de loading centralizado' },
+    { versao: '0.15.0', data: '31/03/2026', resumo: 'WAB: módulo de orçamentos — botão 📋 no chat abre preset de Banho de Ouro; parcelas auto-calculadas; insere direto no textarea' },
+    { versao: '0.14.6', data: '31/03/2026', resumo: 'WAB: fix AudioPlayer — duration 0:00 em proxy streams; load() explícito no mount + onDurationChange/onCanPlay' },
+    { versao: '0.14.5', data: '31/03/2026', resumo: 'WAB: fix alinhamento bolhas (max-w no flex item, não no filho); player de áudio customizado (play/pause/barra); deleted message corrigido' },
+    { versao: '0.14.4', data: '31/03/2026', resumo: 'WAB: fix alinhamento das bolhas — substituído flex-row-reverse por flex-row + ml-auto; margem esquerda/direita agora sempre consistente' },
+    { versao: '0.14.3', data: '31/03/2026', resumo: 'WAB: fix encaminhar mídia — salva mediaUrl na mensagem encaminhada; imagens/vídeos não aparecem mais como [Imagem indisponível]' },
+    { versao: '0.14.2', data: '31/03/2026', resumo: 'WAB: reagir em modo seleção — barra flutuante de emojis estilo WhatsApp (aparece com 1 msg selecionada); botão Smile oculto no mobile' },
+    { versao: '0.14.1', data: '31/03/2026', resumo: 'WAB: fix encaminhar — botão visível (z-index acima do BottomNav); fix reações — Smile visível no mobile e fecha ao entrar no modo seleção' },
+    { versao: '0.14.0', data: '31/03/2026', resumo: 'WAB: encaminhar mensagens — selecionar → ↗ → bottom sheet estilo WhatsApp com busca, multi-conversa e indicador "Encaminhada" na bolha' },
+    { versao: '0.13.2', data: '31/03/2026', resumo: 'WAB: fix overscroll — listener nativo non-passive no container do input impede drag na área de padding scrollar a página' },
+    { versao: '0.13.1', data: '31/03/2026', resumo: 'WAB: fix seleção — sem borda cinza em msgs recebidas, "Cícero Joias" no copy, imagem+legenda copiados; Perfil: changelog limitado a 3 entradas' },
+    { versao: '0.13.0', data: '31/03/2026', resumo: 'WAB: selecionar mensagens — long press seleciona, copiar e deletar (janela 60h) com feedback granular' },
+    { versao: '0.12.9', data: '31/03/2026', resumo: 'WAB: fix ícone de reply duplicado no mobile — swipe centralizado' },
+    { versao: '0.12.7', data: '31/03/2026', resumo: 'WAB: reações às mensagens — segurar para reagir com ✅💚🤝🙏' },
+    { versao: '0.12.6', data: '31/03/2026', resumo: 'WAB: fix horário das mensagens — fuso America/Recife em lista e chat' },
+    { versao: '0.12.5', data: '31/03/2026', resumo: 'WAB: fix espaço abaixo do input e header sumindo ao scrollar' },
+    { versao: '0.12.4', data: '31/03/2026', resumo: 'WAB: fix layout mobile — header e input sempre fixos, scroll só nas mensagens' },
+    { versao: '0.12.3', data: '31/03/2026', resumo: 'WAB: fix scroll horizontal durante swipe-to-reply' },
+    { versao: '0.12.2', data: '31/03/2026', resumo: 'WAB: swipe para direita ativa reply (igual WhatsApp)' },
+    { versao: '0.12.1', data: '31/03/2026', resumo: 'WAB: fix reply — citação aparece corretamente no WhatsApp do cliente' },
+    { versao: '0.12.0', data: '31/03/2026', resumo: 'WAB: scroll inteligente com botão flutuante de novas mensagens' },
+    { versao: '0.11.0', data: '31/03/2026', resumo: 'WAB: Realtime, não lidas, infinite scroll, reply e busca' },
+    { versao: '0.10.0', data: '31/03/2026', resumo: 'WAB: push notifications nativas via Web Push / VAPID' },
+];
 
 export default async function PerfilPage() {
     const supabase = await createClient();
@@ -38,6 +106,7 @@ export default async function PerfilPage() {
                         lojaPadrao={dbUser.lojaPadrao}
                         notifPush={dbUser.notif_push}
                         notifHorario={dbUser.notif_horario}
+                        changelog={CHANGELOG_RESUMIDO}
                     />
                 </div>
             </Suspense>

@@ -14,6 +14,68 @@ import { maybeRespondWithAI } from '@/lib/whatsapp/ai-responder'
 
 const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
+/**
+ * Envia mensagem de boas-vindas automática com guarda atômica anti-race-condition.
+ * 
+ * Executada sincronamente no fluxo principal do webhook (não via `after()`),
+ * garantindo que `updateMany` e `sendTextMessage` aconteçam no mesmo contexto
+ * de execução. A condição WHERE no `updateMany` resolve a disputa quando dois
+ * webhooks concorrentes chegam simultaneamente: apenas um obtém count > 0 e
+ * envia a mensagem; os demais veem count === 0 e abortam sem enviar.
+ */
+async function trySendWelcomeMessage(
+  conversationId: string,
+  waId: string,
+  existingConv: { last_message_at: Date | null; welcome_sent_at: Date | null } | null,
+): Promise<void> {
+  const now = Date.now()
+  const prevActivity = existingConv?.last_message_at
+  const prevWelcome = existingConv?.welcome_sent_at
+
+  // Janela de 7 dias sem atividade de nenhum dos lados
+  const windowExpired = !prevActivity || (now - prevActivity.getTime() > WELCOME_WINDOW_MS)
+  // Boas-vindas não foi enviada nessa janela
+  const welcomeStale = !prevWelcome || (now - prevWelcome.getTime() > WELCOME_WINDOW_MS)
+
+  if (!windowExpired || !welcomeStale) return
+
+  const settings = await prisma.waSettings.findUnique({ where: { id: 'singleton' } })
+  if (!settings?.welcome_enabled || !settings.welcome_message) return
+
+  // Trava atômica: gravar welcome_sent_at ANTES de enviar
+  const updated = await prisma.waConversation.updateMany({
+    where: {
+      id: conversationId,
+      // Condição de guarda: welcome_sent_at ainda está fora da janela
+      OR: [
+        { welcome_sent_at: null },
+        { welcome_sent_at: { lt: new Date(now - WELCOME_WINDOW_MS) } },
+      ],
+    },
+    data: { welcome_sent_at: new Date(now) },
+  })
+
+  // Se count === 0, outro webhook ganhou a corrida — não envia
+  if (updated.count === 0) {
+    console.log(`[webhook] Welcome skipped for ${waId}: another webhook won the race`)
+    return
+  }
+
+  const waMessageId = await sendTextMessage(waId, settings.welcome_message)
+  await prisma.waMessage.create({
+    data: {
+      wa_message_id: waMessageId || undefined,
+      conversation_id: conversationId,
+      direction: 'outbound',
+      type: 'text',
+      content: settings.welcome_message,
+      status: 'sent',
+      timestamp: new Date(),
+    },
+  })
+  console.log(`[webhook] Welcome message sent to ${waId}`)
+}
+
 // GET: Verificação de Webhook (Facebook/Meta exige isso para validar o endpoint)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -178,6 +240,13 @@ export async function POST(req: NextRequest) {
               },
             })
 
+            // D. Mensagem de boas-vindas automática (ANTES do after — evita race condition)
+            try {
+              await trySendWelcomeMessage(waConversation.id, waId, existingConv)
+            } catch (err) {
+              console.error('[webhook] welcome message error:', err)
+            }
+
             // Dispara IA para mensagens de texto (após ack ao Meta — não bloqueia)
             if (msg.type === 'text') {
               after(() =>
@@ -186,66 +255,20 @@ export async function POST(req: NextRequest) {
               )
             }
 
-            // Dispara push e incrementa unreads após a resposta 200 (não bloqueia o webhook)
+            // E. Incrementa unread count DENTRO da transação principal (antes do after)
+            // Corrige race condition: se o processo morrer entre save e increment,
+            // o badge de não lidos não fica desatualizado permanentemente
+            try {
+              await incrementUnreadForConversation(waConversation.id)
+            } catch (err) {
+              console.error('[webhook] unread increment error:', err)
+            }
+
+            // Dispara push após a resposta 200 (não bloqueia o webhook)
             after(() =>
               dispatchPushForConversation(waConversation.id, name, content || '[Mídia]')
                 .catch((err) => console.error('[webhook] push dispatch error:', err))
             )
-            after(() =>
-              incrementUnreadForConversation(waConversation.id)
-                .catch((err) => console.error('[webhook] unread increment error:', err))
-            )
-
-            // D. Mensagem de boas-vindas automática
-            after(async () => {
-              try {
-                const now = Date.now()
-                const prevActivity = existingConv?.last_message_at
-                const prevWelcome  = existingConv?.welcome_sent_at
-
-                // Janela de 7 dias sem atividade de nenhum dos lados
-                const windowExpired = !prevActivity || (now - prevActivity.getTime() > WELCOME_WINDOW_MS)
-                // Boas-vindas não foi enviada nessa janela
-                const welcomeStale  = !prevWelcome  || (now - prevWelcome.getTime()  > WELCOME_WINDOW_MS)
-
-                if (!windowExpired || !welcomeStale) return
-
-                const settings = await prisma.waSettings.findUnique({ where: { id: 'singleton' } })
-                if (!settings?.welcome_enabled || !settings.welcome_message) return
-
-                // Trava atômica: gravar welcome_sent_at ANTES de enviar para evitar race condition
-                const updated = await prisma.waConversation.updateMany({
-                  where: {
-                    id: waConversation.id,
-                    // Condição de guarda: welcome_sent_at ainda está fora da janela
-                    OR: [
-                      { welcome_sent_at: null },
-                      { welcome_sent_at: { lt: new Date(now - WELCOME_WINDOW_MS) } },
-                    ],
-                  },
-                  data: { welcome_sent_at: new Date(now) },
-                })
-
-                // Se count === 0, outro processo ganhou a corrida — não envia
-                if (updated.count === 0) return
-
-                const waMessageId = await sendTextMessage(waId, settings.welcome_message)
-                await prisma.waMessage.create({
-                  data: {
-                    wa_message_id: waMessageId || undefined,
-                    conversation_id: waConversation.id,
-                    direction: 'outbound',
-                    type: 'text',
-                    content: settings.welcome_message,
-                    status: 'sent',
-                    timestamp: new Date(),
-                  },
-                })
-                console.log(`[webhook] Welcome message sent to ${waId}`)
-              } catch (err) {
-                console.error('[webhook] welcome message error:', err)
-              }
-            })
           } catch (msgError) {
             console.error(`[webhook] Error processing message ${msg.id}:`, msgError)
             // Continue processing other messages instead of failing entire webhook

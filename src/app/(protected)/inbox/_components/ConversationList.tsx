@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
-import { ConversationItem } from './ConversationItem'
+import { VirtualizedConversationList } from './VirtualizedConversationList'
 import type { ConversationWithPreview } from './types'
 import type { Prisma } from '@prisma/client'
 
@@ -72,14 +72,9 @@ export async function ConversationList({ activeId, filterUnread, filterTagId }: 
   }
 
   return (
-    <div className="divide-y divide-border/50">
-      {conversations.map((conv) => (
-        <ConversationItem
-          key={conv.id}
-          conversation={conv}
-          isActive={conv.id === activeId}
-        />
-      ))}
-    </div>
+    <VirtualizedConversationList
+      conversations={conversations}
+      activeId={activeId}
+    />
   )
 }

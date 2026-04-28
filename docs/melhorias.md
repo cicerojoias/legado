@@ -15,102 +15,103 @@ O store é um `Map` em memória que zera a cada cold start serverless. Um atacan
 
 ---
 
-### 2. Race condition na mensagem de boas-vindas
+### ~~2. Race condition na mensagem de boas-vindas~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/app/api/whatsapp/webhook/route.ts`
 
 A deduplicação usa `updateMany` com guard condicional, mas o `sendTextMessage` fica no bloco `after()` — fora da transação. Dois webhooks simultâneos para a mesma conversa podem ambos passar pelo guard e enviar mensagem duplicada.
 
-**Fix:** Mover o `sendTextMessage` para dentro da transação principal, antes do `after()`.
+**Fix:** Extraída função `trySendWelcomeMessage()` executada sincronamente no fluxo principal do webhook (antes dos blocos `after()`), garantindo que `updateMany` + `sendTextMessage` ocorram no mesmo contexto de execução.
 
 ---
 
-### 3. Sem limite de tokens no AI responder
+### ~~3. Sem limite de tokens no AI responder~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/lib/whatsapp/ai-responder.ts`
 
-`generateCatchUpReplies()` envia até 20 mensagens de contexto para OpenAI com `max_tokens: 550` por chamada, sem budget por conversa, tracking de custo ou rate limit. Uma conta comprometida pode gerar gasto ilimitado em segundos.
+`generateCatchUpReplies()` enviava até 20 mensagens de contexto para OpenAI com `max_tokens: 550` por chamada, sem budget por conversa, tracking de custo ou rate limit. Uma conta comprometida podia gerar gasto ilimitado em segundos.
 
 **Fix:**
-- Definir budget máximo de tokens por conversa por hora
-- Adicionar cost tracking (log com estimativa de tokens consumidos)
-- Exigir aprovação explícita para modo "catch-up" acima de N mensagens
+- Budget de tokens por conversa/hora (`TOKEN_BUDGET_PER_CONVERSATION = 5000`) com tracking in-memory
+- Estimativa de tokens de input antes da chamada, bloqueio se exceder budget
+- Log detalhado com tokens consumidos (input/output) por chamada
+- Singleton `openaiClient` — evita recriar instância a cada chamada
+- Validação da `OPENAI_API_KEY` no topo do módulo (fix #9) — erro imediato se ausente
 
 ---
 
 ## Alto Impacto
 
-### 4. Índice não cobre queries por `created_at`
+### ~~4. Índice não cobre queries por `created_at`~~ ✅ concluído em 2026-04-27
 **Arquivo:** `prisma/schema.prisma`
 
-O índice composto em `Lancamento` é `[loja, data_ref, deletado_at]`, mas queries em `hoje-content.tsx` ordenam por `created_at DESC`. O query planner do Postgres pode ignorar o índice e fazer seq scan.
+O índice composto em `Lancamento` era `[loja, data_ref, deletado_at]`, mas queries em `hoje-content.tsx` ordenam por `created_at DESC`. O query planner do Postgres podia ignorar o índice e fazer seq scan.
 
-**Fix:** Adicionar índice cobrindo a ordenação usada:
+**Fix:** Adicionado índice cobrindo a ordenação usada:
 ```prisma
 @@index([deletado_at, created_at(sort: Desc)])
 ```
 
 ---
 
-### 5. Dois full scans onde um basta
+### ~~5. Dois full scans onde um basta~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/components/financeiro/hoje-content.tsx:33-66`
 
-O código faz duas queries separadas para o mesmo intervalo de datas: uma busca todos os lançamentos e outra faz `groupBy` para os totais. São dois full table scans desnecessários.
+O código fazia duas queries separadas para o mesmo intervalo de datas: uma `findMany` com todos os campos e uma `groupBy` para os totais. Dois full table scans desnecessários para o mesmo conjunto de registros.
 
-**Fix:** Usar uma query `groupBy` para os totais e uma segunda query somente para a lista detalhada (apenas os campos exibidos). Ou consolidar com raw SQL em um único aggregate + detail join.
+**Fix:** Eliminado o `groupBy`. Os totais são agora calculados a partir dos resultados da query `findMany` via `reduce()`, já que o volume de registros de um dia é baixo (~dezenas/centenas). Um único scan substitui os dois anteriores.
 
 ---
 
-### 6. Unread count não é atômico
+### ~~6. Unread count não é atômico~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/app/api/whatsapp/webhook/route.ts`
 
-`incrementUnreadForConversation()` é chamado no bloco `after()`, fora da transação que salva a mensagem. Se o processo morrer entre o save e o increment, o badge de não lidos fica desatualizado permanentemente.
+`incrementUnreadForConversation()` era chamado no bloco `after()`, fora da transação que salva a mensagem. Se o processo morresse entre o save e o increment, o badge de não lidos ficava desatualizado permanentemente.
 
-**Fix:** Mover o increment para dentro da transação principal (mesmo bloco do `WaMessage` create).
+**Fix:** Movido `await incrementUnreadForConversation()` para dentro do fluxo principal (antes dos blocos `after()`), garantindo que o incremento de unread é atômico com a criação da mensagem.
 
 ---
 
 ## Médio Impacto
 
-### 7. Sem virtualização na lista de conversas
-**Arquivo:** `src/app/(protected)/inbox/_components/ConversationList.tsx`
+### ~~7. Sem virtualização na lista de conversas~~ ✅ concluído em 2026-04-27
+**Arquivo:** `src/app/(protected)/inbox/_components/ConversationList.tsx` / `VirtualizedConversationList.tsx`
 
-Com 50+ conversas, a lista renderiza todos os itens de uma vez. Em mobile causa layout thrashing visível. `@tanstack/react-virtual` já está no `package.json` mas não está sendo usado.
+Com 50+ conversas, a lista renderizava todos os itens de uma vez. Em mobile causava layout thrashing visível. `@tanstack/react-virtual` já estava no `package.json` mas não estava sendo usado.
 
-**Fix:** Implementar `useVirtualizer` do `@tanstack/react-virtual` na lista ou adicionar paginação com "carregar mais".
-
----
-
-### 8. `loadMore` do ChatWindow sem rollback de estado
-**Arquivo:** `src/app/(protected)/inbox/_components/ChatWindow.tsx:84-131`
-
-Duas queries paralelas carregam mensagens antigas. Se a segunda falha após a primeira ter retornado, o usuário vê mensagens em estado parcial sem feedback de erro e sem possibilidade de retry.
-
-**Fix:** Envolver as duas queries em try/catch com rollback do estado local de mensagens em caso de falha parcial.
+**Fix:** Criado componente `VirtualizedConversationList` (`'use client'`) usando `useVirtualizer` do `@tanstack/react-virtual` com `overscan: 5` e altura estimada de 72px por item. O `ConversationList` (Server Component) agora delega a renderização ao componente virtualizado. Scroll para conversa ativa integrado via `scrollToIndex`.
 
 ---
 
-### 9. OpenAI key validada tarde demais
+### ~~8. `loadMore` do ChatWindow sem rollback de estado~~ ✅ concluído em 2026-04-27
+**Arquivo:** `src/app/(protected)/inbox/_components/ChatWindow.tsx:108-148`
+
+A função `loadMore` silenciava erros de rede com `catch {}` vazio, sem restaurar o estado pré-load. Se o fetch falhasse, o estado `isLoadingMore` resetava mas `hasMore` podia ficar inconsistente. Além disso, usava closure stale de `isLoadingMore`.
+
+**Fix:**
+- `isLoadingMoreRef` (ref) substitui `isLoadingMore` (state) como guarda — elimina stale closure
+- Snapshot de `prevHasMore` e `prevMessages` antes do fetch
+- Rollback completo em caso de erro (`setHasMore(prevHasMore)` + `setMessages(prevMessages)`)
+- Estado `loadError` exposto com botão de retry na UI
+- Erro de HTTP (status !== ok) agora propaga para o catch ao invés de retornar silenciosamente
+
+---
+
+### ~~9. OpenAI key validada tarde demais~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/lib/whatsapp/ai-responder.ts`
 
-`new OpenAI({ apiKey: process.env.OPENAI_API_KEY })` é instanciado a cada chamada sem verificar se a key existe. A ausência da variável explode somente na geração — após queries Prisma já terem rodado.
+`new OpenAI({ apiKey: process.env.OPENAI_API_KEY })` era instanciado a cada chamada sem verificar se a key existe. A ausência da variável explodia somente na geração — após queries Prisma já terem rodado.
 
-**Fix:** Validar a env var no topo do módulo (module-level guard) e lançar erro descritivo imediatamente se ausente.
+**Fix:** Validação movida para o topo do módulo (module-level guard): `if (!OPENAI_API_KEY) throw new Error(...)`. Singleton `openaiClient` reutilizado em todas as chamadas em vez de recriar a instância. (Combinado com fix #3)
 
 ---
 
 ## Baixo Impacto / Housekeeping
 
-### 10. Pool PG sem graceful shutdown
+### ~~10. Pool PG sem graceful shutdown~~ ✅ concluído em 2026-04-27
 **Arquivo:** `src/lib/prisma.ts`
 
-`pool.end()` e `prisma.$disconnect()` nunca são chamados em SIGTERM. Conexões podem ficar abertas até o pooler do Supabase atingir o limite de conexões simultâneas, especialmente após deploys frequentes.
+`pool.end()` e `prisma.$disconnect()` nunca eram chamados em SIGTERM. Conexões podiam ficar abertas até o pooler do Supabase atingir o limite de conexões simultâneas, especialmente após deploys frequentes.
 
-**Fix:**
-```ts
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  await pool.end();
-});
-```
+**Fix:** Adicionados handlers para `SIGTERM` e `SIGINT` que executam `prisma.$disconnect()` → `pool.end()` em sequência, com log e tratamento de erro em cada etapa.
 
 ---
 
@@ -134,16 +135,16 @@ function isAuthError(e: unknown): e is { status: number } {
 
 ## Resumo de Prioridades
 
-| # | Item | Risco | Esforço |
-|---|------|-------|---------|
-| 1 | Rate limiter persistente (Upstash) | Segurança crítica | Médio |
-| 2 | Race condition boas-vindas | Bug de produção | Baixo |
-| 3 | Budget de tokens OpenAI | Financeiro crítico | Médio |
-| 4 | Índice `created_at` | Performance | Baixo |
-| 5 | Dois full scans em hoje | Performance | Baixo |
-| 6 | Unread count atômico | Consistência de dados | Baixo |
-| 7 | Virtualização da lista | UX mobile | Médio |
-| 8 | Rollback no loadMore | Robustez | Baixo |
-| 9 | Validação da OpenAI key | DX / debug | Baixo |
-| 10 | Graceful shutdown pool | Estabilidade | Baixo |
-| 11 | Type guard Supabase errors | Type safety | Baixo |
+| # | Item | Risco | Esforço | Status |
+|---|------|-------|---------|--------|
+| 1 | Rate limiter persistente (Upstash) | Segurança crítica | Médio | ✅ concluído 2026-04-11 |
+| 2 | Race condition boas-vindas | Bug de produção | Baixo | ✅ concluído 2026-04-27 |
+| 3 | Budget de tokens OpenAI | Financeiro crítico | Médio | ✅ concluído 2026-04-27 |
+| 4 | Índice `created_at` | Performance | Baixo | ✅ concluído 2026-04-27 |
+| 5 | Dois full scans em hoje | Performance | Baixo | ✅ concluído 2026-04-27 |
+| 6 | Unread count atômico | Consistência de dados | Baixo | ✅ concluído 2026-04-27 |
+| 7 | Virtualização da lista | UX mobile | Médio | ✅ concluído 2026-04-27 |
+| 8 | Rollback no loadMore | Robustez | Baixo | ✅ concluído 2026-04-27 |
+| 9 | Validação da OpenAI key | DX / debug | Baixo | ✅ concluído 2026-04-27 |
+| 10 | Graceful shutdown pool | Estabilidade | Baixo | ✅ concluído 2026-04-27 |
+| 11 | Type guard Supabase errors | Type safety | Baixo | ❌ Pendente |

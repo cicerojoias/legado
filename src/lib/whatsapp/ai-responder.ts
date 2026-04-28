@@ -3,12 +3,68 @@ import { prisma } from '@/lib/prisma'
 import { sendTextMessage } from './meta-client'
 import { SERVICE_POLICY_JSON_BLOCK } from './service-policy'
 
+// ─── Validação antecipada da OpenAI key (fix #9) ────────────────────────────
+// Erro imediato se ausente — evita queries Prisma rodarem antes de descobrir
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+if (!OPENAI_API_KEY) {
+  throw new Error(
+    '[ai-responder] OPENAI_API_KEY não configurada. ' +
+    'Defina a variável de ambiente para habilitar respostas com IA.'
+  )
+}
+
+// Singleton OpenAI client — reutilizado em todas as chamadas
+const openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY })
+
+// ─── Constantes ─────────────────────────────────────────────────────────────
 const WINDOW_MS = 36 * 60 * 60 * 1000
 const MAX_CONTEXT_MESSAGES = 20
 const MAX_CATCH_UP_SEGMENTS = 3
 const CATCH_UP_REPLY_GAP_MIN_MS = 1800
 const CATCH_UP_REPLY_GAP_JITTER_MS = 1200
 const WELCOME_MENU_WINDOW_MS = 5 * 60 * 1000 // 5 minutos para resposta de menu
+
+// ─── Budget de tokens (fix #3) ──────────────────────────────────────────────
+// Evita gasto ilimitado: cada conversa tem um teto de tokens por hora
+const TOKEN_BUDGET_PER_CONVERSATION = 5000 // tokens estimados por conversa/hora
+const TOKEN_BUDGET_WINDOW_MS = 60 * 60 * 1000 // 1 hora
+const ESTIMATED_TOKENS_PER_CHAR = 0.25 // ~4 chars por token em pt-BR
+
+// In-memory: aceitável para serverless (instâncias têm vida curta)
+// Se precisar de persistência cross-instance, migrar para Redis/DB
+const budgetMap = new Map<string, { tokens: number; windowStart: number }>()
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length * ESTIMATED_TOKENS_PER_CHAR)
+}
+
+function checkAndTrackBudget(
+  conversationId: string,
+  inputTokens: number,
+  outputTokens: number,
+): boolean {
+  const now = Date.now()
+  const budget = budgetMap.get(conversationId)
+
+  // Expirou a janela — reseta
+  if (!budget || (now - budget.windowStart) > TOKEN_BUDGET_WINDOW_MS) {
+    budgetMap.set(conversationId, { tokens: inputTokens + outputTokens, windowStart: now })
+    return true
+  }
+
+  // Dentro da janela — verifica se estoura
+  const total = budget.tokens + inputTokens + outputTokens
+  if (total > TOKEN_BUDGET_PER_CONVERSATION) {
+    console.warn(
+      `[ai-responder] Budget excedido para conversa ${conversationId}: ` +
+      `${budget.tokens} + ${inputTokens + outputTokens} > ${TOKEN_BUDGET_PER_CONVERSATION} tokens/hora`
+    )
+    return false
+  }
+
+  budget.tokens = total
+  return true
+}
 
 // Mapeamento de opções do menu de boas-vindas
 const WELCOME_MENU_OPTIONS: Record<string, string> = {
@@ -199,27 +255,59 @@ async function fetchRecentTextHistory(conversationId: string, windowStart: Date)
   }) as Promise<TextMessageRow[]>
 }
 
-async function generateSingleReply(history: TextMessageRow[]) {
+async function generateSingleReply(history: TextMessageRow[], conversationId: string) {
   const messages = toChatMessages(history.slice(-MAX_CONTEXT_MESSAGES))
   if (messages.length === 0) return null
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  const completion = await openai.chat.completions.create({
+  // Estima tokens de input: system prompt + mensagens de contexto
+  const systemTokens = estimateTokens(SYSTEM_PROMPT)
+  const inputText = messages.map((m) => m.content as string).join(' ')
+  const inputTokens = systemTokens + estimateTokens(inputText)
+  const maxOutputTokens = 400
+
+  // Verifica budget antes de chamar a API
+  if (!checkAndTrackBudget(conversationId, inputTokens, maxOutputTokens)) {
+    console.warn(`[ai-responder] singleReply bloqueado por budget: ${conversationId}`)
+    return null
+  }
+
+  const completion = await openaiClient.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-    max_tokens: 400,
+    max_tokens: maxOutputTokens,
     temperature: 0.7,
   })
 
-  return completion.choices[0]?.message?.content?.trim() ?? null
+  const reply = completion.choices[0]?.message?.content?.trim() ?? null
+  const actualOutputTokens = completion.usage?.completion_tokens ?? maxOutputTokens
+  const actualInputTokens = completion.usage?.prompt_tokens ?? inputTokens
+
+  console.log(
+    `[ai-responder] singleReply tokens — conv=${conversationId} ` +
+    `in=${actualInputTokens} out=${actualOutputTokens} ` +
+    `budget=${budgetMap.get(conversationId)?.tokens ?? '?'}/${TOKEN_BUDGET_PER_CONVERSATION}`
+  )
+
+  return reply
 }
 
-async function generateCatchUpReplies(history: TextMessageRow[]) {
+async function generateCatchUpReplies(history: TextMessageRow[], conversationId: string) {
   const messages = toChatMessages(history.slice(-MAX_CONTEXT_MESSAGES))
   if (messages.length === 0) return []
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  const completion = await openai.chat.completions.create({
+  // Estima tokens de input: prompts do sistema + mensagens de contexto
+  const systemTokens = estimateTokens(SYSTEM_PROMPT + CATCH_UP_STYLE_PROMPT + CATCH_UP_JSON_PROMPT)
+  const inputText = messages.map((m) => m.content as string).join(' ')
+  const inputTokens = systemTokens + estimateTokens(inputText)
+  const maxOutputTokens = 550
+
+  // Verifica budget antes de chamar a API
+  if (!checkAndTrackBudget(conversationId, inputTokens, maxOutputTokens)) {
+    console.warn(`[ai-responder] catchUp bloqueado por budget: ${conversationId}`)
+    return []
+  }
+
+  const completion = await openaiClient.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -227,11 +315,20 @@ async function generateCatchUpReplies(history: TextMessageRow[]) {
       { role: 'system', content: CATCH_UP_JSON_PROMPT },
       ...messages,
     ],
-    max_tokens: 550,
+    max_tokens: maxOutputTokens,
     temperature: 0.7,
   })
 
   const raw = completion.choices[0]?.message?.content?.trim()
+  const actualOutputTokens = completion.usage?.completion_tokens ?? maxOutputTokens
+  const actualInputTokens = completion.usage?.prompt_tokens ?? inputTokens
+
+  console.log(
+    `[ai-responder] catchUp tokens — conv=${conversationId} ` +
+    `in=${actualInputTokens} out=${actualOutputTokens} ` +
+    `budget=${budgetMap.get(conversationId)?.tokens ?? '?'}/${TOKEN_BUDGET_PER_CONVERSATION}`
+  )
+
   if (!raw) return []
 
   const segments: string[] = []
@@ -342,7 +439,7 @@ export async function maybeRespondWithAI(conversationId: string, waId: string): 
   // Se não é menu ou IA está desativada, retorna
   if (!conversation?.ia_ativa) return
 
-  const aiReply = await generateSingleReply(history.reverse())
+  const aiReply = await generateSingleReply(history.reverse(), conversationId)
   if (!aiReply) return
 
   const waMessageId = await sendTextMessage(waId, aiReply)
@@ -370,7 +467,7 @@ export async function activateAiWithCatchUp(conversationId: string, waId: string
   let sentCount = 0
 
   if (pending.length > 0) {
-    const replies = await generateCatchUpReplies(history)
+    const replies = await generateCatchUpReplies(history, conversationId)
     if (replies.length > 0) {
       sentCount = (await sendAiReplies(waId, conversationId, replies)).length
     }

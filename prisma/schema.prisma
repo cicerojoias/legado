@@ -78,6 +78,9 @@ model Lancamento {
   // Planner usa o índice para loja + data_ref + deletado_at IS NULL sem full scan
   @@index([loja, data_ref, deletado_at])
   @@index([usuario_id])
+  // Índice cobrindo a ordenação por created_at DESC usada em hoje-content.tsx
+  // Evita seq scan quando o planner prefere ordenar por created_at
+  @@index([deletado_at, created_at(sort: Desc)])
   @@map("lancamentos")
 }
 

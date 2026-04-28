@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 /**
  * Incrementa unreadCount em WaConversationRead para todos os usuários
  * ADMIN e SUPER_ADMIN ativos quando uma mensagem inbound chega.
- * Chamado via after() no webhook — não bloqueia a resposta à Meta.
+ * Chamado sincronamente no webhook durante o fluxo principal de recebimento.
  */
 export async function incrementUnreadForConversation(conversationId: string) {
   const adminUsers = await prisma.user.findMany({

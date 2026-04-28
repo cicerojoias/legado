@@ -30,6 +30,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [messages, setMessages] = useState<WaMessage[]>(initialMessages)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const isLoadingMoreRef = useRef(false) // ref anti-stale-closure
+  const [loadError, setLoadError] = useState(false)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
   const [assistenteOpen, setAssistenteOpen] = useState(false)
 
@@ -106,19 +108,25 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
   // Carrega a página anterior (mensagens mais antigas)
   const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return
+    if (isLoadingMoreRef.current || !hasMore) return
     const oldest = messages[0]
     if (!oldest) return
 
+    isLoadingMoreRef.current = true
     setIsLoadingMore(true)
+    setLoadError(false)
     const el = scrollContainerRef.current
     const prevScrollHeight = el?.scrollHeight ?? 0
     const prevScrollTop = el?.scrollTop ?? 0
 
+    // Snapshot do estado pré-load para rollback em caso de erro parcial
+    const prevHasMore = hasMore
+    const prevMessages = messages
+
     try {
       const before = encodeURIComponent(new Date(oldest.timestamp).toISOString())
       const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
-      if (!res.ok) return
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const older: WaMessage[] = data.conversation?.messages ?? []
 
@@ -140,12 +148,17 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         if (!el) return
         el.scrollTop = prevScrollTop + (el.scrollHeight - prevScrollHeight)
       })
-    } catch {
-      // silenciar erros de rede
+    } catch (err) {
+      console.error('[ChatWindow] loadMore error:', err)
+      // Rollback: restaura estado pré-load para consistência
+      setHasMore(prevHasMore)
+      setMessages(prevMessages)
+      setLoadError(true)
     } finally {
+      isLoadingMoreRef.current = false
       setIsLoadingMore(false)
     }
-  }, [conversationId, hasMore, isLoadingMore, messages])
+  }, [conversationId, hasMore, messages])
 
   // IntersectionObserver no sentinel do topo — dispara loadMore quando visível
   useEffect(() => {
@@ -303,6 +316,18 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         {isLoadingMore && (
           <div className="flex justify-center py-2">
             <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          </div>
+        )}
+
+        {/* Erro ao carregar — botão de retry */}
+        {loadError && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={() => loadMore()}
+              className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              Erro ao carregar — toque para tentar novamente
+            </button>
           </div>
         )}
 
