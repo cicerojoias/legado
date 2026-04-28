@@ -47,6 +47,10 @@ function revalidateAll() {
 
 type ActionResult = { success: true } | { success: false; error: string };
 
+function isAuthError(e: unknown): e is { status: number } {
+    return typeof e === 'object' && e !== null && 'status' in e;
+}
+
 // ─── 1. Alterar Loja, Role e Ativo de uma vez (Modal de Edição) ─────────────
 // Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → $transaction { read → write → audit }
 
@@ -158,7 +162,7 @@ export async function deleteUserAction(formData: FormData): Promise<ActionResult
         }
 
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(targetId);
-        if (authError && (authError as any).status !== 404) {
+        if (authError && (!isAuthError(authError) || authError.status !== 404)) {
              console.error('[deleteUserAction] Erro no Supabase Auth:', authError);
              return { success: false, error: 'Erro ao remover credenciais do servidor de autenticação.' };
         }
