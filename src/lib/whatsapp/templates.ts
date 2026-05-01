@@ -33,9 +33,11 @@ export const WA_TEMPLATES: WaTemplateConfig[] = [
     name: 'retomar_atendimento',
     displayName: 'Retomar Atendimento',
     language: 'pt_BR',
-    preview: 'Olá {{1}}, tudo bem? Gostaríamos de dar continuidade ao seu atendimento na Cícero Joias. Podemos ajudá-lo(a)?',
+    preview:
+      'Olá {{1}}! 👋\n\nNotamos que não concluímos seu atendimento na Cícero Joias.\n\n{{2}}\n\n✅ Responda esta mensagem para continuarmos!\n\nEstamos à disposição. 😊',
     params: [
-      { label: 'Nome do cliente', placeholder: 'Ex: João' },
+      { label: 'Nome do cliente', placeholder: 'Ex: Mayanne' },
+      { label: 'Mensagem personalizada', placeholder: 'Ex: Sobre o orçamento do seu anel' },
     ],
   },
   {

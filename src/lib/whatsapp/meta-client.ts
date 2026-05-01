@@ -218,6 +218,67 @@ export async function sendMediaByMediaId(
 }
 
 /**
+ * Verifica se um template está disponível e válido na Meta Cloud API.
+ * Útil para validação prévia antes do envio.
+ *
+ * @param templateName - Nome exato do template no Meta Business Manager
+ * @param languageCode - Código de idioma (ex: "pt_BR")
+ * @returns true se o template está aprovado e disponível
+ */
+export async function validateTemplate(
+  templateName: string,
+  languageCode: string
+): Promise<boolean> {
+  const phoneId = getPhoneId()
+  const token = getToken()
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/${phoneId}/message_templates?name=${encodeURIComponent(templateName)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+
+    if (!res.ok) {
+      console.error(`[validateTemplate] Erro ao buscar template ${templateName}:`, await res.text())
+      return false
+    }
+
+    const data = (await res.json()) as {
+      data: Array<{
+        name: string
+        status: string
+        language: string
+        category: string
+      }>
+    }
+
+    const template = data.data?.find(
+      (t) => t.name === templateName && t.language === languageCode
+    )
+
+    if (!template) {
+      console.warn(`[validateTemplate] Template ${templateName} (${languageCode}) não encontrado`)
+      return false
+    }
+
+    // Status possíveis: approved, pending, rejected, paused, disabled
+    if (template.status !== 'approved') {
+      console.warn(
+        `[validateTemplate] Template ${templateName} está com status: ${template.status}`
+      )
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error(`[validateTemplate] Erro ao validar template ${templateName}:`, error)
+    return false
+  }
+}
+
+/**
  * Envia uma mensagem de template pré-aprovado pela Meta.
  * Necessário para contatos fora da janela de 24h.
  *
@@ -266,6 +327,11 @@ export async function sendTemplateMessage(
 
   if (!res.ok) {
     const err = await res.text()
+    console.error(`[sendTemplateMessage] Erro da Meta:`, {
+      status: res.status,
+      template: templateName,
+      error: err,
+    })
     throw new Error(`Meta Template error ${res.status}: ${err}`)
   }
 

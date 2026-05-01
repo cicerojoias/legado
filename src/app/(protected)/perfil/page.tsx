@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.41', data: '01/05/2026', resumo: 'WAB: templates pós-24h — validação em tempo real, indicadores visuais (✅/❌/🔄), endpoint validate-template e guia de configuração no Meta Business Manager' },
     { versao: '0.18.40', data: '28/04/2026', resumo: 'GitHub Actions: cron job gratuito configurado para resumo diário — substitui Vercel Cron (Plano Pro); workflow executa diariamente às 18:00 UTC (15:00 BRT) via schedule + workflow_dispatch' },
     { versao: '0.18.39', data: '28/04/2026', resumo: 'WAB: long press no desktop — apertar e segurar mouse sobre mensagem/imagem ativa modo de seleção (igual ao mobile); imagens não disparam mais drag nativo' },
     { versao: '0.18.38', data: '27/04/2026', resumo: 'Perfil: changelog migrado para Server Component — reduz bundle JS do cliente; type guard isAuthError substitui (as any) nos erros do Supabase Auth' },
