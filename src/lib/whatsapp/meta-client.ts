@@ -297,15 +297,20 @@ export async function sendTemplateMessage(
   const phoneId = getPhoneId()
   const token = getToken()
 
-  const components =
-    bodyParams.length > 0
-      ? [
-          {
-            type: 'body',
-            parameters: bodyParams.map((text) => ({ type: 'text', text })),
-          },
-        ]
-      : []
+  // Montar componentes: apenas body (sem header)
+  // O template foi configurado no Meta SEM cabeçalho (opcional/removido)
+  const components: Array<{
+    type: string
+    parameters?: Array<{ type: string; text?: string }>
+  }> = []
+
+  // Adicionar body com os parâmetros do template
+  if (bodyParams.length > 0) {
+    components.push({
+      type: 'body',
+      parameters: bodyParams.map((text) => ({ type: 'text', text })),
+    })
+  }
 
   const res = await fetch(`${BASE_URL}/${phoneId}/messages`, {
     method: 'POST',
