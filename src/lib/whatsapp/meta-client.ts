@@ -233,25 +233,32 @@ export async function validateTemplate(
   const token = getToken()
 
   try {
-    const res = await fetch(
-      `${BASE_URL}/${phoneId}/message_templates?name=${encodeURIComponent(templateName)}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    )
+    const url = `${BASE_URL}/${phoneId}/message_templates?name=${encodeURIComponent(templateName)}`
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
     if (!res.ok) {
-      console.error(`[validateTemplate] Erro ao buscar template ${templateName}:`, await res.text())
+      const errText = await res.text()
+      console.error(`[validateTemplate] Erro HTTP ${res.status} ao buscar template "${templateName}": ${errText}`)
       return false
     }
 
-    const data = (await res.json()) as {
-      data: Array<{
+    const raw = (await res.json()) as unknown
+    const data = raw as {
+      data?: Array<{
         name: string
         status: string
         language: string
-        category: string
+        category?: string
       }>
+    }
+
+    console.log(`[validateTemplate] Buscando "${templateName}" (${languageCode}) → ${data.data?.length ?? 0} templates retornados`)
+    if (data.data?.length) {
+      data.data.forEach((t) => {
+        console.log(`[validateTemplate]   → name="${t.name}" language="${t.language}" status="${t.status}"`)
+      })
     }
 
     const template = data.data?.find(
@@ -259,21 +266,30 @@ export async function validateTemplate(
     )
 
     if (!template) {
-      console.warn(`[validateTemplate] Template ${templateName} (${languageCode}) não encontrado`)
+      console.warn(`[validateTemplate] Template "${templateName}" (${languageCode}) NÃO encontrado entre os ${data.data?.length ?? 0} retornados`)
+      // Tenta busca case-insensitive para diagnóstico
+      const ciMatch = data.data?.find(
+        (t) => t.name.toLowerCase() === templateName.toLowerCase()
+      )
+      if (ciMatch) {
+        console.warn(`[validateTemplate] → Match case-insensitive encontrado: name="${ciMatch.name}" language="${ciMatch.language}" status="${ciMatch.status}" — mas language não bate (esperado: ${languageCode})`)
+      }
       return false
     }
 
-    // Status possíveis: approved, pending, rejected, paused, disabled
-    if (template.status !== 'approved') {
+    // Status possíveis: approved, pending, rejected, paused, disabled, APPproved (case-insensitive)
+    const normalizedStatus = template.status?.toLowerCase() ?? ''
+    if (normalizedStatus !== 'approved') {
       console.warn(
-        `[validateTemplate] Template ${templateName} está com status: ${template.status}`
+        `[validateTemplate] Template "${templateName}" status="${template.status}" (normalizado: "${normalizedStatus}") — NÃO está aprovado`
       )
       return false
     }
 
+    console.log(`[validateTemplate] Template "${templateName}" VÁLIDO ✓ (status="${template.status}")`)
     return true
   } catch (error) {
-    console.error(`[validateTemplate] Erro ao validar template ${templateName}:`, error)
+    console.error(`[validateTemplate] Exceção ao validar template "${templateName}":`, error)
     return false
   }
 }
