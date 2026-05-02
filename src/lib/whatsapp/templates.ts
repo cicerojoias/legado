@@ -30,7 +30,7 @@ export const WA_TEMPLATES: WaTemplateConfig[] = [
     params: [],
   },
   {
-    name: 'retomar_atendimento',
+    name: 'retomar_atendimento_v1',
     displayName: 'Retomar Atendimento',
     language: 'pt_BR',
     preview:
