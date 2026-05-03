@@ -14,41 +14,64 @@ export async function dispatchPushForConversation(
   contactName: string,
   messageContent: string
 ): Promise<void> {
-  const subscriptions = await prisma.waPushSubscription.findMany({
-    where: {
-      user: {
-        role: { in: ['ADMIN', 'SUPER_ADMIN', 'GERENTE'] },
-        ativo: true,
-        notif_push: true,
+  try {
+    console.log(`[push-dispatcher] Iniciando envio para conversa ${conversationId}`)
+    
+    const subscriptions = await prisma.waPushSubscription.findMany({
+      where: {
+        user: {
+          role: { in: ['ADMIN', 'SUPER_ADMIN', 'GERENTE'] },
+          ativo: true,
+          notif_push: true,
+        },
       },
-    },
-    select: { endpoint: true, p256dh: true, auth: true },
-  })
+      select: { 
+        endpoint: true, 
+        p256dh: true, 
+        auth: true,
+        user: { select: { id: true, nome: true, role: true } }
+      },
+    })
 
-  if (subscriptions.length === 0) return
+    console.log(`[push-dispatcher] Encontradas ${subscriptions.length} subscriptions elegíveis`)
 
-  // Conta conversas abertas para atualizar o badge do app
-  const unreadCount = await prisma.waConversation.count({
-    where: { status: 'open' },
-  })
+    if (subscriptions.length === 0) {
+      console.log('[push-dispatcher] Nenhuma subscription encontrada. Verifique: 1) Usuários com role ADMIN/SUPER_ADMIN/GERENTE, 2) ativo=true, 3) notif_push=true, 4) subscriptions registradas')
+      return
+    }
 
-  const payload = {
-    title: contactName,
-    body: messageContent.slice(0, 120),
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    conversationId,
-    url: `/inbox/${conversationId}`,
-    unreadCount,
-  }
+    // Conta conversas abertas para atualizar o badge do app
+    const unreadCount = await prisma.waConversation.count({
+      where: { status: 'open' },
+    })
 
-  const results = await Promise.allSettled(
-    subscriptions.map((sub) => sendPush(sub.endpoint, sub.p256dh, sub.auth, payload))
-  )
+    const payload = {
+      title: contactName,
+      body: messageContent.slice(0, 120),
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      conversationId,
+      url: `/inbox/${conversationId}`,
+      unreadCount,
+    }
 
-  const failed = results.filter((r) => r.status === 'rejected')
-  if (failed.length > 0) {
-    console.error(`[push-dispatcher] ${failed.length}/${subscriptions.length} pushes falharam`, failed)
+    console.log(`[push-dispatcher] Enviando push para ${subscriptions.length} dispositivo(s)`)
+    console.log(`[push-dispatcher] Payload:`, JSON.stringify({ title: payload.title, body: payload.body, conversationId: payload.conversationId }))
+
+    const results = await Promise.allSettled(
+      subscriptions.map((sub) => sendPush(sub.endpoint, sub.p256dh, sub.auth, payload))
+    )
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length
+    const failed = results.filter((r) => r.status === 'rejected')
+    
+    console.log(`[push-dispatcher] Resultado: ${succeeded} sucesso(s), ${failed.length} falha(s)`)
+    
+    if (failed.length > 0) {
+      console.error(`[push-dispatcher] ${failed.length}/${subscriptions.length} pushes falharam`, failed)
+    }
+  } catch (error) {
+    console.error('[push-dispatcher] Erro ao enviar notificação push:', error)
   }
 }
 
@@ -134,62 +157,73 @@ function formatBRL(value: number): string {
  * GERENTE e OPERADOR NÃO recebem este resumo.
  */
 export async function dispatchPushResumoDiario(): Promise<void> {
-  const totais = await getTotaisFinanceirosDoDia()
+  try {
+    console.log('[push-dispatcher] Iniciando envio de resumo diário')
 
-  const body = [
-    `Entradas: ${formatBRL(totais.entradas)}`,
-    `Saídas: ${formatBRL(totais.saidas)}`,
-    `Saldo: ${formatBRL(totais.saldo)}`,
-    totais.numLancamentos > 0 && `${totais.numLancamentos} lançamento(s) registrado(s)`,
-  ]
-    .filter(Boolean)
-    .join('\n')
+    const totais = await getTotaisFinanceirosDoDia()
 
-  const payload = {
-    title: '📊 Resumo Financeiro do Dia',
-    body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    type: 'daily-summary',
-    url: '/hoje',
-    unreadCount: 0,
-    data: {
-      entradas: totais.entradas,
-      saidas: totais.saidas,
-      saldo: totais.saldo,
-      pix: totais.pix,
-      debito: totais.debito,
-      credito: totais.credito,
-      especie: totais.especie,
-    },
-  }
+    const body = [
+      `Entradas: ${formatBRL(totais.entradas)}`,
+      `Saídas: ${formatBRL(totais.saidas)}`,
+      `Saldo: ${formatBRL(totais.saldo)}`,
+      totais.numLancamentos > 0 && `${totais.numLancamentos} lançamento(s) registrado(s)`,
+    ]
+      .filter(Boolean)
+      .join('\n')
 
-  const subscriptions = await prisma.waPushSubscription.findMany({
-    where: {
-      user: {
-        role: { in: ['ADMIN', 'SUPER_ADMIN'] },
-        ativo: true,
-        notif_push: true,
+    const payload = {
+      title: '📊 Resumo Financeiro do Dia',
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      type: 'daily-summary',
+      url: '/hoje',
+      unreadCount: 0,
+      data: {
+        entradas: totais.entradas,
+        saidas: totais.saidas,
+        saldo: totais.saldo,
+        pix: totais.pix,
+        debito: totais.debito,
+        credito: totais.credito,
+        especie: totais.especie,
       },
-    },
-    select: { endpoint: true, p256dh: true, auth: true, user: { select: { nome: true, notif_horario: true } } },
-  })
+    }
 
-  if (subscriptions.length === 0) {
-    console.log('[push-dispatcher] Nenhuma subscription elegível para resumo diário')
-    return
-  }
+    const subscriptions = await prisma.waPushSubscription.findMany({
+      where: {
+        user: {
+          role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+          ativo: true,
+          notif_push: true,
+        },
+      },
+      select: { endpoint: true, p256dh: true, auth: true, user: { select: { nome: true, notif_horario: true } } },
+    })
 
-  console.log(`[push-dispatcher] Enviando resumo diário para ${subscriptions.length} usuário(s)`)
+    if (subscriptions.length === 0) {
+      console.log('[push-dispatcher] Nenhuma subscription elegível para resumo diário. Verifique: 1) Usuários com role ADMIN/SUPER_ADMIN, 2) ativo=true, 3) notif_push=true, 4) subscriptions registradas')
+      return
+    }
 
-  const results = await Promise.allSettled(
-    subscriptions.map((sub) => sendPush(sub.endpoint, sub.p256dh, sub.auth, payload))
-  )
+    console.log(`[push-dispatcher] Enviando resumo diário para ${subscriptions.length} usuário(s)`)
+    console.log(`[push-dispatcher] Payload:`, JSON.stringify({ title: payload.title, body: payload.body }))
 
-  const failed = results.filter((r) => r.status === 'rejected')
-  if (failed.length > 0) {
-    console.error(`[push-dispatcher] ${failed.length}/${subscriptions.length} pushes de resumo diário falharam`, failed)
-  } else {
-    console.log(`[push-dispatcher] Resumo diário enviado com sucesso para ${subscriptions.length} usuário(s)`)
+    const results = await Promise.allSettled(
+      subscriptions.map((sub) => sendPush(sub.endpoint, sub.p256dh, sub.auth, payload))
+    )
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length
+    const failed = results.filter((r) => r.status === 'rejected')
+    
+    console.log(`[push-dispatcher] Resumo diário: ${succeeded} sucesso(s), ${failed.length} falha(s)`)
+    
+    if (failed.length > 0) {
+      console.error(`[push-dispatcher] ${failed.length}/${subscriptions.length} pushes de resumo diário falharam`, failed)
+    } else {
+      console.log(`[push-dispatcher] Resumo diário enviado com sucesso para ${subscriptions.length} usuário(s)`)
+    }
+  } catch (error) {
+    console.error('[push-dispatcher] Erro ao enviar resumo diário:', error)
   }
 }
