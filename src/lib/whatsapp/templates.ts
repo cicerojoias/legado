@@ -22,14 +22,6 @@ export interface WaTemplateConfig {
 
 export const WA_TEMPLATES: WaTemplateConfig[] = [
   {
-    name: 'boas_vindas_cicero',
-    displayName: 'Boas-vindas / Menu de Serviços',
-    language: 'pt_BR',
-    preview:
-      'Olá, seja bem-vindo(a) à Cícero Joias! ✨\n\nTemos 40 anos de tradição em:\n\n1️⃣ Alianças, anéis de formatura e joias sob medida 💍\n2️⃣ Banho de ouro premium 🔸\n3️⃣ Joias em geral, relógios e armações de óculos 💎\n4️⃣ Consertos profissionais de joias, relógios e óculos 🔧\n\n0️⃣ Falar com um atendente 👥\n\nDigite o número da opção desejada e aguarde.\n\nEm breve entraremos em contato! ☺️',
-    params: [],
-  },
-  {
     name: 'retomar_atendimento_v1',
     displayName: 'Retomar Atendimento',
     language: 'pt_BR',
@@ -38,25 +30,6 @@ export const WA_TEMPLATES: WaTemplateConfig[] = [
     params: [
       { label: 'Nome do cliente', placeholder: 'Ex: Mayanne' },
       { label: 'Mensagem personalizada', placeholder: 'Ex: Sobre o orçamento do seu anel' },
-    ],
-  },
-  {
-    name: 'peca_pronta',
-    displayName: 'Peça Pronta para Retirada',
-    language: 'pt_BR',
-    preview: 'Olá {{1}}, sua peça já está pronta! Pode passar em nossa loja para retirar. 😊',
-    params: [
-      { label: 'Nome do cliente', placeholder: 'Ex: Maria' },
-    ],
-  },
-  {
-    name: 'orcamento_joias',
-    displayName: 'Envio de Orçamento',
-    language: 'pt_BR',
-    preview: 'Olá {{1}}, segue o orçamento solicitado: {{2}}. Qualquer dúvida, estamos à disposição!',
-    params: [
-      { label: 'Nome do cliente', placeholder: 'Ex: Carlos' },
-      { label: 'Valor / descrição', placeholder: 'Ex: R$ 150,00 para conserto do anel' },
     ],
   },
 ]
