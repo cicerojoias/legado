@@ -14,6 +14,12 @@ function getToken(): string {
   return token
 }
 
+function getWabaId(): string {
+  const id = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID
+  if (!id) throw new Error('WHATSAPP_BUSINESS_ACCOUNT_ID não configurado')
+  return id
+}
+
 /**
  * Envia uma mensagem de texto para um destinatário.
  * @param contextWaMessageId - wa_message_id da mensagem citada (reply). Deve ser o ID
@@ -229,11 +235,11 @@ export async function validateTemplate(
   templateName: string,
   languageCode: string
 ): Promise<boolean> {
-  const phoneId = getPhoneId()
+  const wabaId = getWabaId()
   const token = getToken()
 
   try {
-    const url = `${BASE_URL}/${phoneId}/message_templates?name=${encodeURIComponent(templateName)}`
+    const url = `${BASE_URL}/${wabaId}/message_templates?name=${encodeURIComponent(templateName)}`
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     })
