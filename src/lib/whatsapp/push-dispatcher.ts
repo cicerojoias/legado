@@ -22,7 +22,7 @@ export async function dispatchPushForConversation(
         user: {
           role: { in: ['ADMIN', 'SUPER_ADMIN', 'GERENTE'] },
           ativo: true,
-          notif_push: true,
+          // notif_push gate applies only to daily summary — WAB alerts go to all subscribed eligible users
         },
       },
       select: { 
@@ -36,7 +36,7 @@ export async function dispatchPushForConversation(
     console.log(`[push-dispatcher] Encontradas ${subscriptions.length} subscriptions elegíveis`)
 
     if (subscriptions.length === 0) {
-      console.log('[push-dispatcher] Nenhuma subscription encontrada. Verifique: 1) Usuários com role ADMIN/SUPER_ADMIN/GERENTE, 2) ativo=true, 3) notif_push=true, 4) subscriptions registradas')
+      console.log('[push-dispatcher] Nenhuma subscription encontrada. Verifique: 1) Usuários com role ADMIN/SUPER_ADMIN/GERENTE, 2) ativo=true, 3) subscriptions registradas no perfil')
       return
     }
 

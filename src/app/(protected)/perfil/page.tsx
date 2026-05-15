@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.44', data: '14/05/2026', resumo: 'fix: notificações push WAB — dispatchPushForConversation não exige mais notif_push=true; alertas de mensagens chegam a qualquer usuário com subscription ativa' },
     { versao: '0.18.43', data: '01/05/2026', resumo: 'WAB: simplificação de templates — apenas Retomar Atendimento disponível; removidos Boas-vindas, Peça Pronta e Orçamento do seletor pós-24h' },
     { versao: '0.18.42', data: '01/05/2026', resumo: 'WAB: fix envio de templates WhatsApp — removido componente header para alinhar com configuração do Meta (header opcional); corrige erro de validação da API' },
     { versao: '0.18.41', data: '01/05/2026', resumo: 'WAB: templates pós-24h — validação em tempo real, indicadores visuais (✅/❌/🔄), endpoint validate-template e guia de configuração no Meta Business Manager' },
