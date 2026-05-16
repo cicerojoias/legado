@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock, X, ZoomIn } from 'lucide-react'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock, X, ZoomIn, MapPin, User, Package, MousePointerClick, Bell, CircleOff, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
@@ -221,7 +221,47 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const { mediaUrl, mimeType, content, type } = message
 
-  // ── Imagem ──────────────────────────────────────────────────────────────
+  const pillCls = cn(
+    'flex items-center gap-2 my-1 rounded-xl px-3 py-2.5 text-sm',
+    isOutbound ? 'bg-white/10 border border-white/15' : 'bg-black/5 border border-black/8'
+  )
+
+  // ── Figurinha ────────────────────────────────────────────────────────────
+  if (type === 'sticker') {
+    return (
+      <div className="mb-1">
+        {mediaUrl ? (
+          <>
+            <div
+              className="relative group cursor-zoom-in inline-block"
+              onClick={() => setLightboxSrc(mediaUrl)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl}
+                alt="figurinha"
+                className="w-28 h-28 object-contain rounded-lg"
+                loading="lazy"
+                draggable={false}
+              />
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-black/15">
+                <ZoomIn className="w-6 h-6 text-white drop-shadow-md" />
+              </div>
+            </div>
+            <AnimatePresence>
+              {lightboxSrc && (
+                <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+              )}
+            </AnimatePresence>
+          </>
+        ) : (
+          <span className="italic text-muted-foreground text-xs">[Figurinha indisponível]</span>
+        )}
+      </div>
+    )
+  }
+
+  // ── Imagem ───────────────────────────────────────────────────────────────
   if (type === 'image' || mimeType?.startsWith('image/')) {
     return (
       <div className="mb-1">
@@ -299,7 +339,101 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
     )
   }
 
-  // Se não for mídia reconhecida, mas tiver mediaUrl, mostra link de download
+  // ── Localização ──────────────────────────────────────────────────────────
+  if (type === 'location') {
+    let lat = 0, lng = 0, name = '', address = ''
+    try {
+      const p = JSON.parse(content || '{}')
+      lat = p.lat ?? 0; lng = p.lng ?? 0; name = p.name || ''; address = p.address || ''
+    } catch { /* conteúdo legado: mostra genérico */ }
+    const mapsUrl = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : null
+    return (
+      <a
+        href={mapsUrl || '#'}
+        target={mapsUrl ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        className={cn(pillCls, 'hover:opacity-80 transition-opacity')}
+        onClick={!mapsUrl ? e => e.preventDefault() : undefined}
+      >
+        <MapPin className="w-5 h-5 shrink-0 text-rose-500" />
+        <div className="min-w-0">
+          <p className="font-medium truncate">{name || 'Localização'}</p>
+          {address && <p className="text-xs opacity-70 truncate">{address}</p>}
+          {mapsUrl && <p className="text-xs opacity-60 flex items-center gap-0.5 mt-0.5">Ver no Maps <ExternalLink className="w-2.5 h-2.5" /></p>}
+        </div>
+      </a>
+    )
+  }
+
+  // ── Contato compartilhado ────────────────────────────────────────────────
+  if (type === 'contacts') {
+    let name = '', total = 1
+    try {
+      const p = JSON.parse(content || '{}')
+      name = p.name || ''; total = p.total ?? 1
+    } catch { /* legado */ }
+    const label = total > 1 ? `${total} contatos` : (name || 'Contato')
+    return (
+      <div className={pillCls}>
+        <User className="w-5 h-5 shrink-0 text-blue-500" />
+        <div className="min-w-0">
+          <p className="font-medium truncate">{label}</p>
+          <p className="text-xs opacity-60">Cartão de contato</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Pedido (catálogo) ────────────────────────────────────────────────────
+  if (type === 'order') {
+    let count = 0, text = ''
+    try {
+      const p = JSON.parse(content || '{}')
+      count = p.count ?? 0; text = p.text || ''
+    } catch { /* legado */ }
+    return (
+      <div className={pillCls}>
+        <Package className="w-5 h-5 shrink-0 text-amber-500" />
+        <div className="min-w-0">
+          <p className="font-medium">Pedido{count > 0 ? ` — ${count} item${count !== 1 ? 's' : ''}` : ''}</p>
+          {text && <p className="text-xs opacity-70 truncate">{text}</p>}
+          <p className="text-xs opacity-60">Solicitado pelo cliente</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Resposta de botão / interativo ───────────────────────────────────────
+  if (type === 'interactive' || type === 'button') {
+    return (
+      <div className={cn(pillCls, 'gap-1.5')}>
+        <MousePointerClick className="w-4 h-4 shrink-0 opacity-60" />
+        <span className="text-sm">{content || '[Botão]'}</span>
+      </div>
+    )
+  }
+
+  // ── Notificação de sistema ───────────────────────────────────────────────
+  if (type === 'system') {
+    return (
+      <div className="flex items-center gap-1.5 my-0.5 text-xs opacity-60 italic">
+        <Bell className="w-3 h-3 shrink-0" />
+        <span>{content || 'Notificação do sistema'}</span>
+      </div>
+    )
+  }
+
+  // ── Tipo não suportado / desconhecido ────────────────────────────────────
+  if (type === 'unsupported' || type === 'unknown') {
+    return (
+      <div className="flex items-center gap-1.5 my-0.5 text-xs opacity-50 italic">
+        <CircleOff className="w-3 h-3 shrink-0" />
+        <span>Tipo de mensagem não suportado</span>
+      </div>
+    )
+  }
+
+  // ── Fallback: mediaUrl genérico ──────────────────────────────────────────
   if (mediaUrl) {
     return (
       <a

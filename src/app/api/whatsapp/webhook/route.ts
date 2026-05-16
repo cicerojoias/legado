@@ -201,6 +201,38 @@ export async function POST(req: NextRequest) {
               content = msg.document?.filename || '[Documento]'
               mediaId = msg.document?.id || ''
               mimeType = msg.document?.mime_type || ''
+            } else if (msg.type === 'sticker') {
+              content = msg.sticker?.animated ? '[Figurinha animada]' : '[Figurinha]'
+              mediaId = msg.sticker?.id || ''
+              mimeType = msg.sticker?.mime_type || 'image/webp'
+            } else if (msg.type === 'location') {
+              const loc = msg.location
+              content = JSON.stringify({
+                lat: loc?.latitude,
+                lng: loc?.longitude,
+                name: loc?.name || '',
+                address: loc?.address || '',
+                url: loc?.url || '',
+              })
+            } else if (msg.type === 'contacts') {
+              const first = msg.contacts?.[0]
+              const name = first?.name?.formatted_name || first?.name?.first_name || ''
+              const total = msg.contacts?.length ?? 1
+              content = JSON.stringify({ name, total })
+            } else if (msg.type === 'order') {
+              const count = msg.order?.product_items?.length ?? 0
+              content = JSON.stringify({ count, text: msg.order?.text || '' })
+            } else if (msg.type === 'interactive') {
+              content = msg.interactive?.button_reply?.title
+                || msg.interactive?.list_reply?.title
+                || msg.interactive?.nfm_reply?.body
+                || '[Interativo]'
+            } else if (msg.type === 'button') {
+              content = msg.button?.text || '[Botão]'
+            } else if (msg.type === 'system') {
+              content = msg.system?.body || '[Sistema]'
+            } else if (msg.type === 'unsupported' || msg.type === 'unknown') {
+              content = '[Mensagem não suportada]'
             }
 
             // mediaUrl aponta para nosso proxy: busca da Meta on-demand, sem background job
