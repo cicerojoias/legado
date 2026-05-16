@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock, X, ZoomIn } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 import { AudioPlayer } from './AudioPlayer'
@@ -39,7 +41,51 @@ const FOOTER_H = 72
 const PICKER_H = 56
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handler)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+        onClick={onClose}
+        aria-label="Fechar"
+      >
+        <X className="w-6 h-6" />
+      </button>
+      <motion.img
+        src={src}
+        alt="imagem ampliada"
+        className="max-w-[92vw] max-h-[90vh] rounded-xl object-contain shadow-2xl"
+        initial={{ scale: 0.88, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.88, opacity: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        onClick={e => e.stopPropagation()}
+        draggable={false}
+      />
+    </motion.div>,
+    document.body
+  )
+}
+
 function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: boolean }) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const { mediaUrl, mimeType, content, type } = message
 
   // ── Imagem ──────────────────────────────────────────────────────────────
@@ -47,14 +93,29 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
     return (
       <div className="mb-1">
         {mediaUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={mediaUrl}
-            alt="imagem"
-            className="max-w-full rounded-lg object-cover max-h-64 w-full"
-            loading="lazy"
-            draggable={false}
-          />
+          <>
+            <div
+              className="relative group cursor-zoom-in"
+              onClick={() => setLightboxSrc(mediaUrl)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl}
+                alt="imagem"
+                className="max-w-full rounded-lg object-cover max-h-64 w-full"
+                loading="lazy"
+                draggable={false}
+              />
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                <ZoomIn className="w-8 h-8 text-white drop-shadow-md" />
+              </div>
+            </div>
+            <AnimatePresence>
+              {lightboxSrc && (
+                <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+              )}
+            </AnimatePresence>
+          </>
         ) : (
           <span className="italic text-muted-foreground text-xs">[Imagem indisponível]</span>
         )}
