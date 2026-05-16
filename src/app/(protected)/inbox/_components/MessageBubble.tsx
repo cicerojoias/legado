@@ -42,15 +42,127 @@ const PICKER_H = 56
 
 /** Renderiza o corpo da mensagem conforme tipo e mimeType */
 function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [transitioning, setTransitioning] = useState(false)
+  const [dragging, setDragging] = useState(false)
+
+  const zoomRef = useRef(1)
+  const panRef = useRef({ x: 0, y: 0 })
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null)
+  const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null)
+  const lastTapRef = useRef(0)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  function clamp(v: number) { return Math.max(1, Math.min(5, v)) }
+
+  function snapReset() {
+    setTransitioning(true)
+    zoomRef.current = 1
+    panRef.current = { x: 0, y: 0 }
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+    setTimeout(() => setTransitioning(false), 220)
+  }
+
+  function snapZoom(target: number) {
+    setTransitioning(true)
+    zoomRef.current = target
+    setZoom(target)
+    setTimeout(() => setTransitioning(false), 220)
+  }
+
+  // ESC + body scroll lock
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', handler)
-      document.body.style.overflow = ''
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      zoomRef.current > 1 ? snapReset() : onClose()
     }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [onClose])
+
+  // Native wheel + touchmove (passive: false obrigatório para preventDefault)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const next = clamp(zoomRef.current * (e.deltaY > 0 ? 0.9 : 1.1))
+      zoomRef.current = next
+      setZoom(next)
+      if (next === 1) { panRef.current = { x: 0, y: 0 }; setPan({ x: 0, y: 0 }) }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault()
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const next = clamp(pinchRef.current.zoom * (Math.sqrt(dx * dx + dy * dy) / pinchRef.current.dist))
+        zoomRef.current = next
+        setZoom(next)
+      } else if (e.touches.length === 1 && dragRef.current) {
+        e.preventDefault()
+        const np = {
+          x: dragRef.current.px + (e.touches[0].clientX - dragRef.current.x),
+          y: dragRef.current.py + (e.touches[0].clientY - dragRef.current.y),
+        }
+        panRef.current = np
+        setPan(np)
+      }
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => { el.removeEventListener('wheel', onWheel); el.removeEventListener('touchmove', onTouchMove) }
+  }, [])
+
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      pinchRef.current = { dist: Math.sqrt(dx * dx + dy * dy), zoom: zoomRef.current }
+      dragRef.current = null
+    } else if (e.touches.length === 1) {
+      const now = Date.now()
+      if (now - lastTapRef.current < 280) {
+        lastTapRef.current = 0
+        zoomRef.current > 1 ? snapReset() : snapZoom(2.5)
+        return
+      }
+      lastTapRef.current = now
+      if (zoomRef.current > 1) {
+        dragRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, px: panRef.current.x, py: panRef.current.y }
+      }
+    }
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length < 2) pinchRef.current = null
+    if (e.touches.length === 0) { dragRef.current = null; setDragging(false) }
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    if (zoomRef.current <= 1) return
+    e.preventDefault()
+    dragRef.current = { x: e.clientX, y: e.clientY, px: panRef.current.x, py: panRef.current.y }
+    setDragging(true)
+  }
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (!dragRef.current) return
+    const np = {
+      x: dragRef.current.px + (e.clientX - dragRef.current.x),
+      y: dragRef.current.py + (e.clientY - dragRef.current.y),
+    }
+    panRef.current = np
+    setPan(np)
+  }
+
+  function handleMouseUp() { dragRef.current = null; setDragging(false) }
 
   return createPortal(
     <motion.div
@@ -59,26 +171,47 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      onClick={onClose}
+      onClick={() => { zoomRef.current > 1 ? snapReset() : onClose() }}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       <button
-        className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-        onClick={onClose}
+        className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
+        onClick={e => { e.stopPropagation(); onClose() }}
         aria-label="Fechar"
       >
         <X className="w-6 h-6" />
       </button>
-      <motion.img
-        src={src}
-        alt="imagem ampliada"
-        className="max-w-[92vw] max-h-[90vh] rounded-xl object-contain shadow-2xl"
+
+      <motion.div
+        ref={wrapRef}
+        className="flex items-center justify-center"
         initial={{ scale: 0.88, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.88, opacity: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={e => e.stopPropagation()}
-        draggable={false}
-      />
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        style={{ touchAction: 'none' }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="imagem ampliada"
+          className="max-w-[92vw] max-h-[90vh] rounded-xl object-contain shadow-2xl select-none"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            transition: transitioning ? 'transform 0.2s ease-out' : 'none',
+            cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in',
+          }}
+          draggable={false}
+        />
+      </motion.div>
     </motion.div>,
     document.body
   )
