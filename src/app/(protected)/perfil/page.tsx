@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.50', data: '19/05/2026', resumo: 'Relatórios: módulo de relatório anual premium com visualização de desempenho mensal, gráfico de barras com rolagem horizontal otimizada para mobile e painel com lista de resumo numérico' },
     { versao: '0.18.49', data: '19/05/2026', resumo: 'WAB: remoção da bolinha de status "online" enganosa e implementação de gerador robusto de iniciais de avatares para nomes únicos, emojis e pontuações com fallback inteligente para DDD' },
     { versao: '0.18.48', data: '15/05/2026', resumo: 'WAB: placeholders para todos os tipos de mensagem Meta — figurinha (lightbox), localização (link Maps), contato, pedido, botão/interativo, sistema e não-suportado' },
     { versao: '0.18.47', data: '15/05/2026', resumo: 'WAB: pinch-to-zoom no lightbox — pinça (mobile), scroll de mouse (desktop), arrastar para pan, duplo toque para zoom 2.5x e reset; ESC/backdrop redefine zoom antes de fechar' },

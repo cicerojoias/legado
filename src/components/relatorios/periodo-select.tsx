@@ -7,6 +7,7 @@ const PERIODOS = [
     { value: 'hoje', label: 'Hoje' },
     { value: 'semana', label: 'Semana' },
     { value: 'mes', label: 'Mês' },
+    { value: 'ano', label: 'Ano' },
 ] as const;
 
 export function PeriodoSelect({ current }: { current: string }) {

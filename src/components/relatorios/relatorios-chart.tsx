@@ -64,38 +64,53 @@ const formatCompact = (value: number) =>
 export function RelatoriosChart({ data, periodo }: { data: ChartDataPoint[]; periodo?: string }) {
     const isSemana = periodo === 'semana';
     const isMes = periodo === 'mes';
+    const isAno = periodo === 'ano';
+
+    const chartTitle = isAno ? 'Entradas vs Saídas por Mês' : 'Entradas vs Saídas por Dia';
+
+    const chartContent = (
+        <ChartContainer config={chartConfig} className={isSemana ? 'h-44 w-full aspect-auto' : 'h-40 w-full aspect-auto'}>
+            <BarChart data={data} barCategoryGap="25%" margin={{ left: 0, right: 4, top: 4, bottom: isSemana ? 8 : 0 }}>
+                <XAxis
+                    dataKey="date"
+                    tickFormatter={isSemana ? undefined : (isMes ? undefined : (isAno ? undefined : formatDay))}
+                    tick={isSemana ? SemanaTick : (isMes ? (props: any) => <MesTick {...props} data={data} /> : { fontSize: 10, fill: '#6B6358' })}
+                    axisLine={false}
+                    tickLine={false}
+                    height={isSemana || isMes ? 36 : 20}
+                    interval={0}
+                />
+                <YAxis
+                    tickFormatter={formatCompact}
+                    tick={{ fontSize: 9, fill: '#6B6358' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={70}
+                />
+                <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                />
+                <Bar dataKey="entradas" fill="#184434" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                <Bar dataKey="saidas" fill="#B54040" radius={[4, 4, 0, 0]} maxBarSize={28} />
+            </BarChart>
+        </ChartContainer>
+    );
 
     return (
         <div className="bg-card rounded-xl p-4 border border-border">
             <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-wide mb-3">
-                Entradas vs Saídas por Dia
+                {chartTitle}
             </p>
-            <ChartContainer config={chartConfig} className={isSemana ? 'h-44 w-full aspect-auto' : 'h-40 w-full aspect-auto'}>
-                <BarChart data={data} barCategoryGap="25%" margin={{ left: 0, right: 4, top: 4, bottom: isSemana ? 8 : 0 }}>
-                    <XAxis
-                        dataKey="date"
-                        tickFormatter={isSemana ? undefined : (isMes ? undefined : formatDay)}
-                        tick={isSemana ? SemanaTick : (isMes ? (props: any) => <MesTick {...props} data={data} /> : { fontSize: 10, fill: '#6B6358' })}
-                        axisLine={false}
-                        tickLine={false}
-                        height={isSemana || isMes ? 36 : 20}
-                        interval={0}
-                    />
-                    <YAxis
-                        tickFormatter={formatCompact}
-                        tick={{ fontSize: 9, fill: '#6B6358' }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={70}
-                    />
-                    <ChartTooltip
-                        content={<ChartTooltipContent />}
-                        cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-                    />
-                    <Bar dataKey="entradas" fill="#184434" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                    <Bar dataKey="saidas" fill="#B54040" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                </BarChart>
-            </ChartContainer>
+            {isAno ? (
+                <div className="w-full overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border">
+                    <div className="min-w-[600px] h-40">
+                        {chartContent}
+                    </div>
+                </div>
+            ) : (
+                chartContent
+            )}
         </div>
     );
 }

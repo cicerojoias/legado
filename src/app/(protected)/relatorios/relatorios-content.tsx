@@ -25,6 +25,14 @@ function calcPeriod(periodo: string) {
         return { start, end, prevStart, prevEnd };
     }
 
+    if (periodo === 'ano') {
+        const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+        const end = new Date(Date.UTC(now.getUTCFullYear(), 11, 31, 23, 59, 59, 999));
+        const prevStart = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));
+        const prevEnd = new Date(Date.UTC(now.getUTCFullYear() - 1, 11, 31, 23, 59, 59, 999));
+        return { start, end, prevStart, prevEnd };
+    }
+
     if (periodo === 'semana') {
         const start = new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
         const end = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -63,6 +71,12 @@ interface Props {
 }
 
 export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: Props) {
+    const formatCurrency = (val: number) =>
+        new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+        }).format(val);
+
     const { start, end, prevStart, prevEnd } = calcPeriod(periodo);
     const lojaWhere = buildLojaWhere(loja, dbUserLoja);
     const baseWhere = { deletado_at: null, ...lojaWhere };
@@ -115,7 +129,21 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
     // Agrega os dados para o gráfico
     const chartData: { date: string; dateRange?: string; entradas: number; saidas: number }[] = [];
 
-    if (periodo === 'mes') {
+    if (periodo === 'ano') {
+        const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        for (let i = 0; i < 12; i++) {
+            chartData.push({ date: mesesNomes[i], entradas: 0, saidas: 0 });
+        }
+
+        for (const l of chartLancamentos) {
+            const mesIndex = l.data_ref.getUTCMonth(); // 0 a 11
+            const entry = chartData[mesIndex];
+            if (entry) {
+                if (l.tipo === 'ENTRADA') entry.entradas += Number(l.valor);
+                else entry.saidas += Number(l.valor);
+            }
+        }
+    } else if (periodo === 'mes') {
         const weeksCount = 5;
         const lastDayStr = end.toISOString().split('T')[0].split('-')[2];
         const lastDay = Number(lastDayStr);
@@ -197,6 +225,41 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
 
             {/* Gráfico */}
             {chartData.length > 0 && <RelatoriosChart data={chartData} periodo={periodo} />}
+
+            {/* Resumo Mensal (Apenas no período Anual) */}
+            {periodo === 'ano' && (
+                <div className="bg-card rounded-xl border border-border overflow-hidden">
+                    <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-wide p-3 border-b border-border">
+                        Resumo Mensal ({start.getUTCFullYear()})
+                    </p>
+                    <div className="divide-y divide-border/60">
+                        {chartData.map((mes) => {
+                            const saldoMes = mes.entradas - mes.saidas;
+                            return (
+                                <div key={mes.date} className="flex items-center justify-between p-3 text-xs hover:bg-muted/30 transition-colors">
+                                    <span className="font-semibold text-foreground w-12">{mes.date}</span>
+                                    <div className="flex gap-4 text-right flex-1 justify-end">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Entradas</span>
+                                            <span className="text-emerald-700 font-medium">{formatCurrency(mes.entradas)}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Saídas</span>
+                                            <span className="text-rose-700 font-medium">{formatCurrency(mes.saidas)}</span>
+                                        </div>
+                                        <div className="flex flex-col w-24">
+                                            <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Saldo</span>
+                                            <span className={`font-bold ${saldoMes >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                {formatCurrency(saldoMes)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Lista */}
             <div className="pt-1">
