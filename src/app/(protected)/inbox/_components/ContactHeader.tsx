@@ -5,7 +5,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { activateIaWithCatchUpAction, getIaActivationPreview, toggleIaAtiva } from '../actions/conversation'
-import { cn } from '@/lib/utils'
+import { cn, getContactInitials } from '@/lib/utils'
 import type { WaContact, WaConversation, WaTag } from '@prisma/client'
 import type { TagWithMeta } from './types'
 import { ConversationTagPanel } from './ConversationTagPanel'
@@ -138,12 +138,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
     }
   }
 
-  const initials = (contact.name ?? contact.phone)
-    .split(' ')
-    .slice(0, 2)
-    .map((w: string) => w[0])
-    .join('')
-    .toUpperCase()
+  const initials = getContactInitials(contact.name, contact.phone)
 
   // Modo seleção: renderiza overlay no lugar do header normal
   if (active) {

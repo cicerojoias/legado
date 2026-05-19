@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.49', data: '19/05/2026', resumo: 'WAB: remoção da bolinha de status "online" enganosa e implementação de gerador robusto de iniciais de avatares para nomes únicos, emojis e pontuações com fallback inteligente para DDD' },
     { versao: '0.18.48', data: '15/05/2026', resumo: 'WAB: placeholders para todos os tipos de mensagem Meta — figurinha (lightbox), localização (link Maps), contato, pedido, botão/interativo, sistema e não-suportado' },
     { versao: '0.18.47', data: '15/05/2026', resumo: 'WAB: pinch-to-zoom no lightbox — pinça (mobile), scroll de mouse (desktop), arrastar para pan, duplo toque para zoom 2.5x e reset; ESC/backdrop redefine zoom antes de fechar' },
     { versao: '0.18.46', data: '15/05/2026', resumo: 'WAB: fullscreen de imagem — clicar em qualquer foto no chat abre lightbox animado (Framer Motion) com backdrop escuro, botão X e fechamento por ESC ou clique fora' },

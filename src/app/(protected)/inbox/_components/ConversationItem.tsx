@@ -1,6 +1,6 @@
 import type { ConversationWithPreview } from './types'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn, getContactInitials } from '@/lib/utils'
 import { Check, CheckCheck, Clock } from 'lucide-react'
 
 interface ConversationItemProps {
@@ -47,15 +47,10 @@ function formatTime(date: Date | string | null): string {
 }
 
 export function ConversationItem({ conversation, isActive }: ConversationItemProps) {
-  const { contact, messages, status, last_message_at, unreadCount, conversation_tags } = conversation
+  const { contact, messages, last_message_at, unreadCount, conversation_tags } = conversation
   const lastMsg = messages[0]
   const hasUnread = unreadCount > 0
-  const initials = (contact.name ?? contact.phone)
-    .split(' ')
-    .slice(0, 2)
-    .map((w: string) => w[0])
-    .join('')
-    .toUpperCase()
+  const initials = getContactInitials(contact.name, contact.phone)
 
   const visibleTags = conversation_tags.slice(0, 2)
   const extraTags = conversation_tags.length - 2
@@ -73,9 +68,6 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
         <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
           {initials}
         </div>
-        {status === 'open' && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
-        )}
       </div>
 
       {/* Info */}

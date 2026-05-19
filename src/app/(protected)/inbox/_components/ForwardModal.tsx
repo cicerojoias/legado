@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { X, Search, Forward } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getContactInitials } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -38,10 +38,7 @@ function avatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-function getInitials(name: string | null, phone: string): string {
-  const src = name ?? phone
-  return src.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase().slice(0, 2)
-}
+
 
 function getLastMessagePreview(msg: ForwardConversation['messages'][0] | undefined): string {
   if (!msg) return 'Sem mensagens'
@@ -220,7 +217,7 @@ export function ForwardModal({ open, onClose, messageIds, messageCount, onForwar
             filtered.map(conv => {
               const isSelected = selected.has(conv.id)
               const displayName = conv.contact.name ?? conv.contact.phone
-              const initials = getInitials(conv.contact.name, conv.contact.phone)
+              const initials = getContactInitials(conv.contact.name, conv.contact.phone)
               const color = avatarColor(displayName)
               const preview = getLastMessagePreview(conv.messages[0])
 
