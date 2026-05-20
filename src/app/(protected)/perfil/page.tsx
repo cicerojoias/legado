@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.52', data: '20/05/2026', resumo: 'WAB: divisores de data e cabeçalho flutuante (sticky) nas conversas do chat para melhor legibilidade e organização temporal' },
     { versao: '0.18.51', data: '20/05/2026', resumo: 'WAB/PWA: navegação global ao clicar nas notificações push, fuso horário UTC-3 e filtro de deletados no resumo financeiro, correção de timezone de recebimento de mensagens e exibição precisa de ontem/dias da semana no chat/sidebar' },
     { versao: '0.18.50', data: '19/05/2026', resumo: 'Relatórios: módulo de relatório anual premium com visualização de desempenho mensal, gráfico de barras com rolagem horizontal otimizada para mobile e painel com lista de resumo numérico' },
     { versao: '0.18.49', data: '19/05/2026', resumo: 'WAB: remoção da bolinha de status "online" enganosa e implementação de gerador robusto de iniciais de avatares para nomes únicos, emojis e pontuações com fallback inteligente para DDD' },

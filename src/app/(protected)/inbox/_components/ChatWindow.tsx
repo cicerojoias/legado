@@ -19,6 +19,49 @@ const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
 const PAGE_SIZE = 100
 const BOTTOM_THRESHOLD = 150 // px — considera "no fundo" se dentro desse limite
 
+function getLocalDateString(dateInput: Date | string | null): string {
+  if (!dateInput) return ''
+  const d = new Date(dateInput)
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Recife',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  return fmt.format(d) // "YYYY-MM-DD"
+}
+
+function getDateLabel(dateInput: Date | string | null): string {
+  if (!dateInput) return ''
+  const d = new Date(dateInput)
+  const now = new Date()
+
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Recife',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const dStr = fmt.format(d)
+  const nowStr = fmt.format(now)
+
+  if (dStr === nowStr) return 'Hoje'
+
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = fmt.format(yesterday)
+
+  if (dStr === yesterdayStr) return 'Ontem'
+
+  return d.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Recife',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 interface ChatWindowProps {
   conversationId: string
   initialMessages: WaMessage[]
@@ -322,18 +365,39 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
             Sem mensagens ainda
           </div>
         ) : (
-          messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              onReply={() => setReplyTo({
-                id: msg.id,
-                content: msg.content ?? '[Mídia]',
-                direction: msg.direction,
-              })}
-              onReact={(emoji) => handleReact(msg.id, emoji)}
-            />
-          ))
+          messages.flatMap((msg, index) => {
+            const prevMsg = index > 0 ? messages[index - 1] : null
+            const dateStr = getLocalDateString(msg.timestamp)
+            const prevDateStr = prevMsg ? getLocalDateString(prevMsg.timestamp) : null
+            const showSeparator = dateStr !== prevDateStr
+
+            const elements = []
+            if (showSeparator) {
+              elements.push(
+                <div
+                  key={`sep-${msg.id}`}
+                  className="flex justify-center my-2 sticky top-0 z-10 pointer-events-none"
+                >
+                  <span className="bg-card/95 border backdrop-blur text-muted-foreground text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
+                    {getDateLabel(msg.timestamp)}
+                  </span>
+                </div>
+              )
+            }
+            elements.push(
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onReply={() => setReplyTo({
+                  id: msg.id,
+                  content: msg.content ?? '[Mídia]',
+                  direction: msg.direction,
+                })}
+                onReact={(emoji) => handleReact(msg.id, emoji)}
+              />
+            )
+            return elements
+          })
         )}
         <div ref={bottomRef} />
       </div>
