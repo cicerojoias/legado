@@ -255,20 +255,6 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     }
   }, [conversationId, scrollToBottom])
 
-  // Listener para mensagens do Service Worker (notificationclick → NAVIGATE_TO)
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return
-
-    const handler = (event: MessageEvent<{ type?: string; url?: string }>) => {
-      if (event.data?.type === 'NAVIGATE_TO' && typeof event.data.url === 'string') {
-        router.push(event.data.url)
-      }
-    }
-
-    navigator.serviceWorker.addEventListener('message', handler)
-    return () => navigator.serviceWorker.removeEventListener('message', handler)
-  }, [router])
-
   const windowExpired = useMemo(() => {
     const lastInbound = [...messages].reverse().find((m) => m.direction === 'inbound')
     if (!lastInbound) return true

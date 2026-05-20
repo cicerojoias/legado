@@ -89,8 +89,10 @@ async function getTotaisFinanceirosDoDia(): Promise<{
   saldo: number
   numLancamentos: number
 }> {
-  const now = new Date()
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  // Obter data atual no fuso horário do Brasil (UTC-3) para garantir o cálculo correto do dia
+  const tzOffset = -3 * 60 * 60 * 1000
+  const localNow = new Date(Date.now() + tzOffset)
+  const todayStart = new Date(Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate()))
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1)
 
   const lancamentos = await prisma.lancamento.findMany({
@@ -99,6 +101,7 @@ async function getTotaisFinanceirosDoDia(): Promise<{
         gte: todayStart,
         lte: todayEnd,
       },
+      deletado_at: null, // Apenas lançamentos ativos
     },
     select: {
       tipo: true,

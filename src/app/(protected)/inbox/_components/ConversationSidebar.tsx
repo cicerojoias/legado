@@ -39,11 +39,49 @@ interface SearchResults {
 
 function formatTime(ts: string) {
   const d = new Date(ts)
-  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000)
-  if (diffDays === 0) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  if (diffDays === 1) return 'Ontem'
-  if (diffDays < 7) return d.toLocaleDateString('pt-BR', { weekday: 'short' })
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  const now = new Date()
+
+  // Formatador para obter a data local no formato YYYY-MM-DD no fuso de Recife
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Recife',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const dStr = fmt.format(d) // "YYYY-MM-DD"
+  const nowStr = fmt.format(now) // "YYYY-MM-DD"
+
+  if (dStr === nowStr) {
+    return d.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Recife',
+    })
+  }
+
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = fmt.format(yesterday)
+
+  if (dStr === yesterdayStr) {
+    return 'Ontem'
+  }
+
+  const diffTime = now.getTime() - d.getTime()
+  const diffDays = diffTime / (1000 * 60 * 60 * 24)
+  if (diffDays < 7 && diffDays >= 0) {
+    return d.toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      timeZone: 'America/Recife',
+    })
+  }
+
+  return d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'America/Recife',
+  })
 }
 
 function highlight(text: string, query: string) {

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Sidebar } from "@/components/navigation/sidebar";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { NavigationProgress } from "@/components/navigation/navigation-progress";
+import { PwaNavigationListener } from "@/components/navigation/pwa-navigation-listener";
 
 export default function ProtectedLayout({
     children,
@@ -10,6 +11,7 @@ export default function ProtectedLayout({
 }) {
     return (
         <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+            <PwaNavigationListener />
             <Suspense fallback={null}>
                 <NavigationProgress />
             </Suspense>

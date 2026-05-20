@@ -136,12 +136,19 @@ self.addEventListener('notificationclick', (event) => {
         includeUncontrolled: true,
       })
 
-      const existingInbox = windowClients.find((c) => c.url.includes('/inbox'))
+      // Procura qualquer aba aberta que pertença à mesma origem da aplicação
+      const existingClient = windowClients.find((c) => {
+        try {
+          return new URL(c.url).origin === self.location.origin
+        } catch {
+          return false
+        }
+      })
 
-      if (existingInbox) {
-        await (existingInbox as WindowClient).focus()
-        // Tells ChatWindow / inbox router to navigate to the right conversation
-        existingInbox.postMessage({ type: 'NAVIGATE_TO', url })
+      if (existingClient) {
+        await (existingClient as WindowClient).focus()
+        // Envia mensagem para que o PwaNavigationListener global no React redirecione a rota
+        existingClient.postMessage({ type: 'NAVIGATE_TO', url })
       } else {
         await self.clients.openWindow(url)
       }

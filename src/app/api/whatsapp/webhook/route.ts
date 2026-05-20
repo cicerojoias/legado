@@ -163,17 +163,27 @@ export async function POST(req: NextRequest) {
               select: { id: true, last_message_at: true, welcome_sent_at: true },
             })
 
+            // Parsear o timestamp real enviado pela Meta (segundos unix para objeto Date)
+            const messageTimestamp = msg.timestamp
+              ? new Date(Number(msg.timestamp) * 1000)
+              : new Date()
+
+            // Atualiza last_message_at apenas se o novo timestamp for mais recente (evita problemas com fora de ordem)
+            const lastMessageAt = (!existingConv || !existingConv.last_message_at || messageTimestamp > existingConv.last_message_at)
+              ? messageTimestamp
+              : existingConv.last_message_at
+
             // C. Garantir que a conversa existe (um contato = uma conversa)
             let waConversation = await prisma.waConversation.upsert({
               where: { contact_id: waContact.id },
               update: {
                 status: 'open',
-                last_message_at: new Date(),
+                last_message_at: lastMessageAt,
               },
               create: {
                 contact_id: waContact.id,
                 status: 'open',
-                last_message_at: new Date(),
+                last_message_at: lastMessageAt,
               },
             })
 
@@ -263,7 +273,7 @@ export async function POST(req: NextRequest) {
                 type,
                 content,
                 status: 'delivered',
-                timestamp: new Date(),
+                timestamp: messageTimestamp,
                 mediaUrl,
                 mediaId: mediaId || undefined,
                 mimeType: mimeType || undefined,
