@@ -78,6 +78,11 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
   const [assistenteOpen, setAssistenteOpen] = useState(false)
 
+  // Controle de data flutuante
+  const [isFloatingDateVisible, setIsFloatingDateVisible] = useState(false)
+  const [floatingDateLabel, setFloatingDateLabel] = useState('')
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [pendingCount, setPendingCount] = useState(0)
   const reactingRef = useRef<Set<string>>(new Set())
 
@@ -130,9 +135,52 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       rafRef.current = null
       const el = scrollContainerRef.current
       if (!el) return
+
+      // A. Controle do AtBottom
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
       isAtBottomRef.current = distanceFromBottom <= BOTTOM_THRESHOLD
+
+      // B. Controle do Indicador de Data Flutuante
+      const isScrollable = el.scrollHeight > el.clientHeight
+      if (!isScrollable || el.scrollTop <= 10) {
+        setIsFloatingDateVisible(false)
+        return
+      }
+
+      setIsFloatingDateVisible(true)
+
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsFloatingDateVisible(false)
+      }, 1500)
+
+      // Identificar qual balão está no topo do viewport
+      const containerRect = el.getBoundingClientRect()
+      const bubbles = el.getElementsByClassName('message-bubble-item')
+      let activeMsgTimestamp: string | null = null
+
+      for (let i = 0; i < bubbles.length; i++) {
+        const bubble = bubbles[i] as HTMLElement
+        const rect = bubble.getBoundingClientRect()
+        // Threshold de 40px a partir do topo do container de scroll
+        if (rect.top - containerRect.top <= 40) {
+          activeMsgTimestamp = bubble.getAttribute('data-timestamp')
+        } else {
+          break
+        }
+      }
+
+      if (activeMsgTimestamp) {
+        setFloatingDateLabel(getDateLabel(activeMsgTimestamp))
+      }
     })
+  }, [])
+
+  // Limpar timeout do scroll ao desmontar
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+    }
   }, [])
 
   const handleJumpToBottom = useCallback(() => {
@@ -337,70 +385,94 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Área de mensagens — scroll interno */}
       <div className="relative flex-1 min-h-0">
-      <div ref={scrollContainerRef} onScroll={handleScroll} className={cn('h-full overflow-y-auto overflow-x-hidden overscroll-y-none px-4 py-4 space-y-2', selectionActive && 'select-none')}>
-        {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
-        <div ref={topSentinelRef} className="h-1" />
+        {/* Indicador de Data Flutuante (WhatsApp/Telegram Style) */}
+        <div
+          className={cn(
+            'absolute top-2 left-0 right-0 flex justify-center z-20 pointer-events-none transition-opacity duration-300',
+            isFloatingDateVisible ? 'opacity-100' : 'opacity-0'
+          )}
+        >
+          <span className="bg-card/95 border backdrop-blur text-muted-foreground text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-md">
+            {floatingDateLabel}
+          </span>
+        </div>
 
-        {/* Indicador de carregamento */}
-        {isLoadingMore && (
-          <div className="flex justify-center py-2">
-            <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-          </div>
-        )}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className={cn(
+            'h-full overflow-y-auto overflow-x-hidden overscroll-y-none px-4 py-4 space-y-2',
+            selectionActive && 'select-none'
+          )}
+        >
+          {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
+          <div ref={topSentinelRef} className="h-1" />
 
-        {/* Erro ao carregar — botão de retry */}
-        {loadError && (
-          <div className="flex justify-center py-2">
-            <button
-              onClick={() => loadMore()}
-              className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
-            >
-              Erro ao carregar — toque para tentar novamente
-            </button>
-          </div>
-        )}
+          {/* Indicador de carregamento */}
+          {isLoadingMore && (
+            <div className="flex justify-center py-2">
+              <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            </div>
+          )}
 
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Sem mensagens ainda
-          </div>
-        ) : (
-          messages.flatMap((msg, index) => {
-            const prevMsg = index > 0 ? messages[index - 1] : null
-            const dateStr = getLocalDateString(msg.timestamp)
-            const prevDateStr = prevMsg ? getLocalDateString(prevMsg.timestamp) : null
-            const showSeparator = dateStr !== prevDateStr
+          {/* Erro ao carregar — botão de retry */}
+          {loadError && (
+            <div className="flex justify-center py-2">
+              <button
+                onClick={() => loadMore()}
+                className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
+              >
+                Erro ao carregar — toque para tentar novamente
+              </button>
+            </div>
+          )}
 
-            const elements = []
-            if (showSeparator) {
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+              Sem mensagens ainda
+            </div>
+          ) : (
+            messages.flatMap((msg, index) => {
+              const prevMsg = index > 0 ? messages[index - 1] : null
+              const dateStr = getLocalDateString(msg.timestamp)
+              const prevDateStr = prevMsg ? getLocalDateString(prevMsg.timestamp) : null
+              const showSeparator = dateStr !== prevDateStr
+
+              const elements = []
+              if (showSeparator) {
+                elements.push(
+                  <div
+                    key={`sep-${msg.id}`}
+                    className="flex justify-center my-2"
+                  >
+                    <span className="bg-card/85 border backdrop-blur text-muted-foreground text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
+                      {getDateLabel(msg.timestamp)}
+                    </span>
+                  </div>
+                )
+              }
               elements.push(
                 <div
-                  key={`sep-${msg.id}`}
-                  className="flex justify-center my-2 sticky top-0 z-10 pointer-events-none"
+                  key={msg.id}
+                  className="message-bubble-item"
+                  data-timestamp={msg.timestamp.toString()}
                 >
-                  <span className="bg-card/95 border backdrop-blur text-muted-foreground text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
-                    {getDateLabel(msg.timestamp)}
-                  </span>
+                  <MessageBubble
+                    message={msg}
+                    onReply={() => setReplyTo({
+                      id: msg.id,
+                      content: msg.content ?? '[Mídia]',
+                      direction: msg.direction,
+                    })}
+                    onReact={(emoji) => handleReact(msg.id, emoji)}
+                  />
                 </div>
               )
-            }
-            elements.push(
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                onReply={() => setReplyTo({
-                  id: msg.id,
-                  content: msg.content ?? '[Mídia]',
-                  direction: msg.direction,
-                })}
-                onReact={(emoji) => handleReact(msg.id, emoji)}
-              />
-            )
-            return elements
-          })
-        )}
-        <div ref={bottomRef} />
-      </div>
+              return elements
+            })
+          )}
+          <div ref={bottomRef} />
+        </div>
 
       {/* Botão flutuante "↓ N novas" */}
       {pendingCount > 0 && (
