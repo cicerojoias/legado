@@ -11,6 +11,7 @@ import { dispatchPushForConversation } from '@/lib/whatsapp/push-dispatcher'
 import { incrementUnreadForConversation } from '@/lib/whatsapp/unread-manager'
 import { sendTextMessage } from '@/lib/whatsapp/meta-client'
 import { maybeRespondWithAI } from '@/lib/whatsapp/ai-responder'
+import { persistMediaToR2 } from '@/lib/whatsapp/media-uploader'
 
 const WELCOME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -281,6 +282,18 @@ export async function POST(req: NextRequest) {
                 replyToSnapshot,
               },
             })
+
+            // Salva mídia no R2 de forma assíncrona
+            if (mediaId && mimeType) {
+              try {
+                after(async () => {
+                  console.log(`[webhook] Processando persistência assíncrona da mídia ${mediaId} no R2`)
+                  await persistMediaToR2(mediaId, mimeType)
+                })
+              } catch {
+                void persistMediaToR2(mediaId, mimeType)
+              }
+            }
 
             // D. Mensagem de boas-vindas automática (ANTES do after — evita race condition)
             try {
