@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.59', data: '21/05/2026', resumo: 'WAB: correção da condição de corrida na inicialização do realtime e implementação de cliente singleton do Supabase, garantindo conexões autenticadas corretas' },
     { versao: '0.18.58', data: '21/05/2026', resumo: 'WAB: liberação de políticas de RLS para operadores e gerentes no Supabase, corrigindo bug de mensagens e lista de conversas não atualizarem automaticamente em tempo real para não-admins' },
     { versao: '0.18.57', data: '20/05/2026', resumo: 'WAB: invalidação forçada do Next.js Router Cache ao retornar para o Inbox, garantindo atualização instantânea dos badges de não lidas no mobile' },
     { versao: '0.18.56', data: '20/05/2026', resumo: 'WAB: correção e sincronização instantânea dos badges (notificações) de mensagens não lidas no painel e na barra lateral ao abrir e ler chats' },

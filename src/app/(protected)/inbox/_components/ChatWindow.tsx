@@ -267,76 +267,88 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   // Realtime: escuta INSERT e UPDATE em wa_messages scoped pela conversation_id
   useEffect(() => {
     const supabase = createClient()
+    let activeChannel: RealtimeChannel | null = null
 
     console.log(`[wab-realtime-chat] Subscrevendo conversa: ${conversationId}`)
 
-    const channel = supabase
-      .channel(`wab-chat-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'wa_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          // Append direto — preserva mensagens antigas já carregadas via loadMore
-          const newMsg = payload.new as unknown as WaMessage
-          console.log(`[wab-realtime-chat] Nova mensagem na conversa ${conversationId}:`, newMsg)
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev
-            return [...prev, newMsg]
-          })
-          if (isAtBottomRef.current) {
-            scrollToBottom()
-          } else if (newMsg.direction === 'inbound') {
-            setPendingCount((prev) => prev + 1)
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'wa_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updated = payload.new as {
-            id: string
-            status: string
-            mediaUrl: string | null
-            reaction: string | null
-            type: string
-            content: string | null
-          }
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === updated.id
-                ? {
-                    ...m,
-                    status: updated.status,
-                    mediaUrl: updated.type === 'deleted' ? null : (updated.mediaUrl ?? m.mediaUrl),
-                    reaction: updated.type === 'deleted' ? null : updated.reaction,
-                    type: updated.type,
-                    content: updated.type === 'deleted' ? null : updated.content,
-                  }
-                : m
-            )
-          )
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[wab-realtime-chat] ✅ Inscrito na conversa ${conversationId}`)
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error(`[wab-realtime-chat] ❌ Erro ao subscrever conversa ${conversationId}:`, status, err)
-        }
-      })
+    const initChat = async () => {
+      try {
+        await supabase.auth.getSession()
+      } catch (err) {
+        console.error(`[wab-realtime-chat] Erro ao obter sessão na conversa ${conversationId}:`, err)
+      }
 
-    channelRef.current = channel
+      const channel = supabase
+        .channel(`wab-chat-${conversationId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'wa_messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            // Append direto — preserva mensagens antigas já carregadas via loadMore
+            const newMsg = payload.new as unknown as WaMessage
+            console.log(`[wab-realtime-chat] Nova mensagem na conversa ${conversationId}:`, newMsg)
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev
+              return [...prev, newMsg]
+            })
+            if (isAtBottomRef.current) {
+              scrollToBottom()
+            } else if (newMsg.direction === 'inbound') {
+              setPendingCount((prev) => prev + 1)
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'wa_messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const updated = payload.new as {
+              id: string
+              status: string
+              mediaUrl: string | null
+              reaction: string | null
+              type: string
+              content: string | null
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === updated.id
+                  ? {
+                      ...m,
+                      status: updated.status,
+                      mediaUrl: updated.type === 'deleted' ? null : (updated.mediaUrl ?? m.mediaUrl),
+                      reaction: updated.type === 'deleted' ? null : updated.reaction,
+                      type: updated.type,
+                      content: updated.type === 'deleted' ? null : updated.content,
+                    }
+                  : m
+              )
+            )
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`[wab-realtime-chat] ✅ Inscrito na conversa ${conversationId}`)
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`[wab-realtime-chat] ❌ Erro ao subscrever conversa ${conversationId}:`, status, err)
+          }
+        })
+
+      channelRef.current = channel
+      activeChannel = channel
+    }
+
+    initChat()
 
     const handleGlobalNewMessage = (e: Event) => {
       const customEvent = e as CustomEvent<WaMessage>
@@ -359,9 +371,9 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
     return () => {
       window.removeEventListener('wab-new-message', handleGlobalNewMessage)
-      if (channelRef.current) {
+      if (activeChannel) {
         console.log(`[wab-realtime-chat] Limpando canal da conversa ${conversationId}`)
-        supabase.removeChannel(channelRef.current)
+        supabase.removeChannel(activeChannel)
       }
     }
   }, [conversationId, scrollToBottom])
