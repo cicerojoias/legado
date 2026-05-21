@@ -338,7 +338,27 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
     channelRef.current = channel
 
+    const handleGlobalNewMessage = (e: Event) => {
+      const customEvent = e as CustomEvent<WaMessage>
+      const newMsg = customEvent.detail
+      if (newMsg && newMsg.conversation_id === conversationId) {
+        console.log(`[wab-realtime-chat] Nova mensagem recebida via evento global na conversa ${conversationId}:`, newMsg)
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev
+          return [...prev, newMsg]
+        })
+        if (isAtBottomRef.current) {
+          scrollToBottom()
+        } else if (newMsg.direction === 'inbound') {
+          setPendingCount((prev) => prev + 1)
+        }
+      }
+    }
+
+    window.addEventListener('wab-new-message', handleGlobalNewMessage)
+
     return () => {
+      window.removeEventListener('wab-new-message', handleGlobalNewMessage)
       if (channelRef.current) {
         console.log(`[wab-realtime-chat] Limpando canal da conversa ${conversationId}`)
         supabase.removeChannel(channelRef.current)
