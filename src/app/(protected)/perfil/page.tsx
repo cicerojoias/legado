@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.61', data: '21/05/2026', resumo: 'WAB: correção crítica do loading infinito ao clicar em conversas no desktop — removido router.refresh() imediato no mount da sidebar e adicionado debounce de 800ms nos event handlers do realtime para evitar interferência com navegações ativas do Next.js' },
     { versao: '0.18.60', data: '21/05/2026', resumo: 'WAB: refatoração completa do Realtime em arquitetura centralizada síncrona de evento único via layout, reduzindo conexões Websocket e garantindo sincronização instantânea de mensagens e badges (não lidas) em tempo real sem F5' },
     { versao: '0.18.59', data: '21/05/2026', resumo: 'WAB: correção da condição de corrida na inicialização do realtime e implementação de cliente singleton do Supabase, garantindo conexões autenticadas corretas' },
     { versao: '0.18.58', data: '21/05/2026', resumo: 'WAB: liberação de políticas de RLS para operadores e gerentes no Supabase, corrigindo bug de mensagens e lista de conversas não atualizarem automaticamente em tempo real para não-admins' },

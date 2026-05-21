@@ -117,22 +117,30 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   const inputRef = useRef<HTMLInputElement>(null)
   // Escutar eventos de novas mensagens do Realtime
   useEffect(() => {
-    // Força o Next.js a revalidar o cache do router ao montar a barra lateral
-    router.refresh()
+    // Debounce para não disparar múltiplos router.refresh() consecutivos
+    // e evitar interferência com navegações ativas do Next.js
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    const debouncedRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        console.log('[wab-sidebar] Executando refresh da lista de conversas...')
+        router.refresh()
+      }, 800)
+    }
 
     const handleNewMessage = () => {
-      console.log('[wab-sidebar] Nova mensagem detectada - atualizando lista...')
-      router.refresh()
+      console.log('[wab-sidebar] Nova mensagem detectada - agendando atualização da lista...')
+      debouncedRefresh()
     }
 
     const handleConversationUpdate = () => {
-      console.log('[wab-sidebar] Conversa atualizada - refresh...')
-      router.refresh()
+      console.log('[wab-sidebar] Conversa atualizada - agendando refresh...')
+      debouncedRefresh()
     }
 
     const handleConversationReadUpdate = () => {
-      console.log('[wab-sidebar] Leitura de conversa atualizada - refresh...')
-      router.refresh()
+      console.log('[wab-sidebar] Leitura de conversa atualizada - agendando refresh...')
+      debouncedRefresh()
     }
 
     window.addEventListener('wab-new-message', handleNewMessage)
@@ -140,6 +148,7 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
     window.addEventListener('wab-conversation-read-update', handleConversationReadUpdate)
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
       window.removeEventListener('wab-new-message', handleNewMessage)
       window.removeEventListener('wab-conversation-update', handleConversationUpdate)
       window.removeEventListener('wab-conversation-read-update', handleConversationReadUpdate)
