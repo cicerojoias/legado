@@ -117,6 +117,9 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   const inputRef = useRef<HTMLInputElement>(null)
   // Escutar eventos de novas mensagens do Realtime
   useEffect(() => {
+    // Força o Next.js a revalidar o cache do router ao montar a barra lateral
+    router.refresh()
+
     const handleNewMessage = () => {
       console.log('[wab-sidebar] Nova mensagem detectada - atualizando lista...')
       router.refresh()
