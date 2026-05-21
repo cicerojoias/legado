@@ -48,6 +48,17 @@ export function ConversationListRealtimeSync() {
           }))
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wa_conversation_reads' },
+        (payload) => {
+          console.log('[wab-realtime-list] wa_conversation_reads update:', payload.new)
+          // Dispara evento para indicar que o status de leitura mudou
+          window.dispatchEvent(new CustomEvent('wab-conversation-read-update', { 
+            detail: payload.new 
+          }))
+        }
+      )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('[wab-realtime-list] ✅ Inscrito com sucesso no canal realtime')

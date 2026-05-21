@@ -119,7 +119,6 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   useEffect(() => {
     const handleNewMessage = () => {
       console.log('[wab-sidebar] Nova mensagem detectada - atualizando lista...')
-      // Usa router.refresh() para re-fetch dos dados do servidor
       router.refresh()
     }
 
@@ -128,12 +127,19 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       router.refresh()
     }
 
+    const handleConversationReadUpdate = () => {
+      console.log('[wab-sidebar] Leitura de conversa atualizada - refresh...')
+      router.refresh()
+    }
+
     window.addEventListener('wab-new-message', handleNewMessage)
     window.addEventListener('wab-conversation-update', handleConversationUpdate)
+    window.addEventListener('wab-conversation-read-update', handleConversationReadUpdate)
 
     return () => {
       window.removeEventListener('wab-new-message', handleNewMessage)
       window.removeEventListener('wab-conversation-update', handleConversationUpdate)
+      window.removeEventListener('wab-conversation-read-update', handleConversationReadUpdate)
     }
   }, [router])
 

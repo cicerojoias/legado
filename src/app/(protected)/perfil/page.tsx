@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.56', data: '20/05/2026', resumo: 'WAB: correção e sincronização instantânea dos badges (notificações) de mensagens não lidas no painel e na barra lateral ao abrir e ler chats' },
     { versao: '0.18.55', data: '20/05/2026', resumo: 'WAB: integração com Cloudflare R2 para armazenamento permanente e seguro de mídias recebidas (inbound) e remoção de arquivos mortos' },
     { versao: '0.18.54', data: '20/05/2026', resumo: 'WAB: suporte a rolagem infinita (scroll infinito) com paginação dinâmica baseada em cursor no histórico de conversas da barra lateral' },
     { versao: '0.18.53', data: '20/05/2026', resumo: 'WAB: polimento e refinamento do indicador flutuante de data com fade-out por inatividade, sem sobreposições e visibilidade inteligente apenas sob rolagem' },

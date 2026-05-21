@@ -30,11 +30,15 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const userId = user?.id ?? ''
 
   if (user) {
-    prisma.waConversationRead.upsert({
-      where: { userId_conversationId: { userId: user.id, conversationId } },
-      update: { unreadCount: 0, lastReadAt: new Date() },
-      create: { userId: user.id, conversationId, unreadCount: 0 },
-    }).catch(() => {})
+    try {
+      await prisma.waConversationRead.upsert({
+        where: { userId_conversationId: { userId: user.id, conversationId } },
+        update: { unreadCount: 0, lastReadAt: new Date() },
+        create: { userId: user.id, conversationId, unreadCount: 0 },
+      })
+    } catch (err) {
+      console.error('[conversation-page] Erro ao salvar leitura:', err)
+    }
   }
 
   const [unreadTotal, tags, dbUser, settings] = await Promise.all([
