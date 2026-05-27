@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.65', data: '26/05/2026', resumo: 'WAB: localizador de mensagens por palavras-chave dentro do chat específico com rolagem automática inteligente, destaque dourado e AbortController para evitar requisições concorrentes obsoletas' },
     { versao: '0.18.64', data: '26/05/2026', resumo: 'WAB: fix scroll infinito — correção do cursor de paginação ignorando conversas vazias sem data de última mensagem (last_message_at: null), permitindo o fluxo infinito com nulos no fim da lista' },
     { versao: '0.18.63', data: '26/05/2026', resumo: 'WAB: fix timezone em tempo real — correção na interpretação do timestamp de mensagens recebidas/enviadas via Supabase Realtime, garantindo que o fuso horário (America/Recife) seja aplicado corretamente e evitando deslocamentos de data/hora' },
     { versao: '0.18.62', data: '26/05/2026', resumo: 'WAB: fix scroll infinito — correção no atrelamento do virtualizador de rolagem ao elemento do DOM pós-montagem, garantindo o carregamento automático de conversas antigas (como as de março/abril)' },
