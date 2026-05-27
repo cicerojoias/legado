@@ -75,6 +75,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const isLoadingMoreRef = useRef(false) // ref anti-stale-closure
+  const isSearchingAndScrollingRef = useRef(false)
   const [loadError, setLoadError] = useState(false)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; direction: string } | null>(null)
   const [assistenteOpen, setAssistenteOpen] = useState(false)
@@ -199,7 +200,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
   // Carrega a página anterior (mensagens mais antigas)
   const loadMore = useCallback(async () => {
-    if (isLoadingMoreRef.current || !hasMore) return
+    if (isLoadingMoreRef.current || isSearchingAndScrollingRef.current || !hasMore) return
     const oldest = messages[0]
     if (!oldest) return
 
@@ -346,15 +347,18 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           }, 2200)
         }
       } else {
-        // Se não estiver, carrega o histórico em lotes até achar
+        // Bloqueia qualquer carregamento automático pelo sentinela do topo
+        isSearchingAndScrollingRef.current = true
         setIsLoadingMore(true)
+        isLoadingMoreRef.current = true
+
         try {
           let currentMessages = [...currentMessagesSnapshot]
           let oldest = currentMessages[0]
           let found = false
           let iterations = 0 // segurança contra loops infinitos
 
-          while (!found && oldest && iterations < 10) {
+          while (!found && oldest && iterations < 15) {
             iterations++
             const before = encodeURIComponent(parseMessageTimestamp(oldest.timestamp).toISOString())
             const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
@@ -365,6 +369,10 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
             const existingIds = new Set(currentMessages.map((m) => m.id))
             const unique = older.filter((m) => !existingIds.has(m.id))
+            
+            // Se nenhuma mensagem nova foi retornada, interrompe para evitar loop no mesmo cursor
+            if (unique.length === 0) break
+
             currentMessages = [...unique, ...currentMessages]
             oldest = currentMessages[0]
 
@@ -389,11 +397,19 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
                 element.classList.remove('animate-highlight-pulse')
               }, 2200)
             }
-          }, 150)
+            
+            // Libera o carregamento automático apenas após a rolagem estar estável
+            setTimeout(() => {
+              isSearchingAndScrollingRef.current = false
+              setIsLoadingMore(false)
+              isLoadingMoreRef.current = false
+            }, 600)
+          }, 200)
         } catch (err) {
           console.error('[wab-search-scroll] Erro ao carregar mensagens históricas:', err)
-        } finally {
+          isSearchingAndScrollingRef.current = false
           setIsLoadingMore(false)
+          isLoadingMoreRef.current = false
         }
       }
     }
@@ -458,24 +474,25 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
+          style={{ overflowAnchor: 'auto' }}
           className={cn(
             'h-full overflow-y-auto overflow-x-hidden overscroll-y-none px-4 py-4 space-y-2',
             selectionActive && 'select-none'
           )}
         >
           {/* Sentinel do topo: ativa loadMore via IntersectionObserver */}
-          <div ref={topSentinelRef} className="h-1" />
+          <div ref={topSentinelRef} className="h-1" style={{ overflowAnchor: 'none' }} />
 
           {/* Indicador de carregamento */}
           {isLoadingMore && (
-            <div className="flex justify-center py-2">
+            <div className="flex justify-center py-2" style={{ overflowAnchor: 'none' }}>
               <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
             </div>
           )}
 
           {/* Erro ao carregar — botão de retry */}
           {loadError && (
-            <div className="flex justify-center py-2">
+            <div className="flex justify-center py-2" style={{ overflowAnchor: 'none' }}>
               <button
                 onClick={() => loadMore()}
                 className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
