@@ -79,13 +79,17 @@ export function VirtualizedConversationList({ conversations, activeId }: Virtual
     setIsLoadingMore(true)
 
     try {
-      const lastConv = loadedConversations[loadedConversations.length - 1]
-      if (!lastConv || !lastConv.last_message_at) {
+      // Acha a última conversa que possui data válida para servir de cursor
+      const lastConvWithDate = [...loadedConversations]
+        .reverse()
+        .find((c) => c.last_message_at)
+
+      if (!lastConvWithDate || !lastConvWithDate.last_message_at) {
         setHasMore(false)
         return
       }
 
-      const before = encodeURIComponent(new Date(lastConv.last_message_at).toISOString())
+      const before = encodeURIComponent(new Date(lastConvWithDate.last_message_at).toISOString())
       const searchParams = new URLSearchParams(window.location.search)
       const filter = searchParams.get('filter') ?? ''
       const tag = searchParams.get('tag') ?? ''
