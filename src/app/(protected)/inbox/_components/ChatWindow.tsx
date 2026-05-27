@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, parseMessageTimestamp } from '@/lib/utils'
 import type { WaMessage } from '@prisma/client'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
@@ -19,7 +19,7 @@ const BOTTOM_THRESHOLD = 150 // px — considera "no fundo" se dentro desse limi
 
 function getLocalDateString(dateInput: Date | string | null): string {
   if (!dateInput) return ''
-  const d = new Date(dateInput)
+  const d = parseMessageTimestamp(dateInput)
   const fmt = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'America/Recife',
     year: 'numeric',
@@ -31,7 +31,7 @@ function getLocalDateString(dateInput: Date | string | null): string {
 
 function getDateLabel(dateInput: Date | string | null): string {
   if (!dateInput) return ''
-  const d = new Date(dateInput)
+  const d = parseMessageTimestamp(dateInput)
   const now = new Date()
 
   const fmt = new Intl.DateTimeFormat('sv-SE', {
@@ -212,7 +212,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     const prevMessages = messages
 
     try {
-      const before = encodeURIComponent(new Date(oldest.timestamp).toISOString())
+      const before = encodeURIComponent(parseMessageTimestamp(oldest.timestamp).toISOString())
       const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()

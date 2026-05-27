@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, CheckCheck, FileText, Download, Reply, Smile, CheckCircle2, Ban, Forward, Clock, X, ZoomIn, MapPin, User, Package, MousePointerClick, Bell, CircleOff, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn, parseMessageTimestamp } from '@/lib/utils'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 import { AudioPlayer } from './AudioPlayer'
 
@@ -710,7 +710,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
                   hour: '2-digit',
                   minute: '2-digit',
                   timeZone: 'America/Recife',
-                }).format(new Date(message.timestamp))}
+                }).format(parseMessageTimestamp(message.timestamp))}
               </span>
             </div>
           </div>
@@ -878,7 +878,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
 
             {/* Rodapé: Hora e Status */}
             <div className="flex items-center gap-1 mt-1 justify-end">
-              <span className="text-[10px] opacity-70">{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(message.timestamp))}</span>
+              <span className="text-[10px] opacity-70">{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(parseMessageTimestamp(message.timestamp))}</span>
               {statusIcon}
             </div>
           </div>

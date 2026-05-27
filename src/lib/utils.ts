@@ -37,3 +37,28 @@ export function getContactInitials(name: string | null | undefined, phone: strin
 
   return 'WA';
 }
+
+export function parseMessageTimestamp(timestamp: Date | string | null | undefined): Date {
+  if (!timestamp) return new Date()
+  if (timestamp instanceof Date) return timestamp
+
+  let clean = timestamp.trim()
+  
+  // Substitui espaço por T se necessário para o padrão ISO (ex: "2026-05-27 01:53:00" -> "2026-05-27T01:53:00")
+  if (clean.includes(' ') && !clean.includes('T')) {
+    clean = clean.replace(' ', 'T')
+  }
+  
+  // Se não contiver indicador de timezone (Z ou offset +HH:MM / -HH:MM), força UTC adicionando 'Z'
+  if (!clean.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(clean)) {
+    clean = clean + 'Z'
+  }
+  
+  const parsed = new Date(clean)
+  // Fallback se a data for inválida
+  if (isNaN(parsed.getTime())) {
+    return new Date()
+  }
+  
+  return parsed
+}
