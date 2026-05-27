@@ -834,6 +834,7 @@ export function MessageBubble({ message, onReply, onReact }: MessageBubbleProps)
           )}
 
           <div
+            id={`msg-${message.id}`}
             className={cn(
               'relative w-full px-3 py-2 rounded-2xl shadow-sm',
               isOutbound

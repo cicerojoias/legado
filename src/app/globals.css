@@ -129,3 +129,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: transparent;
+  }
+  20%, 80% {
+    background-color: #C79A34; /* Accent (Gold) */
+    color: #1A1A1A; /* Accent foreground */
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-highlight-pulse {
+  animation: highlight-pulse 2.2s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}

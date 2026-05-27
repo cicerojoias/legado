@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Eraser, Trash2, Receipt, Bot } from 'lucide-react'
+import { X, Eraser, Trash2, Receipt, Bot, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ConversationActionsModalProps {
@@ -15,6 +15,7 @@ interface ConversationActionsModalProps {
   onOrcamento: () => void
   onClear:     () => void
   onDelete:    () => void
+  onSearch:    () => void
 }
 
 export function ConversationActionsModal({
@@ -26,6 +27,7 @@ export function ConversationActionsModal({
   onOrcamento,
   onClear,
   onDelete,
+  onSearch,
 }: ConversationActionsModalProps) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -112,6 +114,20 @@ export function ConversationActionsModal({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">Criar orçamento</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Gerar mensagem de orçamento pronto</p>
+                </div>
+              </button>
+
+              {/* Buscar no chat */}
+              <button
+                onClick={() => { onSearch(); onClose() }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/50 transition-colors text-left"
+              >
+                <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4 text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Buscar no chat</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Localizar palavras-chave nesta conversa</p>
                 </div>
               </button>
 

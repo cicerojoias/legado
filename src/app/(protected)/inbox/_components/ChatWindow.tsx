@@ -69,6 +69,9 @@ interface ChatWindowProps {
 export function ChatWindow({ conversationId, initialMessages, initialHasMore }: ChatWindowProps) {
   const router = useRouter()
   const [messages, setMessages] = useState<WaMessage[]>(initialMessages)
+  const messagesRef = useRef<WaMessage[]>(messages)
+  messagesRef.current = messages
+
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const isLoadingMoreRef = useRef(false) // ref anti-stale-closure
@@ -321,6 +324,85 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       window.removeEventListener('wab-message-update', handleGlobalMessageUpdate)
     }
   }, [conversationId, scrollToBottom])
+
+  // Escutar evento de scroll até mensagem específica (busca de palavras)
+  useEffect(() => {
+    const handleScrollToMessage = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ messageId: string; timestamp: string }>
+      const { messageId } = customEvent.detail
+      
+      console.log(`[wab-search-scroll] Buscando rolar até a mensagem ${messageId}`)
+
+      const currentMessagesSnapshot = messagesRef.current
+      const exists = currentMessagesSnapshot.some((m) => m.id === messageId)
+
+      if (exists) {
+        const element = document.getElementById(`msg-${messageId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.classList.add('animate-highlight-pulse')
+          setTimeout(() => {
+            element.classList.remove('animate-highlight-pulse')
+          }, 2200)
+        }
+      } else {
+        // Se não estiver, carrega o histórico em lotes até achar
+        setIsLoadingMore(true)
+        try {
+          let currentMessages = [...currentMessagesSnapshot]
+          let oldest = currentMessages[0]
+          let found = false
+          let iterations = 0 // segurança contra loops infinitos
+
+          while (!found && oldest && iterations < 10) {
+            iterations++
+            const before = encodeURIComponent(parseMessageTimestamp(oldest.timestamp).toISOString())
+            const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
+            if (!res.ok) break
+            const data = await res.json()
+            const older: WaMessage[] = data.conversation?.messages ?? []
+            if (older.length === 0) break
+
+            const existingIds = new Set(currentMessages.map((m) => m.id))
+            const unique = older.filter((m) => !existingIds.has(m.id))
+            currentMessages = [...unique, ...currentMessages]
+            oldest = currentMessages[0]
+
+            if (currentMessages.some((m) => m.id === messageId)) {
+              found = true
+              break
+            }
+
+            if (older.length < PAGE_SIZE) break
+          }
+
+          setMessages(currentMessages)
+          setHasMore(oldest ? true : false)
+
+          // Rola e destaca após re-renderização
+          setTimeout(() => {
+            const element = document.getElementById(`msg-${messageId}`)
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              element.classList.add('animate-highlight-pulse')
+              setTimeout(() => {
+                element.classList.remove('animate-highlight-pulse')
+              }, 2200)
+            }
+          }, 150)
+        } catch (err) {
+          console.error('[wab-search-scroll] Erro ao carregar mensagens históricas:', err)
+        } finally {
+          setIsLoadingMore(false)
+        }
+      }
+    }
+
+    window.addEventListener('wab-scroll-to-message', handleScrollToMessage)
+    return () => {
+      window.removeEventListener('wab-scroll-to-message', handleScrollToMessage)
+    }
+  }, [conversationId])
 
   const windowExpired = useMemo(() => {
     const lastInbound = [...messages].reverse().find((m) => m.direction === 'inbound')

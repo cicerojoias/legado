@@ -10,6 +10,7 @@ import type { WaContact, WaConversation, WaTag } from '@prisma/client'
 import type { TagWithMeta } from './types'
 import { ConversationTagPanel } from './ConversationTagPanel'
 import { ConversationActionsModal } from './ConversationActionsModal'
+import { SearchChatModal } from './SearchChatModal'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'clear' | 'delete' | null>(null)
   const [orcamentoOpen, setOrcamentoOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [iaAtiva, setIaAtiva] = useState(conversation.ia_ativa)
   const [togglingIa, setTogglingIa] = useState(false)
   const [aiPreviewOpen, setAiPreviewOpen] = useState(false)
@@ -211,6 +213,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
         onOrcamento={() => setOrcamentoOpen(true)}
         onClear={() => { setDialogType('clear'); setDialogOpen(true) }}
         onDelete={() => { setDialogType('delete'); setDialogOpen(true) }}
+        onSearch={() => setSearchOpen(true)}
       />
 
       <OrcamentoModal
@@ -308,6 +311,12 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <SearchChatModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        conversationId={conversation.id}
+        contactName={contact.name ?? contact.phone}
+      />
     </>
   )
 }
