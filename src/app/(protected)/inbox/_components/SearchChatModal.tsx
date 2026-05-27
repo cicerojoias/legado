@@ -33,13 +33,17 @@ function formatResultDate(ts: string) {
 
 // Destaca os termos buscados na mensagem
 function highlightTerm(text: string, query: string) {
-  if (!query.trim()) return <span>{text}</span>
-  const regex = new RegExp(`(${query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi')
+  const trimmed = query.trim()
+  if (!trimmed) return <span>{text}</span>
+  
+  const regex = new RegExp(`(${trimmed.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi')
   const parts = text.split(regex)
+  const queryLower = trimmed.toLowerCase()
+
   return (
     <>
       {parts.map((part, idx) =>
-        regex.test(part) ? (
+        part.toLowerCase() === queryLower ? (
           <mark key={idx} className="bg-accent/40 text-foreground font-medium rounded px-0.5">
             {part}
           </mark>
@@ -57,6 +61,7 @@ export function SearchChatModal({ open, onClose, conversationId, contactName }: 
   const [results, setResults] = useState<SearchMessageResult[]>([])
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -67,30 +72,48 @@ export function SearchChatModal({ open, onClose, conversationId, contactName }: 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
     if (!query.trim() || query.length < 2) {
       setResults([])
+      setLoading(false)
       return
     }
 
     setLoading(true)
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
       try {
         const res = await fetch(
-          `/api/whatsapp/conversations/${conversationId}/search-messages?q=${encodeURIComponent(query.trim())}`
+          `/api/whatsapp/conversations/${conversationId}/search-messages?q=${encodeURIComponent(query.trim())}`,
+          { signal: controller.signal }
         )
         if (res.ok) {
           const data = await res.json()
           setResults(data.messages ?? [])
         }
-      } catch (err) {
-        console.error('Erro ao buscar mensagens:', err)
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error('Erro ao buscar mensagens:', err)
+        }
       } finally {
-        setLoading(false)
+        if (abortControllerRef.current === controller) {
+          setLoading(false)
+          abortControllerRef.current = null
+        }
       }
     }, 400)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
   }, [query, conversationId])
 
