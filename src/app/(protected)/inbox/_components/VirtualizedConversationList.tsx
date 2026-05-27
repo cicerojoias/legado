@@ -19,15 +19,18 @@ export function VirtualizedConversationList({ conversations, activeId }: Virtual
   const [hasMore, setHasMore] = useState(conversations.length === 50)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const loadMoreRef = useRef(false)
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
 
-  const getScrollElement = useCallback(
-    () => document.getElementById('conversation-list-scroll'),
-    []
-  )
+  useEffect(() => {
+    const el = document.getElementById('conversation-list-scroll')
+    if (el) {
+      setScrollElement(el)
+    }
+  }, [])
 
   const virtualizer = useVirtualizer({
     count: loadedConversations.length + (hasMore || isLoadingMore ? 1 : 0),
-    getScrollElement,
+    getScrollElement: () => scrollElement,
     estimateSize: () => 72, // altura estimada de cada ConversationItem (~72px)
     overscan: 5,            // renderiza 5 itens extras acima/abaixo do viewport
   })
