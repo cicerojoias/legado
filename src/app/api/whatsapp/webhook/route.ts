@@ -85,7 +85,8 @@ export async function GET(req: NextRequest) {
   const challenge = searchParams.get('hub.challenge')
 
   if (mode && token) {
-    if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    if (mode === 'subscribe' && token === verifyToken) {
       console.log('WEBHOOK_VERIFIED')
       return new Response(challenge, { status: 200 })
     } else {
