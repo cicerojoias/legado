@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.67', data: '02/06/2026', resumo: 'WAB: resolução de conflito de rotas dinâmicas do Next.js unificando [conversationId] e [id] sob o mesmo slug [id] no endpoint de busca de mensagens' },
     { versao: '0.18.66', data: '01/06/2026', resumo: 'WAB: correção crítica na validação do token do Webhook (WHATSAPP_VERIFY_TOKEN) tolerando fallback para WHATSAPP_WEBHOOK_VERIFY_TOKEN, restabelecendo a recepção de novas mensagens após deploy' },
     { versao: '0.18.65', data: '26/05/2026', resumo: 'WAB: localizador de mensagens por palavras-chave dentro do chat específico com rolagem automática inteligente, destaque dourado e AbortController para evitar requisições concorrentes obsoletas' },
     { versao: '0.18.64', data: '26/05/2026', resumo: 'WAB: fix scroll infinito — correção do cursor de paginação ignorando conversas vazias sem data de última mensagem (last_message_at: null), permitindo o fluxo infinito com nulos no fim da lista' },
