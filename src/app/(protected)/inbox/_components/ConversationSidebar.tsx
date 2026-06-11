@@ -115,45 +115,33 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Escutar eventos de novas mensagens do Realtime
+  const [localUnreadTotal, setLocalUnreadTotal] = useState(unreadTotal)
+
   useEffect(() => {
-    // Debounce para não disparar múltiplos router.refresh() consecutivos
-    // e evitar interferência com navegações ativas do Next.js
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null
-    const debouncedRefresh = () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        console.log('[wab-sidebar] Executando refresh da lista de conversas...')
-        router.refresh()
-      }, 800)
+    setLocalUnreadTotal(unreadTotal)
+  }, [unreadTotal])
+
+  // Escuta status de leitura para atualizar o contador global client-side
+  useEffect(() => {
+    const handleReadUpdate = async () => {
+      try {
+        const res = await fetch('/api/whatsapp/unread-count')
+        if (res.ok) {
+          const data = await res.json()
+          if (typeof data.totalConversations === 'number') {
+            setLocalUnreadTotal(data.totalConversations)
+          }
+        }
+      } catch (err) {
+        console.error('[wab-sidebar] Erro ao atualizar contador global:', err)
+      }
     }
 
-    const handleNewMessage = () => {
-      console.log('[wab-sidebar] Nova mensagem detectada - agendando atualização da lista...')
-      debouncedRefresh()
-    }
-
-    const handleConversationUpdate = () => {
-      console.log('[wab-sidebar] Conversa atualizada - agendando refresh...')
-      debouncedRefresh()
-    }
-
-    const handleConversationReadUpdate = () => {
-      console.log('[wab-sidebar] Leitura de conversa atualizada - agendando refresh...')
-      debouncedRefresh()
-    }
-
-    window.addEventListener('wab-new-message', handleNewMessage)
-    window.addEventListener('wab-conversation-update', handleConversationUpdate)
-    window.addEventListener('wab-conversation-read-update', handleConversationReadUpdate)
-
+    window.addEventListener('wab-conversation-read-update', handleReadUpdate)
     return () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      window.removeEventListener('wab-new-message', handleNewMessage)
-      window.removeEventListener('wab-conversation-update', handleConversationUpdate)
-      window.removeEventListener('wab-conversation-read-update', handleConversationReadUpdate)
+      window.removeEventListener('wab-conversation-read-update', handleReadUpdate)
     }
-  }, [router])
+  }, [])
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) { setResults(null); return }
@@ -238,7 +226,7 @@ export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags 
       {!isSearching && (
         <>
           <Suspense fallback={null}>
-            <UnreadFilterTabs unreadTotal={unreadTotal} />
+            <UnreadFilterTabs unreadTotal={localUnreadTotal} />
           </Suspense>
           {tags.length > 0 && (
             <Suspense fallback={null}>

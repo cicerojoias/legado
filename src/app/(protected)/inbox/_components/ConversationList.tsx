@@ -75,6 +75,7 @@ export async function ConversationList({ activeId, filterUnread, filterTagId }: 
     <VirtualizedConversationList
       conversations={conversations}
       activeId={activeId}
+      userId={userId}
     />
   )
 }

@@ -8,18 +8,147 @@ import type { ConversationWithPreview } from './types'
 interface VirtualizedConversationListProps {
   conversations: ConversationWithPreview[]
   activeId?: string
+  userId?: string
 }
 
 /**
  * Renderiza lista de conversas com virtualização via @tanstack/react-virtual
  * e suporte a paginação cursor-based sob rolagem (Scroll Infinito).
  */
-export function VirtualizedConversationList({ conversations, activeId }: VirtualizedConversationListProps) {
+export function VirtualizedConversationList({ conversations, activeId, userId }: VirtualizedConversationListProps) {
   const [loadedConversations, setLoadedConversations] = useState<ConversationWithPreview[]>(conversations)
   const [hasMore, setHasMore] = useState(conversations.length === 50)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const loadMoreRef = useRef(false)
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
+
+  // Ouvir eventos realtime client-side e atualizar estado interno localmente
+  useEffect(() => {
+    const handleNewMessage = async (e: Event) => {
+      const customEvent = e as CustomEvent<any>
+      const newMsg = customEvent.detail
+      if (!newMsg) return
+
+      setLoadedConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === newMsg.conversation_id)
+        if (index >= 0) {
+          const updated = [...prev]
+          const conv = { ...updated[index] }
+          conv.last_message_at = newMsg.timestamp
+          conv.messages = [newMsg]
+          updated[index] = conv
+          return updated.sort((a, b) => {
+            const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0
+            const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0
+            return dateB - dateA
+          })
+        } else {
+          // Conversa totalmente nova ou fora do Top 50 carregado inicialmente. Busca dados completos da API.
+          fetch(`/api/whatsapp/conversations?conversationId=${newMsg.conversation_id}`)
+            .then((res) => {
+              if (res.ok) return res.json()
+            })
+            .then((data) => {
+              const fetchedConv = data?.conversations?.[0]
+              if (fetchedConv) {
+                setLoadedConversations((current) => {
+                  if (current.some((c) => c.id === fetchedConv.id)) return current
+                  const updated = [fetchedConv, ...current]
+                  return updated.sort((a, b) => {
+                    const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0
+                    const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0
+                    return dateB - dateA
+                  })
+                })
+              }
+            })
+            .catch((err) => console.error('[VirtualizedConversationList] Erro ao buscar nova conversa:', err))
+          return prev
+        }
+      })
+    }
+
+    const handleMessageUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<any>
+      const updated = customEvent.detail
+      if (!updated) return
+
+      setLoadedConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === updated.conversation_id)
+        if (index >= 0) {
+          const updatedList = [...prev]
+          const conv = { ...updatedList[index] }
+          const lastMsg = conv.messages[0]
+          if (lastMsg && lastMsg.id === updated.id) {
+            conv.messages = [{
+              ...lastMsg,
+              status: updated.status,
+              reaction: updated.reaction,
+              type: updated.type,
+              content: updated.content,
+              mediaUrl: updated.mediaUrl
+            }]
+            updatedList[index] = conv
+            return updatedList
+          }
+        }
+        return prev
+      })
+    }
+
+    const handleConversationUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<any>
+      const updatedConv = customEvent.detail
+      if (!updatedConv) return
+
+      setLoadedConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === updatedConv.id)
+        if (index >= 0) {
+          const updatedList = [...prev]
+          updatedList[index] = {
+            ...updatedList[index],
+            ...updatedConv,
+          }
+          return updatedList
+        }
+        return prev
+      })
+    }
+
+    const handleConversationReadUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<any>
+      const updatedRead = customEvent.detail
+      if (!updatedRead) return
+
+      // Apenas atualiza se for correspondente ao usuário logado
+      if (userId && updatedRead.userId !== userId) return
+
+      setLoadedConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === updatedRead.conversationId)
+        if (index >= 0) {
+          const updatedList = [...prev]
+          updatedList[index] = {
+            ...updatedList[index],
+            unreadCount: updatedRead.unreadCount,
+          }
+          return updatedList
+        }
+        return prev
+      })
+    }
+
+    window.addEventListener('wab-new-message', handleNewMessage)
+    window.addEventListener('wab-message-update', handleMessageUpdate)
+    window.addEventListener('wab-conversation-update', handleConversationUpdate)
+    window.addEventListener('wab-conversation-read-update', handleConversationReadUpdate)
+
+    return () => {
+      window.removeEventListener('wab-new-message', handleNewMessage)
+      window.removeEventListener('wab-message-update', handleMessageUpdate)
+      window.removeEventListener('wab-conversation-update', handleConversationUpdate)
+      window.removeEventListener('wab-conversation-read-update', handleConversationReadUpdate)
+    }
+  }, [userId])
 
   useEffect(() => {
     const el = document.getElementById('conversation-list-scroll')

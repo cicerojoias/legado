@@ -16,8 +16,9 @@ export async function GET() {
     })
 
     const total = reads.reduce((sum, r) => sum + r.unreadCount, 0)
-    return NextResponse.json({ total })
+    const totalConversations = reads.filter((r) => r.unreadCount > 0).length
+    return NextResponse.json({ total, totalConversations })
   } catch {
-    return NextResponse.json({ total: 0 })
+    return NextResponse.json({ total: 0, totalConversations: 0 })
   }
 }

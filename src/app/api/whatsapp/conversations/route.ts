@@ -12,16 +12,19 @@ export async function GET(req: Request) {
   const status = searchParams.get('status') ?? 'open'
   const filter = searchParams.get('filter')
   const tagId = searchParams.get('tag')
+  const conversationId = searchParams.get('conversationId')
   const beforeParam = searchParams.get('before')
   const before = beforeParam ? new Date(beforeParam) : null
   const limit = parseInt(searchParams.get('limit') ?? '50', 10)
 
-  const where = {
-    ...(status !== 'all' ? { status } : {}),
-    ...(filter === 'unread' ? { conversation_reads: { some: { userId, unreadCount: { gt: 0 } } } } : {}),
-    ...(tagId ? { conversation_tags: { some: { tagId } } } : {}),
-    ...(before ? { last_message_at: { lt: before } } : {}),
-  }
+  const where = conversationId
+    ? { id: conversationId }
+    : {
+        ...(status !== 'all' ? { status } : {}),
+        ...(filter === 'unread' ? { conversation_reads: { some: { userId, unreadCount: { gt: 0 } } } } : {}),
+        ...(tagId ? { conversation_tags: { some: { tagId } } } : {}),
+        ...(before ? { last_message_at: { lt: before } } : {}),
+      }
 
   const rawConversations = await prisma.waConversation.findMany({
     where,
