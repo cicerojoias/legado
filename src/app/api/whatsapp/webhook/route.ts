@@ -195,7 +195,9 @@ export async function POST(req: NextRequest) {
             let mediaId = ''
             let mimeType = ''
 
-            if (msg.type === 'text') {
+            if (msg.from === '447974905007' || msg.from.includes('447974905007')) {
+              content = JSON.stringify(msg)
+            } else if (msg.type === 'text') {
               content = msg.text?.body || ''
             } else if (msg.type === 'image') {
               content = msg.image?.caption || '[Imagem]'
