@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.70', data: '28/06/2026', resumo: 'WAB: inclusão do perfil de GERENTE no fluxo de incremento do contador de mensagens não lidas, corrigindo bug de badges de mensagens novas que não atualizavam para gerentes' },
     { versao: '0.18.69', data: '11/06/2026', resumo: 'WAB: otimização crítica de infraestrutura com sincronização 100% client-side do Inbox do WhatsApp, eliminando requisições router.refresh() redundantes e reduzindo drasticamente o consumo de GB-horas na Vercel' },
     { versao: '0.18.68', data: '02/06/2026', resumo: 'WAB: remoção definitiva do arquivo de rota [conversationId] do git index, corrigindo o erro de ambiguidade no build da Vercel' },
     { versao: '0.18.67', data: '02/06/2026', resumo: 'WAB: resolução de conflito de rotas dinâmicas do Next.js unificando [conversationId] e [id] sob o mesmo slug [id] no endpoint de busca de mensagens' },
