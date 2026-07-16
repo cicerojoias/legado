@@ -13,7 +13,6 @@ const ALLOWED_MIME = new Set([
   'video/mp4',
   'application/pdf',
 ])
-const MAX_BYTES = 16 * 1024 * 1024 // 16 MB (limite WhatsApp)
 const URL_TTL_SECONDS = 120 // 2 min para completar o upload
 
 export async function POST(req: NextRequest) {

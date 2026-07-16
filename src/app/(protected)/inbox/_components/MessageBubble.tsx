@@ -76,7 +76,11 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      zoomRef.current > 1 ? snapReset() : onClose()
+      if (zoomRef.current > 1) {
+        snapReset()
+      } else {
+        onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -130,7 +134,11 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
       const now = Date.now()
       if (now - lastTapRef.current < 280) {
         lastTapRef.current = 0
-        zoomRef.current > 1 ? snapReset() : snapZoom(2.5)
+        if (zoomRef.current > 1) {
+          snapReset()
+        } else {
+          snapZoom(2.5)
+        }
         return
       }
       lastTapRef.current = now
@@ -171,7 +179,13 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      onClick={() => { zoomRef.current > 1 ? snapReset() : onClose() }}
+      onClick={() => {
+        if (zoomRef.current > 1) {
+          snapReset()
+        } else {
+          onClose()
+        }
+      }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}

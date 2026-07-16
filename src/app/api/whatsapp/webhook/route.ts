@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { WebhookPayload } from '@/lib/whatsapp/types'
-import { WhatsAppError } from '@/lib/whatsapp/errors'
 import {
   generateWebhookId,
   isWebhookProcessed,

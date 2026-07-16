@@ -97,8 +97,8 @@ export function SearchChatModal({ open, onClose, conversationId, contactName }: 
           const data = await res.json()
           setResults(data.messages ?? [])
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        if (!(err instanceof Error && err.name === 'AbortError')) {
           console.error('Erro ao buscar mensagens:', err)
         }
       } finally {

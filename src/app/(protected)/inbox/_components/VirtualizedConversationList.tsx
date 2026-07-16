@@ -25,7 +25,7 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
   // Ouvir eventos realtime client-side e atualizar estado interno localmente
   useEffect(() => {
     const handleNewMessage = async (e: Event) => {
-      const customEvent = e as CustomEvent<any>
+      const customEvent = e as CustomEvent<ConversationWithPreview['messages'][number]>
       const newMsg = customEvent.detail
       if (!newMsg) return
 
@@ -69,7 +69,7 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
     }
 
     const handleMessageUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent<any>
+      const customEvent = e as CustomEvent<Pick<ConversationWithPreview['messages'][number], 'id' | 'conversation_id' | 'status' | 'reaction' | 'type' | 'content' | 'mediaUrl'>>
       const updated = customEvent.detail
       if (!updated) return
 
@@ -97,7 +97,7 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
     }
 
     const handleConversationUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent<any>
+      const customEvent = e as CustomEvent<Partial<ConversationWithPreview> & Pick<ConversationWithPreview, 'id'>>
       const updatedConv = customEvent.detail
       if (!updatedConv) return
 
@@ -116,7 +116,7 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
     }
 
     const handleConversationReadUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent<any>
+      const customEvent = e as CustomEvent<{ conversationId: string; unreadCount: number; userId: string }>
       const updatedRead = customEvent.detail
       if (!updatedRead) return
 

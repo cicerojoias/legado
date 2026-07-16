@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { cn, parseMessageTimestamp } from '@/lib/utils'
 import type { WaMessage } from '@prisma/client'
@@ -67,7 +66,6 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ conversationId, initialMessages, initialHasMore }: ChatWindowProps) {
-  const router = useRouter()
   const [messages, setMessages] = useState<WaMessage[]>(initialMessages)
   const messagesRef = useRef<WaMessage[]>(messages)
   messagesRef.current = messages

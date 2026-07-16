@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { Loja } from '@prisma/client';
 import { LancamentosContent } from './lancamentos-content';
 import { LancamentoListSkeleton } from '@/components/financeiro/lancamento-list-skeleton';
 import { FilterBar } from './filter-bar';
@@ -41,11 +40,7 @@ export default async function LancamentosPage({
     const to = params.to ?? defaultTo;
 
     // Determine allowed loja / default preference
-    const defaultLoja = dbUser.lojaAutorizada === 'AMBAS' 
-        ? (dbUser.lojaPadrao ?? 'AMBAS') 
-        : dbUser.lojaAutorizada;
 
-    const lojaParaFiltro = params.loja ?? defaultLoja;
 
     return (
         <div className="flex flex-col h-full bg-muted/20">

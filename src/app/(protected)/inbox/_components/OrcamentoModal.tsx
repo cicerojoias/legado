@@ -91,7 +91,7 @@ function buildAlianca(
 
   let mensagem = `💍 *Orçamento – Par de Alianças ${larguraTexto}*\n\n`
 
-  materiaisOrdenados.forEach((material, index) => {
+  materiaisOrdenados.forEach((material) => {
     const valorParcela = fmtBRL(Math.ceil(material.valor / 6 * 100) / 100)
 
     switch (material.tipo) {

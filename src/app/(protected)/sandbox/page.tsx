@@ -15,10 +15,10 @@ export default function SandboxPage() {
                 <Card className="border-none">
                     <CardHeader>
                         <CardTitle>Teste a Responsividade</CardTitle>
-                        <CardDescription>Pressione F12 e alterne o modo de dispositivo para "iPhone".</CardDescription>
+                        <CardDescription>Pressione F12 e alterne o modo de dispositivo para &quot;iPhone&quot;.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm">Você notará que a Sidebar Lateral elegante será escondida e o Bottom Navigation (a barra inferior) assumirá o controle perfeitamente, usando as animações do Framer Motion ao clicar em 'Lançamentos' ou 'Hoje'.</p>
+                        <p className="text-sm">Você notará que a Sidebar Lateral elegante será escondida e o Bottom Navigation (a barra inferior) assumirá o controle perfeitamente, usando as animações do Framer Motion ao clicar em &apos;Lançamentos&apos; ou &apos;Hoje&apos;.</p>
                     </CardContent>
                 </Card>
 
@@ -28,7 +28,7 @@ export default function SandboxPage() {
                         <CardDescription>O isolamento de perfil em tempo real.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm">Os links visíveis na barra lateral foram definidos no "usePermissions". Como estamos deslogados, você está vendo um menu enxuto padrão, provando a prevenção de renderização de abas sensíveis.</p>
+                        <p className="text-sm">Os links visíveis na barra lateral foram definidos no &quot;usePermissions&quot;. Como estamos deslogados, você está vendo um menu enxuto padrão, provando a prevenção de renderização de abas sensíveis.</p>
                     </CardContent>
                 </Card>
             </div>

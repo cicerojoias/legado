@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.72', data: '16/07/2026', resumo: 'Manutenção: limpeza completa de lint e TypeScript — tipagens reforçadas, imports mortos removidos e regras do React Compiler limitadas aos fluxos client-side compatíveis.' },
     { versao: '0.18.71', data: '16/07/2026', resumo: 'Manutenção: rota sandbox agora protegida por login e PIN; remoção da dependência sem uso @upstash/redis e correções técnicas de lint.' },
     { versao: '0.18.70', data: '28/06/2026', resumo: 'WAB: inclusão do perfil de GERENTE no fluxo de incremento do contador de mensagens não lidas, corrigindo bug de badges de mensagens novas que não atualizavam para gerentes' },
     { versao: '0.18.69', data: '11/06/2026', resumo: 'WAB: otimização crítica de infraestrutura com sincronização 100% client-side do Inbox do WhatsApp, eliminando requisições router.refresh() redundantes e reduzindo drasticamente o consumo de GB-horas na Vercel' },

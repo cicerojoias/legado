@@ -1,5 +1,10 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 
+type S3Error = {
+  name?: string
+  $metadata?: { httpStatusCode?: number }
+}
+
 const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID
 const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY
 const endpoint = process.env.CLOUDFLARE_R2_ENDPOINT
@@ -38,8 +43,9 @@ export async function checkFileExistsInR2(key: string): Promise<boolean> {
     })
     await s3Client.send(command)
     return true
-  } catch (err: any) {
-    if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+  } catch (err: unknown) {
+    const s3Error = err as S3Error
+    if (s3Error.name === 'NotFound' || s3Error.$metadata?.httpStatusCode === 404) {
       return false
     }
     console.error(`[r2-client] Erro ao verificar existência de ${key}:`, err)
@@ -89,9 +95,7 @@ export async function getFileFromR2(key: string): Promise<{ body: ReadableStream
     const response = await s3Client.send(command)
     
     // O SDK S3 v3 provê transformToWebStream() no Node e em runtimes edge
-    const body = response.Body && typeof (response.Body as any).transformToWebStream === 'function'
-      ? (response.Body as any).transformToWebStream()
-      : (response.Body as any)
+    const body = response.Body?.transformToWebStream?.() ?? null
 
     return {
       body,

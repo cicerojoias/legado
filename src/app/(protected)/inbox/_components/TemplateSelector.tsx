@@ -47,7 +47,7 @@ export function TemplateSelector({ conversationId, onMessageSent }: TemplateSele
             })
             const data = await res.json()
             return { name: template.name, isValid: data.isValid, error: data.error }
-          } catch (err) {
+          } catch {
             return { name: template.name, isValid: false, error: 'Erro na validação' }
           }
         })

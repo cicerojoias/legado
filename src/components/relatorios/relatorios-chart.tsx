@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 import {
     ChartContainer,
     ChartTooltip,
@@ -27,9 +27,10 @@ const formatDay = (dateStr: string) => {
     return parts[2] ?? dateStr;
 };
 
-const MesTick = ({ x, y, payload, data }: any) => {
+type ChartTickProps = { x?: number; y?: number; payload?: { value?: string } };
+const MesTick = ({ x, y, payload, data }: ChartTickProps & { data: ChartDataPoint[] }) => {
     const dateStr = payload?.value ?? '';
-    const entry = data.find((d: any) => d.date === dateStr);
+    const entry = data.find((datum) => datum.date === dateStr);
     const dateRange = entry?.dateRange ?? '';
 
     return (
@@ -74,7 +75,7 @@ export function RelatoriosChart({ data, periodo }: { data: ChartDataPoint[]; per
                 <XAxis
                     dataKey="date"
                     tickFormatter={isSemana ? undefined : (isMes ? undefined : (isAno ? undefined : formatDay))}
-                    tick={isSemana ? SemanaTick : (isMes ? (props: any) => <MesTick {...props} data={data} /> : { fontSize: 10, fill: '#6B6358' })}
+                    tick={isSemana ? SemanaTick : (isMes ? (props: ChartTickProps) => <MesTick {...props} data={data} /> : { fontSize: 10, fill: '#6B6358' })}
                     axisLine={false}
                     tickLine={false}
                     height={isSemana || isMes ? 36 : 20}

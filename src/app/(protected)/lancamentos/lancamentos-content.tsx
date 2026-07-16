@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { LancamentoList } from '@/components/financeiro/lancamento-list';
-import { Loja, TipoLancamento } from '@prisma/client';
+import { Loja, Prisma, TipoLancamento } from '@prisma/client';
 import { Card } from '@/components/ui/card';
 import { ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
 
@@ -18,7 +18,7 @@ export async function LancamentosContent({ from, to, loja, tipo, dbUserLoja, use
     const endDate = new Date(to + 'T23:59:59.999Z');
 
     // Build filter — deletado_at: null garante que soft-deletes nunca aparecem
-    const where: any = {
+    const where: Prisma.LancamentoWhereInput = {
         data_ref: {
             gte: startDate,
             lte: endDate,
@@ -72,7 +72,7 @@ export async function LancamentosContent({ from, to, loja, tipo, dbUserLoja, use
 
     const saldo = totals.entradas - totals.saidas;
 
-    const serializedLancamentos = lancamentos.map((l: any) => ({
+    const serializedLancamentos = lancamentos.map((l) => ({
         ...l,
         valor: Number(l.valor),
     }));

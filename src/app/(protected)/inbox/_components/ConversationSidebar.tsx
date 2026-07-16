@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, X, MoreVertical } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
@@ -101,12 +100,11 @@ interface ConversationSidebarProps {
   activeId?:        string
   unreadTotal?:     number
   tags?:            WaTag[]
-  userRole?:        string
   initialSettings?: WaSettings | null
+  userRole?:        string
 }
 
-export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], userRole, initialSettings = null }: ConversationSidebarProps) {
-  const router = useRouter()
+export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], initialSettings = null }: ConversationSidebarProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)

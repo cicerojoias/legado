@@ -194,7 +194,7 @@ export function AssistenteModal({ open, onClose, onAccept, conversationContext }
               {state === 'editing' && (
                 <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2.5">
                   <p className="text-xs text-amber-700 dark:text-amber-400">
-                    💡 Ajuste o prompt e clique em "Gerar Novamente" para criar uma nova versão
+                    💡 Ajuste o prompt e clique em &quot;Gerar Novamente&quot; para criar uma nova versão
                   </p>
                 </div>
               )}
