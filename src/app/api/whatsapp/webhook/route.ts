@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
             const name = contactInfo?.profile?.name || waId
 
             // A. Garantir que o contato existe
-            let waContact = await prisma.waContact.upsert({
+            const waContact = await prisma.waContact.upsert({
               where: { phone: waId },
               update: { name },
               create: { phone: waId, name, wa_id: waId },
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
               : existingConv.last_message_at
 
             // C. Garantir que a conversa existe (um contato = uma conversa)
-            let waConversation = await prisma.waConversation.upsert({
+            const waConversation = await prisma.waConversation.upsert({
               where: { contact_id: waContact.id },
               update: {
                 status: 'open',
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
 
             // C. Salvar a Mensagem
             let content = ''
-            let type = msg.type
+            const type = msg.type
             let mediaId = ''
             let mimeType = ''
 

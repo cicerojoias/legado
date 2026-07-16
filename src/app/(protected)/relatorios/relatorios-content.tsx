@@ -184,7 +184,7 @@ export async function RelatoriosContent({ loja, periodo, dbUserLoja, userId }: P
     } else {
         const dailyMap = new Map<string, { entradas: number; saidas: number }>();
         // Inicializa todos os dias do período com zero
-        let current = new Date(start.getTime());
+        const current = new Date(start.getTime());
         while (current <= end) {
             const dayStr = current.toISOString().split('T')[0];
             dailyMap.set(dayStr, { entradas: 0, saidas: 0 });
