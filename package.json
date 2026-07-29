@@ -1,6 +1,6 @@
 {
   "name": "legado-app",
-  "version": "0.18.72",
+  "version": "0.18.73",
   "private": true,
   "scripts": {
     "dev": "next dev",

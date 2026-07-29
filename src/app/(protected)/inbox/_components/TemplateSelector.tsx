@@ -146,7 +146,7 @@ export function TemplateSelector({ conversationId, onMessageSent }: TemplateSele
   }
 
   return (
-    <div className="border-t bg-background px-4 py-3">
+    <div className="min-h-0 overflow-y-auto overscroll-contain touch-pan-y border-t bg-background px-4 py-3">
       {/* Aviso de janela expirada */}
       <div className="flex items-start gap-1.5 mb-3">
         <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
