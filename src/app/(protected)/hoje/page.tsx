@@ -36,17 +36,7 @@ export default async function HojePage({
     const localNow = new Date(Date.now() + tzOffset);
     const dateStr = params.date ?? localNow.toISOString().split('T')[0];
 
-    // Determine target Loja (server-side, trusts only session)
-    let targetLoja: Loja = dbUser.lojaAutorizada;
-    if (
-        dbUser.lojaAutorizada === 'AMBAS' &&
-        params.loja &&
-        (params.loja === 'JOAO_PESSOA' || params.loja === 'SANTA_RITA')
-    ) {
-        targetLoja = params.loja as Loja;
-    } else if (dbUser.lojaAutorizada === 'AMBAS') {
-        targetLoja = dbUser.lojaPadrao || 'JOAO_PESSOA';
-    }
+    const targetLoja: Loja = 'SANTA_RITA';
 
     return (
         <div className="flex flex-col h-full bg-muted/20">

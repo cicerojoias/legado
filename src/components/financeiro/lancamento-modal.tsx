@@ -127,7 +127,7 @@ export function LancamentoModal({
             descricao: '',
             categoria: 'CONSERTO',
             metodo_pgto: 'PIX',
-            loja: defaultLoja ?? '',
+            loja: defaultLoja ?? 'SANTA_RITA',
             observacao: '',
         },
     });

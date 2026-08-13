@@ -93,17 +93,7 @@ export async function createLancamento(formData: FormData) {
         // **SECURITY: Blind injeção de Loja**
         // A action desconfia do Client. Se o usuário tem AMBAS as lojas, aceita o Input (se for JP ou SR).
         // Senão, cega e ignora a input e força a lojaAutorizada pela sessão.
-        let finalLoja: Loja;
-
-        if (dbUser.lojaAutorizada === 'AMBAS' && inputLoja && (inputLoja === 'JOAO_PESSOA' || inputLoja === 'SANTA_RITA')) {
-            finalLoja = inputLoja as Loja;
-        } else if (dbUser.lojaAutorizada === 'AMBAS') {
-            // Fallback caso a UI bug
-            return { error: 'Selecione uma loja' };
-        } else {
-            // Force user's actual store. IDOR mitigated.
-            finalLoja = dbUser.lojaAutorizada;
-        }
+        let finalLoja: Loja = 'SANTA_RITA';
 
         // Determinar a data de referência (da URL/UI ou Hoje)
         const finalDataRef = data_ref ? new Date(data_ref) : new Date();

@@ -18,23 +18,11 @@ async function fetchDashboardData() {
 
     const baseWhere = { deletado_at: null };
 
-    const [statsMes, statsJP, statsSR, lancamentos30d, recentes] = await Promise.all([
-        // Mês corrente — consolidado
+    const [statsMes, lancamentos30d, recentes] = await Promise.all([
+        // Mês corrente — Santa Rita
         prisma.lancamento.groupBy({
             by: ['tipo'],
             where: { ...baseWhere, data_ref: { gte: startOfMonth, lte: endOfToday } },
-            _sum: { valor: true },
-        }),
-        // Mês corrente — JP
-        prisma.lancamento.groupBy({
-            by: ['tipo'],
-            where: { ...baseWhere, loja: 'JOAO_PESSOA', data_ref: { gte: startOfMonth, lte: endOfToday } },
-            _sum: { valor: true },
-        }),
-        // Mês corrente — SR
-        prisma.lancamento.groupBy({
-            by: ['tipo'],
-            where: { ...baseWhere, loja: 'SANTA_RITA', data_ref: { gte: startOfMonth, lte: endOfToday } },
             _sum: { valor: true },
         }),
         // 30 dias para o gráfico
@@ -52,17 +40,9 @@ async function fetchDashboardData() {
         }),
     ]);
 
-    // Saldo consolidado do mês
+    // Saldo do mês
     const mesEntradas = Number(statsMes.find((s) => s.tipo === 'ENTRADA')?._sum.valor ?? 0);
     const mesSaidas   = Number(statsMes.find((s) => s.tipo === 'SAIDA')?._sum.valor   ?? 0);
-
-    // JP
-    const jpEntradas = Number(statsJP.find((s) => s.tipo === 'ENTRADA')?._sum.valor ?? 0);
-    const jpSaidas   = Number(statsJP.find((s) => s.tipo === 'SAIDA')?._sum.valor   ?? 0);
-
-    // SR
-    const srEntradas = Number(statsSR.find((s) => s.tipo === 'ENTRADA')?._sum.valor ?? 0);
-    const srSaidas   = Number(statsSR.find((s) => s.tipo === 'SAIDA')?._sum.valor   ?? 0);
 
     // Agrega por dia para o gráfico
     const dailyMap = new Map<string, { entradas: number; saidas: number }>();
@@ -80,9 +60,7 @@ async function fetchDashboardData() {
     const recentesSerializados = recentes.map((l) => ({ ...l, valor: Number(l.valor) }));
 
     return {
-        mes:     { entradas: mesEntradas, saidas: mesSaidas },
-        jp:      { entradas: jpEntradas,  saidas: jpSaidas  },
-        sr:      { entradas: srEntradas,  saidas: srSaidas  },
+        mes: { entradas: mesEntradas, saidas: mesSaidas },
         chartData,
         recentes: recentesSerializados,
     };
@@ -93,8 +71,8 @@ async function fetchDashboardData() {
 function DashboardSkeleton() {
     return (
         <div className="p-6 space-y-6 max-w-6xl">
-            <div className="grid grid-cols-3 gap-4">
-                {[0, 1, 2].map((i) => <SaldoCardSkeleton key={i} />)}
+            <div className="grid grid-cols-1 gap-4">
+                <SaldoCardSkeleton />
             </div>
             <div className="h-72 bg-muted rounded-xl animate-pulse" />
             <div className="h-64 bg-muted rounded-xl animate-pulse" />
@@ -109,23 +87,13 @@ async function DashboardContent() {
 
     return (
         <div className="p-6 space-y-6 max-w-6xl">
-            {/* Saldo cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Saldo card */}
+            <div className="grid grid-cols-1 gap-4">
                 <SaldoCard
-                    label="Consolidado — Mês Atual"
+                    label="Balanço Geral — Mês Atual (Santa Rita)"
                     entradas={data.mes.entradas}
                     saidas={data.mes.saidas}
                     destaque
-                />
-                <SaldoCard
-                    label="João Pessoa — Mês Atual"
-                    entradas={data.jp.entradas}
-                    saidas={data.jp.saidas}
-                />
-                <SaldoCard
-                    label="Santa Rita — Mês Atual"
-                    entradas={data.sr.entradas}
-                    saidas={data.sr.saidas}
                 />
             </div>
 

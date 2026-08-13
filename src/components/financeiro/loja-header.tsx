@@ -31,29 +31,11 @@ export function LojaHeader({ lojaSelecionada, lojaAutorizada }: LojaHeaderProps)
     };
 
     return (
-        <div className="flex items-center justify-between py-2">
-            {canSwitch ? (
-                <button
-                    onClick={handleSwitch}
-                    className="p-2 -ml-2 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                </button>
-            ) : <div className="p-2 w-9 h-9" />}
-
+        <div className="flex items-center justify-center py-2">
             <div className="flex items-center gap-2 font-semibold text-lg">
                 <Store className="w-5 h-5 text-primary" />
-                <span>{formatLojaNome(lojaSelecionada)}</span>
+                <span>Santa Rita</span>
             </div>
-
-            {canSwitch ? (
-                <button
-                    onClick={handleSwitch}
-                    className="p-2 -mr-2 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
-                >
-                    <ChevronRight className="w-5 h-5" />
-                </button>
-            ) : <div className="p-2 w-9 h-9" />}
         </div>
     );
 }

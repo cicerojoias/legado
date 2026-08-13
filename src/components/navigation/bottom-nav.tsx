@@ -17,13 +17,8 @@ export function BottomNav() {
     const { isGerente, isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
     const wabUnread = useWabUnreadTotal();
 
-    // Loja da URL tem prioridade; se não tiver, usa a lojaPadrao; fallback: JOAO_PESSOA
-    const lojaUrl = searchParams.get('loja') as 'JOAO_PESSOA' | 'SANTA_RITA' | null;
-    const defaultLoja: 'JOAO_PESSOA' | 'SANTA_RITA' =
-        lojaUrl ?? lojaPadrao ?? 'JOAO_PESSOA';
-
-    // Pode selecionar loja: admin OU usuário com acesso a ambas as lojas
-    const canSelectLoja = isAdmin || lojaAutorizada === 'AMBAS';
+    const defaultLoja: 'JOAO_PESSOA' | 'SANTA_RITA' = 'SANTA_RITA';
+    const canSelectLoja = false;
 
     let links = [];
 
