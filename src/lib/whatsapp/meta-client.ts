@@ -182,13 +182,16 @@ export async function uploadMediaToMeta(
  * @param mediaId   - ID retornado por uploadMediaToMeta()
  * @param mimeType  - MIME type para determinar o waType
  * @param caption   - Legenda opcional (não suportada em áudio)
+ * @param fileName  - Nome do arquivo com extensão (apenas documentos — sem ele o
+ *                    destinatário recebe arquivo sem extensão e pode não conseguir abrir)
  * @returns         - wa_message_id retornado pela Meta
  */
 export async function sendMediaByMediaId(
   to: string,
   mediaId: string,
   mimeType: string,
-  caption?: string
+  caption?: string,
+  fileName?: string
 ): Promise<string> {
   const phoneId = getPhoneId()
   const token = getToken()
@@ -198,6 +201,7 @@ export async function sendMediaByMediaId(
   const mediaPayload = {
     id: mediaId,
     ...(caption && waType !== 'audio' ? { caption } : {}),
+    ...(fileName && waType === 'document' ? { filename: fileName } : {}),
   }
 
   const res = await fetch(`${BASE_URL}/${phoneId}/messages`, {

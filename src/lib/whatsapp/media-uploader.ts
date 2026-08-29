@@ -11,6 +11,7 @@ const ALLOWED_MIME_MAP: Record<string, string> = {
   'audio/mp4': 'm4a',
   'audio/webm': 'webm',
   'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
   'application/pdf': 'pdf',
 }
 

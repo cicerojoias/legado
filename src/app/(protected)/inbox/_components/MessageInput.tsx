@@ -21,9 +21,26 @@ interface MessageInputProps {
   onOpenAssistente?: () => void
 }
 
-// Tipos MIME aceitos no seletor de arquivo
-const ACCEPTED_MIME = 'image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,video/mp4,application/pdf'
-const MAX_FILE_SIZE_MB = 16 // WhatsApp Cloud API limita a 16MB por envio
+// Tipos MIME aceitos no seletor de arquivo.
+// video/quicktime (.mov): formato que o iPhone grava — a Meta não aceita como "video",
+// então o servidor envia como documento (cliente recebe como arquivo anexo).
+const ACCEPTED_MIME = 'image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,video/mp4,video/quicktime,application/pdf'
+
+// Limites oficiais da Meta Cloud API por tipo (validar cedo evita upload inteiro + erro no fim)
+const META_SIZE_LIMITS_MB: Record<string, number> = {
+  image: 5,
+  audio: 16,
+  video: 16,
+  document: 100,
+}
+
+function getSizeLimitMB(mimeType: string): number {
+  if (mimeType.startsWith('image/')) return META_SIZE_LIMITS_MB.image
+  if (mimeType.startsWith('audio/')) return META_SIZE_LIMITS_MB.audio
+  if (mimeType === 'video/mp4') return META_SIZE_LIMITS_MB.video
+  // video/quicktime vai como documento (100MB), PDFs também
+  return META_SIZE_LIMITS_MB.document
+}
 
 type UploadState = 'idle' | 'uploading' | 'preview'
 
@@ -105,8 +122,9 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
     ;(e.target as HTMLInputElement).value = ''
     if (!file) return
 
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.error(`Arquivo muito grande. O limite é ${MAX_FILE_SIZE_MB}MB.`)
+    const limitMB = getSizeLimitMB(file.type)
+    if (file.size > limitMB * 1024 * 1024) {
+      toast.error(`Arquivo muito grande. O WhatsApp aceita no máximo ${limitMB}MB para este tipo de arquivo.`)
       return
     }
 
@@ -373,6 +391,11 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
               <>
                 <Mic className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span className="text-xs text-muted-foreground">Áudio gravado — pronto para enviar</span>
+              </>
+            ) : mediaPreview.mimeType === 'video/quicktime' ? (
+              <>
+                <FileText className="w-4 h-4 text-orange-500 shrink-0" />
+                <span className="text-xs text-muted-foreground truncate">Vídeo do iPhone — o cliente recebe como arquivo</span>
               </>
             ) : (
               <>

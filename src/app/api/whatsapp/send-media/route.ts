@@ -19,6 +19,7 @@ const ALLOWED_MIME = new Set([
   'audio/mp4',
   'audio/ogg',
   'video/mp4',
+  'video/quicktime', // .mov do iPhone — Meta não aceita como "video", vai como documento
   'application/pdf',
 ])
 
@@ -156,7 +157,8 @@ export async function POST(req: Request) {
       conversation.contact.phone,
       mediaId,
       mimeType,
-      caption
+      caption,
+      fileName
     )
 
     const message = await prisma.waMessage.update({

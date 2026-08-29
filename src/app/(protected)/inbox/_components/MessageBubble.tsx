@@ -324,8 +324,17 @@ function MediaBody({ message, isOutbound }: { message: WaMessage; isOutbound: bo
 
   // ── Vídeo ────────────────────────────────────────────────────────────────
   if (type === 'video' || mimeType?.startsWith('video/')) {
+    // playsInline: sem ele o iOS em PWA standalone força fullscreen nativo.
+    // #t=0.001: força o Safari a decodificar o primeiro frame como thumbnail
+    // (com preload="metadata" puro o player fica um retângulo preto no iOS).
     return mediaUrl ? (
-      <video controls src={mediaUrl} className="w-full max-w-[280px] max-h-48 rounded-lg my-1" preload="metadata" />
+      <video
+        controls
+        playsInline
+        src={`${mediaUrl}#t=0.001`}
+        className="w-full max-w-[280px] max-h-48 rounded-lg my-1"
+        preload="metadata"
+      />
     ) : (
       <span className="italic text-muted-foreground text-xs">[Vídeo indisponível]</span>
     )

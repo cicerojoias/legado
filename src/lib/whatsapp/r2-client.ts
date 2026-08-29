@@ -83,25 +83,45 @@ export async function uploadMediaToR2(
 }
 
 /**
- * Retorna o corpo da resposta em formato ReadableStream para o browser e o tipo de conteúdo
+ * Retorna o corpo da resposta em formato ReadableStream para o browser e o tipo de conteúdo.
+ * Aceita um header Range opcional (ex: "bytes=0-1023") — iOS/Safari exige resposta
+ * 206 Partial Content para reproduzir <video>/<audio>, então o proxy repassa o Range.
  */
-export async function getFileFromR2(key: string): Promise<{ body: ReadableStream | null; contentType?: string } | null> {
+export async function getFileFromR2(
+  key: string,
+  range?: string
+): Promise<{
+  body: ReadableStream | null
+  contentType?: string
+  contentLength?: number
+  contentRange?: string
+  partial: boolean
+} | null> {
   if (!s3Client || !bucketName) return null
   try {
     const command = new GetObjectCommand({
       Bucket: bucketName,
       Key: key,
+      ...(range ? { Range: range } : {}),
     })
     const response = await s3Client.send(command)
-    
+
     // O SDK S3 v3 provê transformToWebStream() no Node e em runtimes edge
     const body = response.Body?.transformToWebStream?.() ?? null
 
     return {
       body,
       contentType: response.ContentType,
+      contentLength: response.ContentLength,
+      contentRange: response.ContentRange,
+      partial: !!response.ContentRange,
     }
-  } catch (err) {
+  } catch (err: unknown) {
+    // Range inválido (fora do tamanho do objeto): tenta novamente sem Range
+    const s3Error = err as S3Error
+    if (range && s3Error.$metadata?.httpStatusCode === 416) {
+      return getFileFromR2(key)
+    }
     console.error(`[r2-client] Erro ao obter arquivo ${key} do R2:`, err)
     return null
   }

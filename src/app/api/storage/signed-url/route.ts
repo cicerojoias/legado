@@ -11,6 +11,7 @@ const ALLOWED_MIME = new Set([
   'audio/webm',
   'audio/ogg',
   'video/mp4',
+  'video/quicktime', // .mov do iPhone — enviado à Meta como documento
   'application/pdf',
 ])
 const URL_TTL_SECONDS = 120 // 2 min para completar o upload

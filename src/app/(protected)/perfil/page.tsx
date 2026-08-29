@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.75', data: '13/08/2026', resumo: 'WAB no iOS: vídeos e áudios recebidos agora reproduzem corretamente (suporte a streaming parcial no proxy de mídia), vídeos gravados no iPhone (.mov) podem ser enviados (entregues como arquivo) e validação de tamanho por tipo antes do upload.' },
     { versao: '0.18.74', data: '13/08/2026', resumo: 'Operação: unificação da filial sob a loja de Santa Rita no banco de dados e na interface — histórico consolidado, remoção de seletores de loja redundantes e simplificação da UX de lançamentos.' },
     { versao: '0.18.73', data: '28/07/2026', resumo: 'WAB: correção da rolagem no Android no painel de retomada de atendimento, permitindo acessar o botão de envio quando o template estiver expandido.' },
     { versao: '0.18.72', data: '16/07/2026', resumo: 'Manutenção: limpeza completa de lint e TypeScript — tipagens reforçadas, imports mortos removidos e regras do React Compiler limitadas aos fluxos client-side compatíveis.' },

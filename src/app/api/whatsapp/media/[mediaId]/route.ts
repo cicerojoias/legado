@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { WhatsAppError } from '@/lib/whatsapp/errors'
@@ -19,7 +19,7 @@ interface RouteParams {
  * 1. Tenta buscar a mídia permanentemente do Cloudflare R2.
  * 2. Caso não exista no R2, busca da Meta e inicia upload em background para o R2.
  */
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -33,6 +33,10 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const error = new WhatsAppError('INTERNAL_ERROR', 'Configuração de servidor inválida', 503)
     return new Response(JSON.stringify(error.toJSON()), { status: 503, headers: { 'Content-Type': 'application/json' } })
   }
+
+  // iOS/Safari exige suporte a Range (206 Partial Content) para tocar <video>/<audio>.
+  // Sem isso o player fica preto e não reproduz — repassar o Range em todas as fontes.
+  const rangeHeader = req.headers.get('range') ?? undefined
 
   try {
     // 1. Tentar buscar do Cloudflare R2 primeiro (se configurado)
@@ -48,13 +52,18 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       const exists = await checkFileExistsInR2(key)
       if (exists) {
         console.log(`[media-proxy] Servindo mídia ${mediaId} diretamente do Cloudflare R2`)
-        const file = await getFileFromR2(key)
+        const file = await getFileFromR2(key, rangeHeader)
         if (file && file.body) {
+          const headers: Record<string, string> = {
+            'Content-Type': file.contentType || mimeType,
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'private, max-age=31536000, immutable', // Cache agressivo, o R2 é permanente
+          }
+          if (file.contentLength != null) headers['Content-Length'] = String(file.contentLength)
+          if (file.partial && file.contentRange) headers['Content-Range'] = file.contentRange
           return new Response(file.body, {
-            headers: {
-              'Content-Type': file.contentType || mimeType,
-              'Cache-Control': 'private, max-age=31536000, immutable', // Cache agressivo, o R2 é permanente
-            },
+            status: file.partial ? 206 : 200,
+            headers,
           })
         }
       }
@@ -90,27 +99,38 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       setMediaUrlCache(mediaId, url, mime_type)
     }
 
-    // Baixar da Meta
+    // Baixar da Meta — repassa o Range para o CDN quando presente
     const mediaRes = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(rangeHeader ? { Range: rangeHeader } : {}),
+      },
     })
 
-    if (!mediaRes.ok) {
+    if (!mediaRes.ok && mediaRes.status !== 206) {
       throw new WhatsAppError('UPLOAD_FAILED', 'Falha ao baixar mídia da Meta')
     }
 
-    // Disparar o upload para o R2 em background de forma assíncrona
+    // Disparar o upload para o R2 em background após a resposta
+    // (after() garante execução em serverless — `void` pode ser morto junto com a request)
     if (isR2Configured()) {
       console.log(`[media-proxy] Disparando persistência assíncrona para o R2 da mídia ${mediaId}`)
-      void persistMediaToR2(mediaId, mime_type)
+      after(() => persistMediaToR2(mediaId, mime_type))
     }
 
-    // Retornar stream para o browser
+    // Retornar stream para o browser, preservando resposta parcial (206) quando houver
+    const headers: Record<string, string> = {
+      'Content-Type': mime_type || 'application/octet-stream',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'private, max-age=3600',
+    }
+    const contentRange = mediaRes.headers.get('content-range')
+    const contentLength = mediaRes.headers.get('content-length')
+    if (contentRange) headers['Content-Range'] = contentRange
+    if (contentLength) headers['Content-Length'] = contentLength
     return new Response(mediaRes.body, {
-      headers: {
-        'Content-Type': mime_type || 'application/octet-stream',
-        'Cache-Control': 'private, max-age=3600',
-      },
+      status: mediaRes.status === 206 ? 206 : 200,
+      headers,
     })
   } catch (error) {
     if (error instanceof WhatsAppError) {
