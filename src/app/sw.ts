@@ -1,6 +1,6 @@
-import { defaultCache } from "@serwist/next/worker";
+import { defaultCache, PAGES_CACHE_NAME } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -15,7 +15,52 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    // Mídias do WhatsApp NUNCA passam pelo cache do SW: o defaultCache tem uma regra
+    // NetworkFirst para /api/ que serviria respostas completas cacheadas a requests
+    // com Range — o iOS exige 206 para <video>/<audio> e renderiza player preto sem isso.
+    // Além de encher o Cache Storage (quota apertada em PWA iOS) com binários de vários MB.
+    {
+      matcher: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith("/api/whatsapp/media/"),
+      handler: new NetworkOnly(),
+    },
+    // As regras de navegação do defaultCache (RSC prefetch, RSC e HTML) usam NetworkFirst
+    // SEM networkTimeoutSeconds: numa rede instável, o SW espera a resposta de rede
+    // indefinidamente e nunca cai pro fallback de cache — a tela de carregamento trava
+    // pra sempre. Sobrescrevemos essas 3 entradas aqui (mesmos matchers/cacheNames do
+    // pacote) só para adicionar timeout, antes do spread do defaultCache abaixo.
+    {
+      matcher: ({ request, url: { pathname }, sameOrigin }) =>
+        request.headers.get("RSC") === "1" &&
+        request.headers.get("Next-Router-Prefetch") === "1" &&
+        sameOrigin &&
+        !pathname.startsWith("/api/"),
+      handler: new NetworkFirst({
+        cacheName: PAGES_CACHE_NAME.rscPrefetch,
+        networkTimeoutSeconds: 10,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
+    },
+    {
+      matcher: ({ request, url: { pathname }, sameOrigin }) =>
+        request.headers.get("RSC") === "1" && sameOrigin && !pathname.startsWith("/api/"),
+      handler: new NetworkFirst({
+        cacheName: PAGES_CACHE_NAME.rsc,
+        networkTimeoutSeconds: 10,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
+    },
+    {
+      matcher: ({ request, url: { pathname }, sameOrigin }) =>
+        request.headers.get("Content-Type")?.includes("text/html") && sameOrigin && !pathname.startsWith("/api/"),
+      handler: new NetworkFirst({
+        cacheName: PAGES_CACHE_NAME.html,
+        networkTimeoutSeconds: 10,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
+    },
+    ...defaultCache,
+  ],
 });
 
 serwist.addEventListeners();
