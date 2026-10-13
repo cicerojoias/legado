@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.77', data: '13/10/2026', resumo: 'WAB: opção 5 na mensagem de boas-vindas abre o WhatsApp pessoal do Cícero com uma saudação pré-preenchida para o cliente revisar e enviar.' },
     { versao: '0.18.76', data: '29/08/2026', resumo: 'PWA: correção de carregamento infinito ao abrir o app em rede instável — adicionado timeout de 10s nas regras de cache de navegação do Service Worker, que antes esperavam a resposta de rede indefinidamente sem cair para o cache local.' },
     { versao: '0.18.75', data: '13/08/2026', resumo: 'WAB no iOS: vídeos e áudios recebidos agora reproduzem corretamente (suporte a streaming parcial no proxy de mídia), vídeos gravados no iPhone (.mov) podem ser enviados (entregues como arquivo) e validação de tamanho por tipo antes do upload.' },
     { versao: '0.18.74', data: '13/08/2026', resumo: 'Operação: unificação da filial sob a loja de Santa Rita no banco de dados e na interface — histórico consolidado, remoção de seletores de loja redundantes e simplificação da UX de lançamentos.' },

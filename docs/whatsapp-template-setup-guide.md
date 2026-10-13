@@ -120,6 +120,7 @@ Temos 40 anos de tradição em:
 4️⃣ Consertos profissionais de joias, relógios e óculos 🔧
 
 0️⃣ Falar com um atendente 👥
+5️⃣ Falar diretamente com Cícero 📲
 
 Digite o número da opção desejada e aguarde.
 

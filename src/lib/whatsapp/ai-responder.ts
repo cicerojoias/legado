@@ -73,6 +73,7 @@ const WELCOME_MENU_OPTIONS: Record<string, string> = {
   '2': '/2',
   '3': '/3',
   '4': '/4',
+  '5': '/5',
 }
 
 // Templates de resposta automática do menu (fallback se não encontrar no localStorage)
@@ -82,6 +83,7 @@ const MENU_RESPONSE_TEMPLATES: Record<string, string> = {
   '2': 'Você escolheu *Banho de Ouro Premium*! 🔸\n\n• *Básico* 🥉 – sem garantia\n• *Intermediário* 🥈 – garantia de 6 meses\n• *Avançado* 🥇 – garantia de 1 ano\n\n• *Prazo de serviço:* sob consulta (depende da demanda) ⏳\n• *Preço:* sob consulta (varia conforme a peça)\n\nEnvie foto da peça para podermos lhe enviar o orçamento. 📸',
   '3': 'Você escolheu *Joias, Relógios e Óculos*! 💎\n\n• *Joias:* brincos, cordões, pulseiras, tornozeleiras, pingentes e anéis (masculinos & femininos) 🔸\n• *Relógios:* diversos modelos com garantia de 1 ano – consulte disponibilidade ⌚\n• *Óculos:* armações modernas e lentes sob medida 👓\n\nEnvie o nome do produto ou solicite nosso catálogo para receber mais detalhes. ✨',
   '4': 'Você escolheu *Consertos Profissionais*! ✨\n\n• *Relógios:* Troca de pilha, troca de peças, ajuste de pulseiras e mais. ⌚\n\n• *Óculos:* Conserto de armações, troca de peças, soldas e mais. 👓\n\n• *Joias:* Soldas, ajustes, restaurações, troca de abotoaduras e mais. 💍\n\nEnvie uma foto da peça para que possamos informar o orçamento. 📸',
+  '5': 'Você pode falar diretamente com o Cícero pelo WhatsApp. Ao abrir o link, uma mensagem estará pronta para você revisar e enviar: 📲\n\nhttps://wa.me/5583996022021?text=Ol%C3%A1%2C%20C%C3%ADcero!%20Peguei%20seu%20contato%20pelo%20WhatsApp%20oficial%20da%20C%C3%ADcero%20Joias.%20Gostaria%20de%20falar%20com%20voc%C3%AA.',
 }
 
 // Prompt do sistema - edite aqui para ajustar o comportamento da IA
@@ -488,7 +490,7 @@ export async function activateAiWithCatchUp(conversationId: string, waId: string
 
 /**
  * Tenta processar uma resposta como seleção de menu automático
- * Funciona mesmo com IA desativada se a resposta for 0-4 após boas-vindas
+ * Funciona mesmo com IA desativada se a resposta for 0-5 após boas-vindas
  */
 async function tryHandleWelcomeMenu(
   conversationId: string,
@@ -513,7 +515,7 @@ async function tryHandleWelcomeMenu(
   // Normaliza o conteúdo: remove espaços, converte para lowercase
   const normalized = lastInbound.content.trim().toLowerCase()
 
-  // Verifica se é uma opção de menu (0, 1, 2, 3, 4 ou /0, /1, /2, /3, /4)
+  // Verifica se é uma opção de menu (0 a 5, com ou sem barra)
   const menuMatch = normalized.match(/^\/?(\d)$/)
   if (!menuMatch) return false
 

@@ -15,7 +15,8 @@ export const TEMPLATES: Template[] = [
       '2️⃣ Banho de ouro premium 🔸\n' +
       '3️⃣ Joias em geral, relógios e armações de óculos 💎\n' +
       '4️⃣ Consertos profissionais de joias, relógios e óculos 🔧\n\n' +
-      '0️⃣ Falar com um atendente 👥\n\n' +
+      '0️⃣ Falar com um atendente 👥\n' +
+      '5️⃣ Falar diretamente com Cícero 📲\n\n' +
       'Digite o número da opção desejada e aguarde.\n\n' +
       'Em breve entraremos em contato! ☺️',
   },
@@ -70,6 +71,13 @@ export const TEMPLATES: Template[] = [
       '• *Óculos:* Conserto de armações, troca de peças, soldas e mais. 👓\n\n' +
       '• *Joias:* Soldas, ajustes, restaurações, troca de abotoaduras e mais. 💍\n\n' +
       'Envie uma foto da peça para que possamos informar o orçamento. 📸',
+  },
+  {
+    slug: '5',
+    label: 'Opção 5 — Falar diretamente com Cícero',
+    content:
+      'Você pode falar diretamente com o Cícero pelo WhatsApp. Ao abrir o link, uma mensagem estará pronta para você revisar e enviar: 📲\n\n' +
+      'https://wa.me/5583996022021?text=Ol%C3%A1%2C%20C%C3%ADcero!%20Peguei%20seu%20contato%20pelo%20WhatsApp%20oficial%20da%20C%C3%ADcero%20Joias.%20Gostaria%20de%20falar%20com%20voc%C3%AA.',
   },
   {
     slug: 'envio',
