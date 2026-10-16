@@ -394,6 +394,8 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      // Ignora auto-repetição da tecla e Enter de confirmação do IME (teclados móveis)
+      if (e.repeat || e.nativeEvent.isComposing) return
       handleSend()
     }
   }

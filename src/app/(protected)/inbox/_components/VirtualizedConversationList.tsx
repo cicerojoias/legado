@@ -302,6 +302,7 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
               return (
                 <div
                   key="loader-item"
+                  data-index={virtualItem.index}
                   ref={virtualizer.measureElement}
                   className="flex items-center justify-center py-4 text-muted-foreground text-xs bg-muted/10 border-t border-b"
                 >
