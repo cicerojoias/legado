@@ -5,31 +5,27 @@ import { dispatchPushResumoDiario } from '@/lib/whatsapp/push-dispatcher'
  * API Route protegida para receber o cron job diário de resumo financeiro.
  * 
  * Chamada pelo Vercel Cron (ou outro scheduler) no horário configurado.
- * Envia notificações push de resumo financeiro para ADMIN e SUPER_ADMIN.
+ * Verifica e envia os resumos financeiros pendentes conforme horário de cada usuário.
  * 
  * Segurança: requer header Authorization com token secreto (CRON_SECRET).
  */
 export async function POST(req: NextRequest) {
-  // Proteção: verifica token secreto do cron job
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     console.warn('[cron/daily-summary] Tentativa não autorizada de acesso')
-    return NextResponse.json(
-      { error: 'Não autorizado' },
-      { status: 401 }
-    )
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
   try {
-    console.log('[cron/daily-summary] Iniciando envio de resumo diário')
-    
-    await dispatchPushResumoDiario()
-    
+    console.log('[cron/daily-summary] Iniciando verificação do resumo diário')
+    const result = await dispatchPushResumoDiario()
+
     return NextResponse.json({
       success: true,
-      message: 'Resumo diário enviado com sucesso',
+      message: 'Verificação do resumo diário concluída',
+      ...result,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
@@ -37,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Erro interno ao enviar resumo diário',
+        error: 'Erro ao enviar resumo diário',
         details: error instanceof Error ? error.message : 'Erro desconhecido',
       },
       { status: 500 }

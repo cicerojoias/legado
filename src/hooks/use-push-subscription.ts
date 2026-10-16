@@ -16,6 +16,8 @@ type PushState = {
   permission: NotificationPermission
   subscribed: boolean
   isLoading: boolean
+  isIOS: boolean
+  requiresHomeScreen: boolean
 }
 
 /**
@@ -30,18 +32,32 @@ export function usePushSubscription() {
     permission: 'default',
     subscribed: false,
     isLoading: true,
+    isIOS: false,
+    requiresHomeScreen: false,
   })
 
-  // Verifica suporte e subscription existente ao montar
   useEffect(() => {
-    const isSupported =
-      typeof window !== 'undefined' &&
+    const isIOS =
+      /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+    const requiresHomeScreen = isIOS && !isStandalone
+    const hasPushApis =
       'serviceWorker' in navigator &&
       'PushManager' in window &&
       'Notification' in window
 
-    if (!isSupported) {
-      setState({ supported: false, permission: 'default', subscribed: false, isLoading: false })
+    if (!hasPushApis || requiresHomeScreen) {
+      setState({
+        supported: false,
+        permission: 'Notification' in window ? Notification.permission : 'default',
+        subscribed: false,
+        isLoading: false,
+        isIOS,
+        requiresHomeScreen,
+      })
       return
     }
 
@@ -53,6 +69,8 @@ export function usePushSubscription() {
           permission: Notification.permission,
           subscribed: existing !== null,
           isLoading: false,
+          isIOS,
+          requiresHomeScreen: false,
         })
       })
       .catch(() => {
@@ -61,14 +79,12 @@ export function usePushSubscription() {
           permission: Notification.permission,
           subscribed: false,
           isLoading: false,
+          isIOS,
+          requiresHomeScreen: false,
         })
       })
   }, [])
 
-  /**
-   * Solicita permissão, cria a PushSubscription e registra no servidor.
-   * @returns true se subscrito com sucesso, false caso contrário.
-   */
   const subscribe = useCallback(async (): Promise<boolean> => {
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!vapidKey) {
@@ -76,20 +92,18 @@ export function usePushSubscription() {
       return false
     }
 
-    setState((s) => ({ ...s, isLoading: true }))
+    setState((current) => ({ ...current, isLoading: true }))
 
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
-        setState((s) => ({ ...s, permission, isLoading: false }))
+        setState((current) => ({ ...current, permission, isLoading: false }))
         return false
       }
 
       const reg = await navigator.serviceWorker.ready
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        // Cast necessário: TypeScript strict tipifica Uint8Array<ArrayBufferLike> mas
-        // PushSubscriptionOptionsInit espera ArrayBuffer — o valor em runtime é correto.
         applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
       })
 
@@ -97,7 +111,6 @@ export function usePushSubscription() {
         endpoint: string
         keys: { p256dh: string; auth: string }
       }
-
       const res = await fetch('/api/whatsapp/push-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,26 +122,27 @@ export function usePushSubscription() {
       })
 
       if (!res.ok) {
-        // Rollback: remove subscription local se o servidor rejeitou
         await subscription.unsubscribe().catch(() => {})
-        setState((s) => ({ ...s, isLoading: false }))
+        setState((current) => ({ ...current, isLoading: false }))
         return false
       }
 
-      setState({ supported: true, permission: 'granted', subscribed: true, isLoading: false })
+      setState((current) => ({
+        ...current,
+        permission: 'granted',
+        subscribed: true,
+        isLoading: false,
+      }))
       return true
     } catch (err) {
       console.error('[push] subscribe error:', err)
-      setState((s) => ({ ...s, isLoading: false }))
+      setState((current) => ({ ...current, isLoading: false }))
       return false
     }
   }, [])
 
-  /**
-   * Remove a subscription local e notifica o servidor para deletar do banco.
-   */
   const unsubscribe = useCallback(async (): Promise<void> => {
-    setState((s) => ({ ...s, isLoading: true }))
+    setState((current) => ({ ...current, isLoading: true }))
 
     try {
       const reg = await navigator.serviceWorker.ready
@@ -143,12 +157,34 @@ export function usePushSubscription() {
         await subscription.unsubscribe()
       }
 
-      setState((s) => ({ ...s, subscribed: false, isLoading: false }))
+      setState((current) => ({ ...current, subscribed: false, isLoading: false }))
     } catch (err) {
       console.error('[push] unsubscribe error:', err)
-      setState((s) => ({ ...s, isLoading: false }))
+      setState((current) => ({ ...current, isLoading: false }))
     }
   }, [])
 
-  return { ...state, subscribe, unsubscribe }
+  const sendTestNotification = useCallback(async (testType: 'whatsapp' | 'resumo'): Promise<boolean> => {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const subscription = await reg.pushManager.getSubscription()
+      if (!subscription) return false
+
+      const json = subscription.toJSON() as {
+        endpoint: string
+        keys: { p256dh: string; auth: string }
+      }
+      const response = await fetch('/api/whatsapp/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...json, ...json.keys, testType }),
+      })
+      return response.ok
+    } catch (err) {
+      console.error('[push] test notification error:', err)
+      return false
+    }
+  }, [])
+
+  return { ...state, subscribe, unsubscribe, sendTestNotification }
 }

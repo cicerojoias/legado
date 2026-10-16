@@ -27,6 +27,11 @@ export async function updateSession(request: NextRequest) {
         }
     );
 
+    // The cron endpoint authenticates with its own bearer secret in the route.
+    if (request.nextUrl.pathname === '/api/cron/daily-summary') {
+        return supabaseResponse;
+    }
+
     // Refreshing the auth token
     const {
         data: { user },

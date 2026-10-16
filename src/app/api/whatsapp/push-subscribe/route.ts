@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { sendPush } from '@/lib/whatsapp/push-client'
 
 // ─── SSRF allowlist ───────────────────────────────────────────────────────────
 // Only known push service domains are accepted as subscription endpoints.
@@ -33,6 +34,7 @@ const SubscribeSchema = z.object({
     }, 'Endpoint de push não permitido'),
   p256dh: z.string().min(1).max(100),
   auth: z.string().min(1).max(50),
+  testType: z.enum(['whatsapp', 'resumo']).optional(),
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,18 +54,12 @@ async function getAuthenticatedUser() {
 }
 
 // ─── POST /api/whatsapp/push-subscribe ────────────────────────────────────────
-// Upserts a push subscription for the authenticated ADMIN/SUPER_ADMIN user.
+// Registers a push subscription for the authenticated active user.
 
 export async function POST(req: NextRequest) {
   const dbUser = await getAuthenticatedUser()
   if (!dbUser) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  // RBAC: only ADMIN and SUPER_ADMIN receive WAB push notifications
-  if (dbUser.role === 'OPERADOR') {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
-  }
-
-  // Rate limit: 10 subscriptions / 15 min per user (device registrations, not high frequency)
   const rl = await rateLimit(`push-subscribe:${dbUser.id}`, 10, 15)
   if (!rl.success) {
     return NextResponse.json({ error: rl.message }, { status: 429 })
@@ -84,18 +80,44 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { endpoint, p256dh, auth } = parsed.data
+  const { endpoint, p256dh, auth, testType } = parsed.data
+  if (!['GERENTE', 'ADMIN', 'SUPER_ADMIN'].includes(dbUser.role)) {
+    return NextResponse.json({ error: 'Sem permissão para notificações do WhatsApp' }, { status: 403 })
+  }
+  if (testType === 'resumo' && !['ADMIN', 'SUPER_ADMIN'].includes(dbUser.role)) {
+    return NextResponse.json({ error: 'Sem permissão para testar o resumo financeiro' }, { status: 403 })
+  }
 
-  // Upsert: if endpoint already stored (same device re-subscribing), update keys.
-  // If a different user tries to claim an existing endpoint, endpoint @unique will
-  // reject silently through conflict handling — they keep their own subscription.
   await prisma.waPushSubscription.upsert({
     where: { endpoint },
     update: { p256dh, auth, userId: dbUser.id },
     create: { endpoint, p256dh, auth, userId: dbUser.id },
   })
 
-  return NextResponse.json({ success: true })
+  if (testType === 'whatsapp') {
+    await sendPush(endpoint, p256dh, auth, {
+      title: 'Teste de notificação do Legado',
+      body: 'Este aparelho está pronto para receber novas mensagens do WhatsApp.',
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
+      conversationId: 'push-test',
+      url: '/inbox',
+      unreadCount: 0,
+    })
+  } else if (testType === 'resumo') {
+    await sendPush(endpoint, p256dh, auth, {
+      title: 'Teste do resumo diário',
+      body: 'As notificações deste aparelho estão funcionando. Este é apenas um teste.',
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
+      type: 'daily-summary',
+      url: '/hoje',
+      unreadCount: 0,
+      data: { entradas: 0, saidas: 0, saldo: 0, pix: 0, debito: 0, credito: 0, especie: 0 },
+    })
+  }
+
+  return NextResponse.json({ success: true, testAccepted: Boolean(testType) })
 }
 
 // ─── DELETE /api/whatsapp/push-subscribe ──────────────────────────────────────

@@ -274,9 +274,7 @@ export async function atualizarNotificacoesAction(formData: FormData): Promise<A
         if (!ctx) return { success: false, error: 'Não autorizado.' };
 
         const { dbUser } = ctx;
-
-        // RBAC: apenas ADMIN e SUPER_ADMIN
-        if (dbUser.role === 'OPERADOR') {
+        if (dbUser.role !== 'ADMIN' && dbUser.role !== 'SUPER_ADMIN') {
             return { success: false, error: 'Sem permissão.' };
         }
 

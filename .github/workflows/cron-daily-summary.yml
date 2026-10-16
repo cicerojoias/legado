@@ -2,12 +2,15 @@ name: Daily Financial Summary Cron
 
 on:
   schedule:
-    # Executa todos os dias às 18:00 UTC (15:00 BRT durante horário padrão, 14:00 BRT durante horário de verão)
-    # Ajuste o horário conforme necessário: https://crontab.guru/
-    - cron: '0 18 * * *'
+    # Verifica a cada 5 minutos os resumos cujo horário local já chegou.
+    - cron: '*/5 * * * *'
   
   # Permite execução manual para testes
   workflow_dispatch:
+
+concurrency:
+  group: daily-financial-summary
+  cancel-in-progress: false
 
 jobs:
   trigger-daily-summary:

@@ -71,8 +71,8 @@ export function PerfilContent({
     changelog,
 }: PerfilContentProps) {
     const [openSection, setOpenSection] = useState<OpenSection>(null);
-    const isGerente = role === 'GERENTE' || role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const canReceiveNotifications = ['GERENTE', 'ADMIN', 'SUPER_ADMIN'].includes(role);
+    const canReceiveDailySummary = ['ADMIN', 'SUPER_ADMIN'].includes(role);
     const isSuperAdmin = role === 'SUPER_ADMIN';
 
     const toggleSection = (section: OpenSection) => {
@@ -145,18 +145,18 @@ export function PerfilContent({
                     <EncerrarSessaoButton />
                 </div>
 
-                {/* Notificações — ADMIN+ */}
-                {isGerente && (
+                {/* Notificações disponíveis para perfis com acesso ao WhatsApp */}
+                {canReceiveNotifications && (
                     <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
                             Notificações
                         </p>
 
-                        {/* Toggle WAB push — visível para GERENTE+ */}
+                        {/* Alerta de mensagens para perfis com acesso ao inbox */}
                         <WabNotificacoesToggle />
 
-                        {/* Resumo diário financeiro — apenas ADMIN+ */}
-                        {isAdmin && (
+                        {/* Resumo financeiro diário */}
+                        {canReceiveDailySummary && (
                             <>
                                 <SectionButton
                                     icon={<Bell className="w-4 h-4" />}
@@ -434,48 +434,90 @@ function EncerrarSessaoButton() {
 // ─── WAB Notificações Toggle ─────────────────────────────────────────────────
 
 function WabNotificacoesToggle() {
-    const { supported, permission, subscribed, isLoading, subscribe, unsubscribe } = usePushSubscription()
+    const {
+        supported,
+        permission,
+        subscribed,
+        isLoading,
+        isIOS,
+        requiresHomeScreen,
+        subscribe,
+        unsubscribe,
+        sendTestNotification,
+    } = usePushSubscription();
+    const [isTesting, setIsTesting] = useState(false);
 
     const handleToggle = async (checked: boolean) => {
         if (checked) {
-            const ok = await subscribe()
+            const ok = await subscribe();
             if (!ok && permission === 'denied') {
-                toast.error('Notificações bloqueadas. Habilite nas configurações do navegador.')
+                toast.error('Notificações bloqueadas. Habilite nas configurações do aparelho.');
             } else if (!ok) {
-                toast.error('Não foi possível ativar as notificações.')
+                toast.error('Não foi possível ativar as notificações.');
             } else {
-                toast.success('Notificações WAB ativadas!')
+                toast.success('Notificações do WhatsApp ativadas neste aparelho.');
             }
         } else {
-            await unsubscribe()
-            toast.success('Notificações WAB desativadas.')
+            await unsubscribe();
+            toast.success('Notificações desativadas neste aparelho.');
         }
-    }
+    };
+
+    const handleTest = async () => {
+        setIsTesting(true);
+        const accepted = await sendTestNotification('whatsapp');
+        setIsTesting(false);
+        if (accepted) {
+            toast.success('Teste enviado. Confira a central de notificações deste aparelho.');
+        } else {
+            toast.error('O teste falhou. Confira a conexão e tente ativar as notificações novamente.');
+        }
+    };
+
+    const status = requiresHomeScreen
+        ? 'No iPhone, adicione o app à Tela de Início e abra por lá para ativar.'
+        : !supported
+            ? 'Este navegador não oferece notificações push.'
+            : permission === 'denied'
+                ? 'Bloqueado nas configurações do aparelho ou navegador.'
+                : subscribed
+                    ? 'Este aparelho está inscrito para receber novas mensagens.'
+                    : 'Ative neste aparelho para receber novas mensagens.';
 
     return (
-        <div className="bg-card rounded-xl border px-4 py-3">
+        <div className="bg-card rounded-xl border px-4 py-3 space-y-3">
             <div className="flex items-center gap-3">
                 <BellRing className="w-4 h-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">Mensagens WhatsApp</p>
-                    <p className="text-xs text-muted-foreground">
-                        {!supported
-                            ? 'Instale o app na tela inicial para ativar (iOS)'
-                            : permission === 'denied'
-                                ? 'Bloqueado — habilite nas configurações do navegador'
-                                : subscribed
-                                    ? 'Recebendo alertas de novas mensagens'
-                                    : 'Ative para receber alertas de novas mensagens'}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{status}</p>
+                    {isIOS && supported && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                            No iPhone, confira também Ajustes &gt; Notificações e o modo Foco.
+                        </p>
+                    )}
                 </div>
                 <Switch
                     checked={subscribed}
                     onCheckedChange={handleToggle}
                     disabled={isLoading || !supported || permission === 'denied'}
+                    aria-label="Ativar notificações de mensagens do WhatsApp"
                 />
             </div>
+            {subscribed && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleTest}
+                    disabled={isTesting}
+                >
+                    {isTesting ? 'Enviando teste...' : 'Testar este aparelho'}
+                </Button>
+            )}
         </div>
-    )
+    );
 }
 
 // ─── Notificações Form ──────────────────────────────────────────────────────
@@ -488,8 +530,10 @@ function NotificacoesForm({
     initialHorario: string;
 }) {
     const [isPending, startTransition] = useTransition();
+    const [isTesting, setIsTesting] = useState(false);
     const [pushEnabled, setPushEnabled] = useState(initialPush);
     const [horario, setHorario] = useState(initialHorario);
+    const { subscribed, sendTestNotification } = usePushSubscription();
 
     const handleSave = () => {
         const formData = new FormData();
@@ -499,11 +543,22 @@ function NotificacoesForm({
         startTransition(async () => {
             const result = await atualizarNotificacoesAction(formData);
             if (result.success) {
-                toast.success('Notificações atualizadas!');
+                toast.success('Preferências de resumo atualizadas!');
             } else {
                 toast.error(result.error);
             }
         });
+    };
+
+    const handleTest = async () => {
+        setIsTesting(true);
+        const accepted = await sendTestNotification('resumo');
+        setIsTesting(false);
+        if (accepted) {
+            toast.success('Teste enviado. Confira as notificações deste aparelho.');
+        } else {
+            toast.error('Não foi possível enviar o teste. Ative primeiro as notificações neste aparelho.');
+        }
     };
 
     return (
@@ -517,32 +572,54 @@ function NotificacoesForm({
                 <div>
                     <p className="text-sm font-medium">Resumo diário</p>
                     <p className="text-xs text-muted-foreground">
-                        Receba o total do dia por push
+                        Receba os totais financeiros do dia no horário escolhido
                     </p>
                 </div>
                 <Switch
                     checked={pushEnabled}
                     onCheckedChange={setPushEnabled}
+                    aria-label="Ativar resumo financeiro diário"
                 />
             </div>
 
             <div>
-                <label className="text-xs text-muted-foreground">Horário da notificação</label>
+                <label className="text-xs text-muted-foreground" htmlFor="notif-horario">
+                    Horário da notificação
+                </label>
                 <Input
+                    id="notif-horario"
                     type="time"
                     value={horario}
-                    onChange={(e) => setHorario(e.target.value)}
+                    onChange={(event) => setHorario(event.target.value)}
                     className="mt-1"
                 />
             </div>
 
-            <Button
-                onClick={handleSave}
-                className="w-full"
-                disabled={isPending}
-            >
-                {isPending ? 'Salvando...' : 'Salvar preferências'}
-            </Button>
+            <p className="text-xs text-muted-foreground">
+                O aparelho precisa estar inscrito em “Mensagens WhatsApp” para receber o resumo.
+                {subscribed ? '' : ' Ative essa opção neste aparelho primeiro.'}
+            </p>
+
+            <div className="space-y-2">
+                <Button
+                    onClick={handleSave}
+                    className="w-full"
+                    disabled={isPending}
+                >
+                    {isPending ? 'Salvando...' : 'Salvar preferências'}
+                </Button>
+                {subscribed && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleTest}
+                        disabled={isTesting}
+                    >
+                        {isTesting ? 'Enviando teste...' : 'Testar resumo neste aparelho'}
+                    </Button>
+                )}
+            </div>
         </motion.div>
     );
 }

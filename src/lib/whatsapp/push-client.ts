@@ -34,17 +34,15 @@ export async function sendPush(
     await webpush.sendNotification(
       { endpoint, keys: { p256dh, auth } },
       JSON.stringify(payload),
-      { TTL: 60 } // 60s: se device offline, o push service tenta por 1 min
+      { TTL: 60 * 60 * 24 }
     )
   } catch (err) {
     const e = err as WebPushError
     if (e.statusCode === 410 || e.statusCode === 404) {
-      // Subscription inválida/expirada — limpar silenciosamente
       await prisma.waPushSubscription
         .deleteMany({ where: { endpoint } })
         .catch(() => {})
-    } else {
-      throw err
     }
+    throw err
   }
 }
