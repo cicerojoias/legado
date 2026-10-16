@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.79', data: '16/10/2026', resumo: 'PWA Android: ícone monocromático de notificação reforçado para melhorar a visibilidade em aparelhos Samsung.' },
     { versao: '0.18.78', data: '16/10/2026', resumo: 'Notificações: alertas de WhatsApp para perfis com acesso ao inbox; resumo financeiro restrito a ADMIN/SUPER_ADMIN, com teste por aparelho e ajustes na entrega.' },
     { versao: '0.18.77', data: '13/10/2026', resumo: 'WAB: opção 5 na mensagem de boas-vindas abre o WhatsApp pessoal do Cícero com uma saudação pré-preenchida para o cliente revisar e enviar.' },
     { versao: '0.18.76', data: '29/08/2026', resumo: 'PWA: correção de carregamento infinito ao abrir o app em rede instável — adicionado timeout de 10s nas regras de cache de navegação do Service Worker, que antes esperavam a resposta de rede indefinidamente sem cair para o cache local.' },
