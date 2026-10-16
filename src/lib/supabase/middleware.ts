@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+    const mwStart = performance.now();
+    let mwRoleMs = 0;
     let supabaseResponse = NextResponse.next({
         request,
     });
@@ -36,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     const {
         data: { user },
     } = await supabase.auth.getUser();
+    const mwAuthMs = performance.now() - mwStart;
 
     const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth');
     const isPinRoute = request.nextUrl.pathname.startsWith('/pin') || request.nextUrl.pathname.startsWith('/setup-pin');
@@ -84,11 +87,13 @@ export async function updateSession(request: NextRequest) {
         const isSuperAdminRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/custos-fixos') || pathname.startsWith('/usuarios') || pathname.startsWith('/logs');
 
         if (hasVerifiedPin && (isGerenteRoute || isAdminRoute || isSuperAdminRoute)) {
+            const roleStart = performance.now();
             const { data: dbUser } = await supabase
                 .from('users')
                 .select('role')
                 .eq('id', user.id)
                 .single();
+            mwRoleMs = performance.now() - roleStart;
 
             const role = dbUser?.role as string | undefined;
 
@@ -112,5 +117,10 @@ export async function updateSession(request: NextRequest) {
         }
     }
 
+    // Latência do middleware (aparece nos headers da resposta: x-mw-timing)
+    supabaseResponse.headers.set(
+        'x-mw-timing',
+        `auth;dur=${mwAuthMs.toFixed(1)}, role;dur=${mwRoleMs.toFixed(1)}, total;dur=${(performance.now() - mwStart).toFixed(1)}`
+    );
     return supabaseResponse;
 }

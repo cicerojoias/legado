@@ -2,6 +2,8 @@ import type { ConversationWithPreview } from './types'
 import Link from 'next/link'
 import { cn, getContactInitials } from '@/lib/utils'
 import { Check, CheckCheck, Clock } from 'lucide-react'
+import { perfStart } from '@/lib/client-perf'
+import { setPendingChatPreview } from './chat-preview'
 
 interface ConversationItemProps {
   conversation: ConversationWithPreview
@@ -94,6 +96,10 @@ export function ConversationItem({ conversation, isActive }: ConversationItemPro
   return (
     <Link
       href={`/inbox/${conversation.id}`}
+      onClick={() => {
+        perfStart('chat-open')
+        setPendingChatPreview({ id: conversation.id, name: contact.name ?? contact.phone, initials })
+      }}
       className={cn(
         'flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted/80',
         isActive ? 'bg-primary/10' : 'hover:bg-muted/50'

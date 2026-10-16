@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useState } from 'react'
 import { activateIaWithCatchUpAction, getIaActivationPreview, toggleIaAtiva } from '../actions/conversation'
 import { getContactInitials } from '@/lib/utils'
-import type { WaContact, WaConversation, WaTag } from '@prisma/client'
+import type { WaContact, WaConversation } from '@prisma/client'
 import type { TagWithMeta } from './types'
 import { ConversationTagPanel } from './ConversationTagPanel'
 import { ConversationActionsModal } from './ConversationActionsModal'
@@ -25,6 +25,8 @@ import { useSelectionState } from './SelectionContext'
 import { SelectionHeaderOverlay } from './SelectionHeaderOverlay'
 import { OrcamentoModal } from './OrcamentoModal'
 import { useInsertText } from './InsertTextContext'
+import { perfStart } from '@/lib/client-perf'
+import { useInboxData } from './InboxDataContext'
 
 type AiActivationPreview = {
   pendingCount: number
@@ -42,11 +44,12 @@ interface ContactHeaderProps {
   conversation:  WaConversation
   showBackButton?: boolean
   currentTags?:  TagWithMeta[]
-  availableTags?: WaTag[]
 }
 
-export function ContactHeader({ contact, conversation, showBackButton, currentTags = [], availableTags = [] }: ContactHeaderProps) {
+export function ContactHeader({ contact, conversation, showBackButton, currentTags = [] }: ContactHeaderProps) {
   const router = useRouter()
+  const { role, tags } = useInboxData()
+  const availableTags = role !== 'OPERADOR' ? tags : []
   const [resolving, setResolving] = useState(false)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -159,6 +162,7 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
         {showBackButton && (
           <button
             onClick={() => {
+              perfStart('chat-back')
               if (window.history.length <= 1) {
                 router.push('/inbox')
               } else {

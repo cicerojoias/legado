@@ -1,30 +1,16 @@
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
-import { createClient } from '@/lib/supabase/server'
-import { VirtualizedConversationList } from './VirtualizedConversationList'
+import { createServerTiming } from '@/lib/server-timing'
+import { InboxConversationList } from './InboxConversationList'
 import type { ConversationWithPreview } from './types'
-import type { Prisma } from '@prisma/client'
 
-interface ConversationListProps {
-  activeId?:    string
-  filterUnread?: boolean
-  filterTagId?:  string
-}
-
-export async function ConversationList({ activeId, filterUnread, filterTagId }: ConversationListProps) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id ?? ''
-
-  const where: Prisma.WaConversationWhereInput = {
-    ...(filterUnread ? { conversation_reads: { some: { userId, unreadCount: { gt: 0 } } } } : {}),
-    ...(filterTagId  ? { conversation_tags:  { some: { tagId: filterTagId } } } : {}),
-  }
-
-  // Sem take quando filtro ativo — evita perder conversas taggeadas fora do top-50
-  const applyLimit = !filterTagId && !filterUnread
-
-  const rawConversations = await prisma.waConversation.findMany({
-    where,
+/**
+ * Carrega a lista padrão (top 50, sem filtros) no servidor, em streaming dentro do layout.
+ * Filtros são resolvidos client-side em InboxConversationList.
+ */
+export async function ConversationList({ userId }: { userId: string }) {
+  const timing = createServerTiming('inbox/conversation-list')
+  const rawConversations = await timing.measure('list', prisma.waConversation.findMany({
     orderBy: { last_message_at: 'desc' },
     include: {
       contact: true,
@@ -41,41 +27,18 @@ export async function ConversationList({ activeId, filterUnread, filterTagId }: 
         orderBy: { assignedAt: 'asc' },
       },
     },
-    ...(applyLimit ? { take: 50 } : {}),
-  })
+    take: 50,
+  }))
+  timing.log()
 
   const conversations: ConversationWithPreview[] = rawConversations.map((conv) => ({
     ...conv,
     unreadCount: conv.conversation_reads[0]?.unreadCount ?? 0,
   }))
 
-  if (conversations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm px-8 text-center gap-2 py-16">
-        <p className="text-2xl">{filterUnread || filterTagId ? '🔍' : '💬'}</p>
-        <p className="font-medium">
-          {filterUnread
-            ? 'Nenhuma mensagem não lida'
-            : filterTagId
-            ? 'Nenhuma conversa com essa tag'
-            : 'Nenhuma conversa ainda'}
-        </p>
-        <p className="text-xs">
-          {filterUnread
-            ? 'Você está em dia com todas as conversas.'
-            : filterTagId
-            ? 'Aplique esta tag em conversas para filtrá-las aqui.'
-            : 'As mensagens recebidas no WhatsApp aparecerão aqui.'}
-        </p>
-      </div>
-    )
-  }
-
   return (
-    <VirtualizedConversationList
-      conversations={conversations}
-      activeId={activeId}
-      userId={userId}
-    />
+    <Suspense fallback={null}>
+      <InboxConversationList initialConversations={conversations} userId={userId} />
+    </Suspense>
   )
 }

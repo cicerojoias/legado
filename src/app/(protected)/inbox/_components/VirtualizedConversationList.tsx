@@ -266,6 +266,16 @@ export function VirtualizedConversationList({ conversations, activeId, userId }:
     }
   }, [lastItem, loadedConversations.length, hasMore, isLoadingMore, loadMore])
 
+  // Zera o badge de não lidas da conversa aberta sem esperar o round-trip do mark-read
+  useEffect(() => {
+    if (!activeId) return
+    setLoadedConversations((prev) =>
+      prev.some((c) => c.id === activeId && c.unreadCount > 0)
+        ? prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c))
+        : prev
+    )
+  }, [activeId])
+
   // Scrolla para o item ativo quando activeId muda
   useEffect(() => {
     if (!activeId) return

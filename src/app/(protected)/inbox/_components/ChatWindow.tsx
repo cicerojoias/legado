@@ -10,10 +10,12 @@ import { TemplateSelector } from './TemplateSelector'
 import { AssistenteModal } from './AssistenteModal'
 import { useSelectionState, useSelectionActions } from './SelectionContext'
 import { useInsertText } from './InsertTextContext'
+import { perfEnd, perfHas } from '@/lib/client-perf'
+import { clearPendingChatPreview } from './chat-preview'
+import { OLDER_PAGE_SIZE } from './chat-constants'
 
 const WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 const REACTIONS = ['✅', '💚', '🤝', '🙏'] as const
-const PAGE_SIZE = 100
 const BOTTOM_THRESHOLD = 150 // px — considera "no fundo" se dentro desse limite
 
 function getLocalDateString(dateInput: Date | string | null): string {
@@ -191,7 +193,12 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   // Scroll inicial + reprocessar mídias pendentes ao abrir a conversa
   useEffect(() => {
     scrollToBottom(false)
-    void fetch(`/api/whatsapp/reprocess-media?conversationId=${conversationId}`, { method: 'POST' })
+    perfEnd('chat-open', 'abrir chat (clique → mensagens)')
+    clearPendingChatPreview()
+    // Só mensagens legadas (mediaId sem mediaUrl) precisam de reprocessamento
+    if (initialMessages.some((m) => m.mediaId && !m.mediaUrl)) {
+      void fetch(`/api/whatsapp/reprocess-media?conversationId=${conversationId}`, { method: 'POST' })
+    }
     // Marca mensagens como lidas ao abrir a conversa
     fetch(`/api/whatsapp/conversations/${conversationId}/mark-read`, { method: 'POST' }).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -215,7 +222,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
     try {
       const before = encodeURIComponent(parseMessageTimestamp(oldest.timestamp).toISOString())
-      const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
+      const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}&limit=${OLDER_PAGE_SIZE}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const older: WaMessage[] = data.conversation?.messages ?? []
@@ -225,7 +232,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
         return
       }
 
-      setHasMore(older.length === PAGE_SIZE)
+      setHasMore(data.hasMore === true)
       setMessages((prev) => {
         // Dedup por id — evita duplicatas se o cursor coincidir com um registro já carregado
         const existingIds = new Set(prev.map((m) => m.id))
@@ -257,7 +264,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) loadMore() },
-      { root: scrollContainerRef.current, threshold: 0.1 }
+      // Margem no topo: começa a buscar o histórico antes do usuário chegar ao fim (estilo WhatsApp)
+      { root: scrollContainerRef.current, rootMargin: '600px 0px 0px 0px', threshold: 0 }
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
@@ -276,6 +284,9 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           if (prev.some((m) => m.id === newMsg.id)) return prev
           return [...prev, newMsg]
         })
+        if (newMsg.direction === 'outbound' && perfHas('send-bubble')) {
+          perfEnd('send-bubble', 'envio: bolha na tela')
+        }
         if (isAtBottomRef.current) {
           scrollToBottom()
         } else if (newMsg.direction === 'inbound') {
@@ -359,7 +370,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
           while (!found && oldest && iterations < 15) {
             iterations++
             const before = encodeURIComponent(parseMessageTimestamp(oldest.timestamp).toISOString())
-            const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}`)
+            const res = await fetch(`/api/whatsapp/conversations/${conversationId}?before=${before}&limit=100`)
             if (!res.ok) break
             const data = await res.json()
             const older: WaMessage[] = data.conversation?.messages ?? []
@@ -379,7 +390,7 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
               break
             }
 
-            if (older.length < PAGE_SIZE) break
+            if (!data.hasMore) break
           }
 
           setMessages(currentMessages)
@@ -449,8 +460,8 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
   }, [])
 
   const handleMessageSent = useCallback(() => {
-    // O envio já publica INSERT/UPDATE via realtime; só garante que a bolha fique visível.
-    scrollToBottom()
+    // A bolha otimista já foi adicionada; rola depois do próximo frame para incluí-la.
+    requestAnimationFrame(() => scrollToBottom())
   }, [scrollToBottom])
 
   return (

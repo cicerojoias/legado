@@ -6,6 +6,9 @@ import { toast } from 'sonner'
 import { useInsertText } from './InsertTextContext'
 import { TemplateMenu } from './TemplateMenu'
 import { Template } from './templates'
+import { perfStart, perfEnd } from '@/lib/client-perf'
+import { useInboxData } from './InboxDataContext'
+import type { WaMessage } from '@prisma/client'
 
 interface ReplyContext {
   id: string
@@ -51,6 +54,7 @@ interface MediaPreview {
 }
 
 export function MessageInput({ conversationId, onMessageSent, replyTo, onClearReply, onOpenAssistente }: MessageInputProps) {
+  const { userId } = useInboxData()
   const [text, setText] = useState('')
   const textSendLockRef = useRef(false)
   const mediaSendLockRef = useRef(false)
@@ -322,21 +326,64 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
     setText('')
     setTimeout(() => textareaRef.current?.focus(), 0)
     setTimeout(() => { textSendLockRef.current = false }, 0)
+    // Envio otimista: a bolha aparece na hora com id gerado aqui; o servidor grava com o
+    // mesmo id, então o INSERT do realtime é deduplicado pelo ChatWindow e pela lista.
+    const clientId = crypto.randomUUID()
+    const nowIso = new Date().toISOString()
+    const replySnapshot = replyTo ? replyTo.content.slice(0, 500) : undefined
+    const optimistic = {
+      id: clientId,
+      conversation_id: conversationId,
+      wa_message_id: null,
+      direction: 'outbound',
+      type: 'text',
+      content: trimmed,
+      mediaUrl: null,
+      mediaId: null,
+      mimeType: null,
+      status: 'pending',
+      sent_by: userId || null,
+      timestamp: nowIso,
+      created_at: nowIso,
+      replyToId: replyTo?.id ?? null,
+      replyToSnapshot: replySnapshot ?? null,
+      reaction: null,
+      forwarded: false,
+    } as unknown as WaMessage
+
+    perfStart('send-bubble')
+    perfStart('send-confirm')
+    window.dispatchEvent(new CustomEvent('wab-new-message', { detail: optimistic }))
+    const replyToId = replyTo?.id
+    onClearReply?.()
+    onMessageSent?.()
+
     try {
       const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          clientId,
           conversationId,
           text: trimmed,
-          replyToId: replyTo?.id,
-          replyToSnapshot: replyTo ? replyTo.content.slice(0, 500) : undefined,
+          replyToId,
+          replyToSnapshot: replySnapshot,
         }),
       })
       if (!res.ok) throw new Error('Falha ao enviar')
-      onClearReply?.()
-      onMessageSent?.()
+      perfEnd('send-confirm', 'envio: confirmação do servidor', res.headers.get('server-timing') ?? undefined)
     } catch {
+      window.dispatchEvent(new CustomEvent('wab-message-update', {
+        detail: {
+          id: clientId,
+          conversation_id: conversationId,
+          status: 'failed',
+          mediaUrl: null,
+          reaction: null,
+          type: 'text',
+          content: trimmed,
+        },
+      }))
       setText((current) => (current.trim() ? current : trimmed))
       toast.error('Erro ao enviar mensagem')
     } finally {

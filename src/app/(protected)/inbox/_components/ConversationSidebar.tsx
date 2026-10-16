@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Search, X, MoreVertical } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons/whatsapp-icon'
 import { cn } from '@/lib/utils'
@@ -97,14 +98,15 @@ function highlight(text: string, query: string) {
 
 interface ConversationSidebarProps {
   children:         React.ReactNode
-  activeId?:        string
   unreadTotal?:     number
   tags?:            WaTag[]
   initialSettings?: WaSettings | null
   userRole?:        string
 }
 
-export function ConversationSidebar({ children, activeId, unreadTotal = 0, tags = [], initialSettings = null }: ConversationSidebarProps) {
+export function ConversationSidebar({ children, unreadTotal = 0, tags = [], initialSettings = null }: ConversationSidebarProps) {
+  const pathname = usePathname()
+  const activeId = pathname.startsWith('/inbox/') ? pathname.split('/')[2] : undefined
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
