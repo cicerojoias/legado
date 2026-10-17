@@ -96,7 +96,7 @@ type DailySummaryPayload = {
   }
 }
 
-const MAX_STACKED_MESSAGES = 6
+const MAX_STACKED_MESSAGES = 3
 
 // ─── Push handler ─────────────────────────────────────────────────────────────
 // Runs in background (even with app closed).

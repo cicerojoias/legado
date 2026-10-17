@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.85', data: '17/10/2026', resumo: 'WAB: notificações agora mostram as 3 últimas mensagens de cada conversa (o título continua com o total).' },
     { versao: '0.18.84', data: '16/10/2026', resumo: 'WAB: notificações acumulam como no WhatsApp (uma por conversa, com as últimas mensagens, e somem ao abrir a conversa); horários do tempo real não aparecem mais 3h adiantados; console sem logs de debug. Tela Hoje: corrigido erro de hidratação no horário dos lançamentos.' },
     { versao: '0.18.83', data: '16/10/2026', resumo: 'Performance e segurança: o login passa a ser conferido localmente (sem consultar o Supabase a cada clique) e o cargo fica em cache assinado por 10 min; o cookie do PIN agora é assinado e não pode ser forjado — será pedido o PIN uma vez após a atualização.' },
     { versao: '0.18.82', data: '16/10/2026', resumo: 'Performance: middleware migrado para proxy (Node.js na mesma região do banco), reduzindo a latência de toda navegação e chamada de API; manifest do PWA não é mais redirecionado para o login.' },
