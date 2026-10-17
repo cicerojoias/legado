@@ -1,6 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { ROLE_COOKIE_NAME, pinCookieName } from '@/lib/signed-cookie';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -11,7 +12,8 @@ export async function logoutAction() {
     // Clear the user-specific PIN cookie (httpOnly — can only be deleted server-side)
     if (user) {
         const cookieStore = await cookies();
-        cookieStore.delete(`pin_verified_${user.id}`);
+        cookieStore.delete(pinCookieName(user.id));
+        cookieStore.delete(ROLE_COOKIE_NAME);
     }
 
     await supabase.auth.signOut();

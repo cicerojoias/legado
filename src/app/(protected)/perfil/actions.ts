@@ -1,6 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { ROLE_COOKIE_NAME, pinCookieName } from '@/lib/signed-cookie';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
@@ -251,7 +252,8 @@ export async function encerrarSessaoAction(): Promise<void> {
 
         // Limpar cookie PIN
         const cookieStore = await cookies();
-        cookieStore.delete(`pin_verified_${user.id}`);
+        cookieStore.delete(pinCookieName(user.id));
+        cookieStore.delete(ROLE_COOKIE_NAME);
 
         // Limpar push subscriptions — falha não deve bloquear o logout
         try {

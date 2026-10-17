@@ -1,5 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+    ROLE_COOKIE_MAX_AGE,
+    ROLE_COOKIE_NAME,
+    createRoleCookieValue,
+    isPinCookieValid,
+    pinCookieName,
+    readRoleCookie,
+} from '@/lib/signed-cookie';
 
 export async function updateSession(request: NextRequest) {
     const mwStart = performance.now();
@@ -34,10 +42,10 @@ export async function updateSession(request: NextRequest) {
         return supabaseResponse;
     }
 
-    // Refreshing the auth token
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    // Valida o JWT localmente (chave assimétrica ES256 via JWKS em cache) e renova a sessão
+    // se preciso — sem ida ao Supabase Auth a cada request, ao contrário do getUser().
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const userId = claimsData?.claims?.sub ?? null;
     const mwAuthMs = performance.now() - mwStart;
 
     const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth');
@@ -45,15 +53,15 @@ export async function updateSession(request: NextRequest) {
     const isResetPasswordRoute = request.nextUrl.pathname.startsWith('/reset-password');
 
     // Protect all routes: Se não tem usuário e não é rota pública, vai pro login
-    if (!user && !isAuthRoute && !isResetPasswordRoute) {
+    if (!userId && !isAuthRoute && !isResetPasswordRoute) {
         const url = request.nextUrl.clone();
         url.pathname = '/login';
         return NextResponse.redirect(url);
     }
 
-    if (user) {
-        const pinCookieName = `pin_verified_${user.id}`;
-        const hasVerifiedPin = request.cookies.has(pinCookieName);
+    if (userId) {
+        // Cookie do PIN assinado: não basta existir, a assinatura e o userId precisam conferir
+        const hasVerifiedPin = isPinCookieValid(request.cookies.get(pinCookieName(userId))?.value, userId);
 
         // Se está na rota de login mas já está logado
         if (isAuthRoute) {
@@ -87,33 +95,53 @@ export async function updateSession(request: NextRequest) {
         const isSuperAdminRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/custos-fixos') || pathname.startsWith('/usuarios') || pathname.startsWith('/logs');
 
         if (hasVerifiedPin && (isGerenteRoute || isAdminRoute || isSuperAdminRoute)) {
-            const roleStart = performance.now();
-            const { data: dbUser } = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', user.id)
-                .single();
-            mwRoleMs = performance.now() - roleStart;
-
-            const role = dbUser?.role as string | undefined;
+            // Role em cache num cookie assinado (10 min) — evita uma query por request.
+            // Ações sensíveis continuam validando a role no banco (server actions/rotas).
+            let role = readRoleCookie(request.cookies.get(ROLE_COOKIE_NAME)?.value, userId) ?? undefined;
+            let freshRole: string | null = null;
+            if (!role) {
+                const roleStart = performance.now();
+                const { data: dbUser } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', userId)
+                    .single();
+                mwRoleMs = performance.now() - roleStart;
+                role = (dbUser?.role as string | undefined) ?? undefined;
+                freshRole = role ?? null;
+            }
+            const withRoleCookie = (res: NextResponse) => {
+                if (freshRole) {
+                    res.cookies.set(ROLE_COOKIE_NAME, createRoleCookieValue(userId, freshRole), {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: 'lax',
+                        maxAge: ROLE_COOKIE_MAX_AGE,
+                        path: '/',
+                    });
+                }
+                return res;
+            };
 
             if (isGerenteRoute && role !== 'GERENTE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
                 const url = request.nextUrl.clone();
                 url.pathname = '/hoje';
-                return NextResponse.redirect(url);
+                return withRoleCookie(NextResponse.redirect(url));
             }
 
             if (isAdminRoute && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
                 const url = request.nextUrl.clone();
                 url.pathname = '/hoje';
-                return NextResponse.redirect(url);
+                return withRoleCookie(NextResponse.redirect(url));
             }
 
             if (isSuperAdminRoute && role !== 'SUPER_ADMIN') {
                 const url = request.nextUrl.clone();
                 url.pathname = '/hoje';
-                return NextResponse.redirect(url);
+                return withRoleCookie(NextResponse.redirect(url));
             }
+
+            withRoleCookie(supabaseResponse);
         }
     }
 

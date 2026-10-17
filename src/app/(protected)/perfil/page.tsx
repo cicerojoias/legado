@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.83', data: '16/10/2026', resumo: 'Performance e segurança: o login passa a ser conferido localmente (sem consultar o Supabase a cada clique) e o cargo fica em cache assinado por 10 min; o cookie do PIN agora é assinado e não pode ser forjado — será pedido o PIN uma vez após a atualização.' },
     { versao: '0.18.82', data: '16/10/2026', resumo: 'Performance: middleware migrado para proxy (Node.js na mesma região do banco), reduzindo a latência de toda navegação e chamada de API; manifest do PWA não é mais redirecionado para o login.' },
     { versao: '0.18.81', data: '16/10/2026', resumo: 'WAB: inbox mais fluido — conversa abre na hora com esqueleto e carrega o histórico ao rolar, lista de conversas permanece montada (voltar é instantâneo), envio de mensagem otimista e medição de latência (Server-Timing + __wabPerfSummary no console).' },
     { versao: '0.18.80', data: '16/10/2026', resumo: 'PWA Android: badge monocromática ajustada para manter o desenho original, aumentar a área visível e reduzir o traço pesado em notificações.' },

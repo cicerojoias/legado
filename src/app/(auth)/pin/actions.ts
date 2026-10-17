@@ -1,6 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { PIN_COOKIE_MAX_AGE, createPinCookieValue, pinCookieName } from '@/lib/signed-cookie';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { FastAuthPinSchema, SetupPinSchema } from '@/lib/validations';
@@ -42,11 +43,11 @@ export async function setupPinAction(pin: string, confirmPin: string) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set(`pin_verified_${user.id}`, 'true', {
+    cookieStore.set(pinCookieName(user.id), createPinCookieValue(user.id), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 12, // 12 horas - depois vai pedir o PIN de novo
+        maxAge: PIN_COOKIE_MAX_AGE, // 12 horas - depois vai pedir o PIN de novo
     });
 
     return { success: true };
@@ -112,11 +113,11 @@ export async function verifyPinAction(pin: string) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set(`pin_verified_${user.id}`, 'true', {
+    cookieStore.set(pinCookieName(user.id), createPinCookieValue(user.id), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 12, // Exige novo PIN a cada 12 horas (expiração na janela ativa)
+        maxAge: PIN_COOKIE_MAX_AGE, // Exige novo PIN a cada 12 horas (expiração na janela ativa)
     });
 
     return { success: true };
