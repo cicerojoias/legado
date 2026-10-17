@@ -351,8 +351,9 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
       forwarded: false,
     } as unknown as WaMessage
 
-    perfStart('send-bubble')
-    perfStart('send-confirm')
+    // Chaves por mensagem: envios em sequência não sobrescrevem a medição um do outro
+    perfStart(`send-bubble:${clientId}`)
+    perfStart(`send-confirm:${clientId}`)
     window.dispatchEvent(new CustomEvent('wab-new-message', { detail: optimistic }))
     const replyToId = replyTo?.id
     onClearReply?.()
@@ -371,7 +372,7 @@ export function MessageInput({ conversationId, onMessageSent, replyTo, onClearRe
         }),
       })
       if (!res.ok) throw new Error('Falha ao enviar')
-      perfEnd('send-confirm', 'envio: confirmação do servidor', res.headers.get('server-timing') ?? undefined)
+      perfEnd(`send-confirm:${clientId}`, 'envio: confirmação do servidor', res.headers.get('server-timing') ?? undefined)
     } catch {
       window.dispatchEvent(new CustomEvent('wab-message-update', {
         detail: {

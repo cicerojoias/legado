@@ -2,6 +2,22 @@
 
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { parseMessageTimestamp } from '@/lib/utils'
+
+// Colunas `timestamp` (sem fuso) chegam do realtime como "2026-10-17T01:59:30.444", sem o "Z".
+// O browser interpretaria como horário local (+3h no Brasil); normalizamos para ISO UTC
+// antes de distribuir, igual ao formato que as APIs (Prisma/JSON) já entregam.
+const NAIVE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?$/
+
+function normalizeTimestamps<T extends Record<string, unknown>>(row: T): T {
+  const out: Record<string, unknown> = { ...row }
+  for (const [key, value] of Object.entries(out)) {
+    if (typeof value === 'string' && NAIVE_TIMESTAMP.test(value)) {
+      out[key] = parseMessageTimestamp(value).toISOString()
+    }
+  }
+  return out as T
+}
 
 /**
  * Componente global que sincroniza o estado do WhatsApp em tempo real.
@@ -13,7 +29,6 @@ export function ConversationListRealtimeSync() {
   useEffect(() => {
     const supabase = createClient()
 
-    console.log('[wab-realtime-list] Iniciando sincronização em tempo real centralizada...')
 
     const channel = supabase
       .channel('wab-list-sync')
@@ -22,10 +37,9 @@ export function ConversationListRealtimeSync() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'wa_conversations' },
         (payload) => {
-          console.log('[wab-realtime-list] wa_conversations UPDATE:', payload.new)
           window.dispatchEvent(
             new CustomEvent('wab-conversation-update', {
-              detail: payload.new,
+              detail: normalizeTimestamps(payload.new),
             })
           )
         }
@@ -35,10 +49,9 @@ export function ConversationListRealtimeSync() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'wa_messages' },
         (payload) => {
-          console.log('[wab-realtime-list] Nova mensagem (INSERT):', payload.new)
           window.dispatchEvent(
             new CustomEvent('wab-new-message', {
-              detail: payload.new,
+              detail: normalizeTimestamps(payload.new),
             })
           )
         }
@@ -48,10 +61,9 @@ export function ConversationListRealtimeSync() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'wa_messages' },
         (payload) => {
-          console.log('[wab-realtime-list] Mensagem atualizada (UPDATE):', payload.new)
           window.dispatchEvent(
             new CustomEvent('wab-message-update', {
-              detail: payload.new,
+              detail: normalizeTimestamps(payload.new),
             })
           )
         }
@@ -61,28 +73,23 @@ export function ConversationListRealtimeSync() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wa_conversation_reads' },
         (payload) => {
-          console.log('[wab-realtime-list] wa_conversation_reads update:', payload.new)
           window.dispatchEvent(
             new CustomEvent('wab-conversation-read-update', {
-              detail: payload.new,
+              detail: normalizeTimestamps(payload.new),
             })
           )
         }
       )
       .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[wab-realtime-list] ✅ Inscrito com sucesso no canal realtime global')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[wab-realtime-list] ❌ Erro no canal realtime:', err)
+        // Só falhas aparecem no console; CLOSED é o fluxo normal ao desmontar
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[wab-realtime-list] Erro no canal realtime:', err)
         } else if (status === 'TIMED_OUT') {
-          console.error('[wab-realtime-list] ⏱️ Timeout ao subscrever no canal realtime')
-        } else if (status === 'CLOSED') {
-          console.warn('[wab-realtime-list] 🔌 Canal realtime fechado')
+          console.error('[wab-realtime-list] Timeout ao subscrever no canal realtime')
         }
       })
 
     return () => {
-      console.log('[wab-realtime-list] Limpando canal realtime global...')
       supabase.removeChannel(channel)
     }
   }, [])

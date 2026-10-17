@@ -195,6 +195,13 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     scrollToBottom(false)
     perfEnd('chat-open', 'abrir chat (clique → mensagens)')
     clearPendingChatPreview()
+    // Conversa aberta: remove as notificações acumuladas dela (como o WhatsApp faz)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => reg.getNotifications({ tag: `wab-${conversationId}` }))
+        .then((list) => list.forEach((n) => n.close()))
+        .catch(() => {})
+    }
     // Só mensagens legadas (mediaId sem mediaUrl) precisam de reprocessamento
     if (initialMessages.some((m) => m.mediaId && !m.mediaUrl)) {
       void fetch(`/api/whatsapp/reprocess-media?conversationId=${conversationId}`, { method: 'POST' })
@@ -273,19 +280,17 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
 
   // Realtime: escuta eventos globais emitidos pelo centralizador central ConversationListRealtimeSync
   useEffect(() => {
-    console.log(`[wab-realtime-chat] Iniciando escuta de eventos para conversa: ${conversationId}`)
 
     const handleGlobalNewMessage = (e: Event) => {
       const customEvent = e as CustomEvent<WaMessage>
       const newMsg = customEvent.detail
       if (newMsg && newMsg.conversation_id === conversationId) {
-        console.log(`[wab-realtime-chat] Nova mensagem recebida via evento global na conversa ${conversationId}:`, newMsg)
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev
           return [...prev, newMsg]
         })
-        if (newMsg.direction === 'outbound' && perfHas('send-bubble')) {
-          perfEnd('send-bubble', 'envio: bolha na tela')
+        if (newMsg.direction === 'outbound' && perfHas(`send-bubble:${newMsg.id}`)) {
+          perfEnd(`send-bubble:${newMsg.id}`, 'envio: bolha na tela')
         }
         if (isAtBottomRef.current) {
           scrollToBottom()
@@ -307,7 +312,6 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       }>
       const updated = customEvent.detail
       if (updated && updated.conversation_id === conversationId) {
-        console.log(`[wab-realtime-chat] Mensagem atualizada recebida via evento global na conversa ${conversationId}:`, updated)
         setMessages((prev) =>
           prev.map((m) =>
             m.id === updated.id
@@ -329,7 +333,6 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
     window.addEventListener('wab-message-update', handleGlobalMessageUpdate)
 
     return () => {
-      console.log(`[wab-realtime-chat] Removendo escuta de eventos para conversa: ${conversationId}`)
       window.removeEventListener('wab-new-message', handleGlobalNewMessage)
       window.removeEventListener('wab-message-update', handleGlobalMessageUpdate)
     }
@@ -341,7 +344,6 @@ export function ChatWindow({ conversationId, initialMessages, initialHasMore }: 
       const customEvent = e as CustomEvent<{ messageId: string; timestamp: string }>
       const { messageId } = customEvent.detail
       
-      console.log(`[wab-search-scroll] Buscando rolar até a mensagem ${messageId}`)
 
       const currentMessagesSnapshot = messagesRef.current
       const exists = currentMessagesSnapshot.some((m) => m.id === messageId)

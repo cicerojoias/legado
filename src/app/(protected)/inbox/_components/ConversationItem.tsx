@@ -1,6 +1,6 @@
 import type { ConversationWithPreview } from './types'
 import Link from 'next/link'
-import { cn, getContactInitials } from '@/lib/utils'
+import { cn, getContactInitials, parseMessageTimestamp } from '@/lib/utils'
 import { Check, CheckCheck, Clock } from 'lucide-react'
 import { perfStart } from '@/lib/client-perf'
 import { setPendingChatPreview } from './chat-preview'
@@ -38,7 +38,7 @@ function TagBadge({ name, color }: { name: string; color: string }) {
 
 function formatTime(date: Date | string | null): string {
   if (!date) return ''
-  const d = new Date(date)
+  const d = parseMessageTimestamp(date)
   const now = new Date()
 
   // Formatador para obter a data local no formato YYYY-MM-DD no fuso de Recife

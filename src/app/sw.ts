@@ -96,6 +96,8 @@ type DailySummaryPayload = {
   }
 }
 
+const MAX_STACKED_MESSAGES = 6
+
 // ─── Push handler ─────────────────────────────────────────────────────────────
 // Runs in background (even with app closed).
 // Handles both WAB conversation notifications and daily summary notifications.
@@ -152,14 +154,40 @@ self.addEventListener('push', (event) => {
       )
       if (conversationVisible) return
 
-      await self.registration.showNotification(conversationPayload.title, {
-        body: conversationPayload.body,
+      // Acumula as mensagens da mesma conversa numa única notificação (estilo WhatsApp):
+      // conversas diferentes ficam em notificações separadas (tag por conversa) e cada uma
+      // mostra as últimas mensagens recebidas, não só a mais recente.
+      const tag = `wab-${conversationPayload.conversationId}`
+      let previousMessages: string[] = []
+      try {
+        const existing = await self.registration.getNotifications({ tag })
+        for (const n of existing) {
+          const stored = (n.data as { messages?: unknown } | null)?.messages
+          if (Array.isArray(stored)) previousMessages = stored.filter((m): m is string => typeof m === 'string')
+          else if (n.body) previousMessages = [n.body]
+          n.close()
+        }
+      } catch {
+        // getNotifications indisponível — segue mostrando só a mensagem atual
+      }
+
+      const messages = [...previousMessages, conversationPayload.body].slice(-MAX_STACKED_MESSAGES)
+      const total = previousMessages.length + 1
+      const title = total > 1
+        ? `${conversationPayload.title} (${total} mensagens)`
+        : conversationPayload.title
+
+      await self.registration.showNotification(title, {
+        body: messages.join('\n'),
         icon: conversationPayload.icon,
         badge: conversationPayload.badge,
-        // tag: replaces previous notification for the same conversation
-        tag: `wab-${conversationPayload.conversationId}`,
+        tag,
         renotify: true,
-        data: { url: conversationPayload.url, conversationId: conversationPayload.conversationId },
+        data: {
+          url: conversationPayload.url,
+          conversationId: conversationPayload.conversationId,
+          messages,
+        },
       })
     })()
   )

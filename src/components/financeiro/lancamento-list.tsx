@@ -41,7 +41,8 @@ export function LancamentoList({ lancamentos, currentUserId, showDate = false }:
     }, []);
 
     const formatTime = (date: Date) => {
-        return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(date));
+        // Fuso fixo: o servidor roda em UTC e o browser em -03; sem isso o horário diverge na hidratação (React #418)
+        return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' }).format(new Date(date));
     };
 
     const formatDate = (date: Date) => {
