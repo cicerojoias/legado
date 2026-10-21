@@ -51,11 +51,11 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 
 ## Decisões pendentes
 
-- **D1 — RLS (S1).** ✅ Verificação liberada e feita (confirmado). ⏳ **Aplicar `rls-seguranca.sql` na produção: aguardando ok.** Backup feito e restaurado com sucesso numa cópia (`Documentos\Cícero Joias - Backups\banco-2026-10-21-antes-rls`, 14 tabelas, contagens iguais).
-- **D2 — Segredo do app Meta (S2).** ⏳ Você adiciona `META_APP_SECRET` (Production + Preview, Sensitive). Passo a passo na página.
+- **D1 — RLS (S1).** ✅ Aplicado na produção em 21/10/2026 com ok do usuário. Conferido: 14 tabelas com RLS, só 5 políticas novas, API pública sem login nega leitura e escrita em tudo (401). Backup feito e restaurado com sucesso numa cópia (`Documentos\Cícero Joias - Backups\banco-2026-10-21-antes-rls`, 14 tabelas, contagens iguais).
+- **D2 — Segredo do app Meta (S2).** ✅ `META_APP_SECRET` criado (Secret, Production + Preview). Falta ligar a checagem no código.
 - **D3 — Zoom (A1).** ✅ Decidido: **manter bloqueado**. A1 cancelado.
 - **D4 — Next 16.1 → 16.4 (S3).** ✅ Aprovado, etapa 5.
-- **D5 — Variáveis da Vercel.** ⏳ As 3 marcadas "Needs Attention" (`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `WHATSAPP_TOKEN`) + `DIRECT_URL` estão em "All Environments" e não são "Sensitive" (qualquer membro do time lê o valor). Recriar como Sensitive, só Production + Preview. Não precisam ser trocadas (nenhuma estava no banco). A lista enviada tem 4 variáveis, mas o código usa ~18 (ver tabela abaixo): conferir a aba *Shared* ou o resto da lista.
+- **D5 — Variáveis da Vercel.** ✅ Feito: 7 segredos recriados como Secret (Production + Preview), 5 variáveis do Redis sem uso removidas, cadastro público do Supabase desligado (S1b), redeploy Ready. Texto original: As 3 marcadas "Needs Attention" (`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `WHATSAPP_TOKEN`) + `DIRECT_URL` estão em "All Environments" e não são "Sensitive" (qualquer membro do time lê o valor). Recriar como Sensitive, só Production + Preview. Não precisam ser trocadas (nenhuma estava no banco). A lista enviada tem 4 variáveis, mas o código usa ~18 (ver tabela abaixo): conferir a aba *Shared* ou o resto da lista.
 
 ### Variáveis que o código usa
 
@@ -92,3 +92,5 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | Investigação | Linha de base, 20 itens, 4 decisões |
 | 21/10/2026 | S1 verificação | Confirmado: banco aberto pela chave pública; cadastro público ligado |
 | 21/10/2026 | S1 preparo | Backup (14 tabelas) restaurado numa cópia; correção + rollback ensaiados |
+| 21/10/2026 | S1b + D5 | Cadastro público desligado; segredos como Secret; Redis removido; redeploy ok |
+| 21/10/2026 | S1 aplicado | Produção protegida: sem login → 401 em todas as tabelas. Próximo: todos trocam o PIN (S1c) |
