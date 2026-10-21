@@ -18,13 +18,8 @@ export function Sidebar() {
         await logoutAction();
     };
 
-    const isSandbox = pathname === '/sandbox';
-
     return (
-        <aside className={cn(
-            "w-64 bg-card flex flex-col h-full",
-            !isSandbox && "border-r"
-        )}>
+        <aside className="w-64 bg-card flex flex-col h-full border-r">
             <div className="p-6">
                 <h2 className="text-xl font-semibold tracking-tight">Cícero Joias</h2>
             </div>
@@ -162,10 +157,7 @@ export function Sidebar() {
                 </Link>
             </nav>
 
-            <div className={cn(
-                "p-4",
-                !isSandbox && "border-t"
-            )}>
+            <div className="p-4 border-t">
                 <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"

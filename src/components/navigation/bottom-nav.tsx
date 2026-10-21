@@ -48,13 +48,8 @@ export function BottomNav() {
         ];
     }
 
-    const isSandbox = pathname === '/sandbox';
-
     return (
-        <nav className={cn(
-            "flex items-center justify-around w-full h-16 bg-card pb-[env(safe-area-inset-bottom)] px-2",
-            !isSandbox && "border-t"
-        )}>
+        <nav className="flex items-center justify-around w-full h-16 bg-card pb-[env(safe-area-inset-bottom)] px-2 border-t">
             {links.map((link) => {
                 if (link.label === 'Registrar') {
                     return (

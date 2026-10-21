@@ -20,7 +20,7 @@ No test runner is configured. Type-checking with `npx tsc --noEmit` is the verif
 
 ### Route Groups
 - `src/app/(auth)/` — Public auth routes: `/login`, `/pin`, `/setup-pin`, logout action
-- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/inbox`, `/sandbox`
+- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/inbox`
 - `src/app/layout.tsx` — Root layout with Geist font and Sonner toaster
 
 ### Auth Flow (two-layer)
