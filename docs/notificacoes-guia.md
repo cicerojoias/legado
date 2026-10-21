@@ -51,7 +51,7 @@ CRON_SECRET=seu_token_aqui
 
 **Documentação completa**: [github-actions-cron-setup.md](./github-actions-cron-setup.md)
 
-**Checklist rápido**: [CHECKLIST-CRON.md](../CHECKLIST-CRON.md)
+**Checklist rápido**: [CHECKLIST-CRON.md](CHECKLIST-CRON.md)
 
 #### ⚠️ Vercel Cron (Requer Plano Pro - $20/mês)
 
