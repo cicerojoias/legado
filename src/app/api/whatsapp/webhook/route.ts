@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { WebhookPayload } from '@/lib/whatsapp/types'
+import { validateSignature } from '@/lib/whatsapp/validate-signature'
 import {
   generateWebhookId,
   isWebhookProcessed,
@@ -99,7 +100,14 @@ export async function GET(req: NextRequest) {
 // POST: Recebimento de eventos (mensagens, status, etc)
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as WebhookPayload
+    // Só aceita o que a Meta assinou com o segredo do app (S2)
+    const rawBody = await req.text()
+    if (!validateSignature(rawBody, req.headers.get('x-hub-signature-256'))) {
+      console.warn('[webhook] Assinatura inválida — requisição recusada')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const body = JSON.parse(rawBody) as WebhookPayload
 
     // Validar se é uma notificação do WhatsApp
     if (body.object !== 'whatsapp_business_account') {
