@@ -1,23 +1,3 @@
-// Alias para compatibilidade com webhook-parser.ts
-export type MetaWebhookPayload = WebhookPayload
-
-export interface ParsedInboundMessage {
-  waId: string
-  phone: string
-  name?: string
-  waMessageId: string
-  type: string
-  content: string
-  timestamp: Date
-  mediaId?: string
-  mimeType?: string
-}
-
-export interface ParsedStatusUpdate {
-  waMessageId: string
-  status: string
-}
-
 export interface WhatsAppConfig {
   accessToken: string
   phoneNumberId: string
