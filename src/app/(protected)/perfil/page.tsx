@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.86', data: '21/10/2026', resumo: 'Segurança: banco fechado para acesso sem login (a chave pública do Supabase só lê o próprio usuário e o inbox para a equipe); cadastro público desligado. Limpeza: página de teste /sandbox removida, arquivos sem uso e ícone duplicado.' },
     { versao: '0.18.85', data: '17/10/2026', resumo: 'WAB: notificações agora mostram as 3 últimas mensagens de cada conversa (o título continua com o total).' },
     { versao: '0.18.84', data: '16/10/2026', resumo: 'WAB: notificações acumulam como no WhatsApp (uma por conversa, com as últimas mensagens, e somem ao abrir a conversa); horários do tempo real não aparecem mais 3h adiantados; console sem logs de debug. Tela Hoje: corrigido erro de hidratação no horário dos lançamentos.' },
     { versao: '0.18.83', data: '16/10/2026', resumo: 'Performance e segurança: o login passa a ser conferido localmente (sem consultar o Supabase a cada clique) e o cargo fica em cache assinado por 10 min; o cookie do PIN agora é assinado e não pode ser forjado — será pedido o PIN uma vez após a atualização.' },
