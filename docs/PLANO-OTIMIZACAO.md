@@ -78,7 +78,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | Etapa | Itens | Risco |
 |---|---|---|
 | 0 Preparação | build local ✅, linha de base ✅ | — |
-| 1 Limpeza | I1, I2, I3, I4, I5 | baixo |
+| 1 Limpeza ✅ | I1, I2, I3, I4, I5 | baixo |
 | 2 Segurança urgente | S2 (código), S4, S5, S6; S1 após D1 | médio — pedir ok antes do push |
 | 3 Ganhos rápidos | P4, P5, A2, A1 (após D3) | baixo |
 | 4 JavaScript | P1, P2, P3 | médio |
@@ -94,3 +94,5 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | S1 preparo | Backup (14 tabelas) restaurado numa cópia; correção + rollback ensaiados |
 | 21/10/2026 | S1b + D5 | Cadastro público desligado; segredos como Secret; Redis removido; redeploy ok |
 | 21/10/2026 | S1 aplicado | Produção protegida: sem login → 401 em todas as tabelas. Próximo: todos trocam o PIN (S1c) |
+| 21/10/2026 | Etapa 1 (I1–I5) | /sandbox, webhook-parser e favicon duplicado removidos; prints fora do repo (`Documentos\Cícero Joias - Prints`); aviso do Prisma sumiu; v0.18.86 publicada |
+| 21/10/2026 | S2 (código) | Webhook confere a assinatura da Meta; 7 casos testados. Aguardando ok para push |
