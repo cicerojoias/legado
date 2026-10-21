@@ -21,7 +21,9 @@ O app é interno: só `/login` é pública. As telas logadas não dá para medir
 Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 
 ### Segurança (S)
-- **S1 🔴 (a confirmar)** — O navegador fala direto com o banco pelo Supabase (chave pública vai no JS). A tabela `users` é lida pelo navegador (`use-permissions.ts`) e o inbox escuta mudanças em tempo real. Não há nenhuma política RLS documentada no repositório e o schema é aplicado por `prisma db push` (que não liga RLS). Se o RLS estiver desligado, **qualquer pessoa com a chave pública** pode ler/alterar `users` (incluindo `pin_hash` e `role`), lançamentos e mensagens. Precisa verificar no banco (D1).
+- **S1 🔴 (confirmado 21/10)** — A chave pública do Supabase (vai no JS do site) tem permissão total em todas as 14 tabelas; 8 estão com RLS desligado (`users`, `lancamentos`, `logs`, `custos_fixos`, `conversation_tags`, `wa_conversation_notes`, `wa_settings`, `wa_tags`) e `wa_messages`/`wa_conversations` têm política liberando leitura **sem login**. Ensaio na cópia: sem login dá para ler 8 usuários (com `pin_hash`), 3 286 lançamentos, 3 605 logs, 7 002 mensagens e promover todos a SUPER_ADMIN. Nenhuma tabela guarda chave de API. Sem sinal de alteração indevida (nenhuma conta nova em 60 dias; papéis conferem), mas leitura não deixa rastro. Correção pronta: `prisma/sql/rls-seguranca.sql` (desfazer: `rls-rollback.sql`), ensaiada numa cópia restaurada do backup: tudo negado para quem não deve, gerente segue vendo o inbox, Prisma intacto, idempotente, rollback volta ao estado original.
+- **S1b 🔴** — Cadastro público do Supabase Auth está **ligado** (`disable_signup: false`): qualquer um cria conta e vira "logado". O app cria usuários manualmente, então dá para desligar sem efeito colateral.
+- **S1c 🟠** — Depois de fechar S1: todos trocam o PIN (o `pin_hash` de 4 dígitos ficou legível e é fácil de quebrar).
 - **S2 🟠** — Webhook do WhatsApp (`/api/whatsapp/webhook`) não confere a assinatura da Meta. A função `validate-signature.ts` existe mas nunca é chamada, e ela deixa passar se `META_APP_SECRET` faltar (que hoje falta). Qualquer um pode enviar mensagens falsas para o inbox, disparar push para a equipe, resposta da IA (custo OpenAI) e boas-vindas automáticas.
 - **S3 🟠** — Next 16.1.6 com alerta crítico (request smuggling, cache do next/image) + sharp/postcss. Correção: atualizar para 16.4.x.
 - **S4 🟡** — Seis rotas devolvem o erro técnico ao navegador (`details: err.message`): cron, migrate-media, send, send-template, validate-template, forward.
@@ -49,10 +51,27 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 
 ## Decisões pendentes
 
-- **D1 — Verificar o RLS (S1).** Recomendo deixar eu rodar uma consulta **só de leitura** no banco (lista tabelas, se o RLS está ligado e as políticas). O modo automático bloqueou; precisa do seu ok. Alternativa pelo celular: Supabase › projeto › *Advisors › Security Advisor* e me dizer se aparece "RLS disabled in public". Se confirmar, a correção mexe no banco de produção → backup verificado + ensaio + seu ok.
-- **D2 — Segredo do app Meta (S2).** Preciso do `META_APP_SECRET` na Vercel. Passo a passo no celular: developers.facebook.com › Meus apps › (app do WhatsApp) › Configurações do app › Básico › *Chave secreta do app* › Mostrar → copiar; depois vercel.com › projeto › Settings › Environment Variables › `META_APP_SECRET` (Production) › Save. Eu faço o código já pronto: confere a assinatura quando o segredo existir e rejeita quando não bater.
-- **D3 — Liberar o zoom (A1).** Recomendo liberar. Pró: acessibilidade (93 → 100), quem enxerga pouco consegue ampliar. Contra: em telas com gesto de pinça pode haver zoom acidental.
-- **D4 — Atualizar Next 16.1 → 16.4 (S3).** Recomendo fazer numa etapa própria, depois das outras, com build + teste das telas principais. Pró: fecha o alerta crítico. Contra: atualização de versão intermediária pode exigir ajustes.
+- **D1 — RLS (S1).** ✅ Verificação liberada e feita (confirmado). ⏳ **Aplicar `rls-seguranca.sql` na produção: aguardando ok.** Backup feito e restaurado com sucesso numa cópia (`Documentos\Cícero Joias - Backups\banco-2026-10-21-antes-rls`, 14 tabelas, contagens iguais).
+- **D2 — Segredo do app Meta (S2).** ⏳ Você adiciona `META_APP_SECRET` (Production + Preview, Sensitive). Passo a passo na página.
+- **D3 — Zoom (A1).** ✅ Decidido: **manter bloqueado**. A1 cancelado.
+- **D4 — Next 16.1 → 16.4 (S3).** ✅ Aprovado, etapa 5.
+- **D5 — Variáveis da Vercel.** ⏳ As 3 marcadas "Needs Attention" (`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `WHATSAPP_TOKEN`) + `DIRECT_URL` estão em "All Environments" e não são "Sensitive" (qualquer membro do time lê o valor). Recriar como Sensitive, só Production + Preview. Não precisam ser trocadas (nenhuma estava no banco). A lista enviada tem 4 variáveis, mas o código usa ~18 (ver tabela abaixo): conferir a aba *Shared* ou o resto da lista.
+
+### Variáveis que o código usa
+
+| Variável | Para quê | Secreta? |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | login | não (vão no navegador) |
+| `DATABASE_URL` | banco (app) | sim |
+| `DIRECT_URL` | banco (só `prisma db push`) | sim |
+| `SUPABASE_SERVICE_ROLE_KEY` | Storage + assinatura dos cookies | sim |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID` | WhatsApp | token sim |
+| `WHATSAPP_VERIFY_TOKEN` (ou `WHATSAPP_WEBHOOK_VERIFY_TOKEN`) | cadastro do webhook | sim |
+| `META_APP_SECRET` | **novo** — assinatura do webhook | sim |
+| `OPENAI_API_KEY` | resposta automática / gerar conversa | sim |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | notificações push | privada sim |
+| `CRON_SECRET` | resumo diário (Vercel Cron manda sozinho) | sim |
+| `CLOUDFLARE_R2_ACCESS_KEY_ID`, `..._SECRET_ACCESS_KEY`, `..._ENDPOINT`, `..._BUCKET_NAME` | guardar mídias do WhatsApp | chaves sim |
 
 ## Etapas
 
@@ -71,3 +90,5 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | Data | Item | Resultado |
 |---|---|---|
 | 21/10/2026 | Investigação | Linha de base, 20 itens, 4 decisões |
+| 21/10/2026 | S1 verificação | Confirmado: banco aberto pela chave pública; cadastro público ligado |
+| 21/10/2026 | S1 preparo | Backup (14 tabelas) restaurado numa cópia; correção + rollback ensaiados |
