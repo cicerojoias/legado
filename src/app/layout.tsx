@@ -3,14 +3,18 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
+// Os nomes das variáveis precisam bater com o @theme do globals.css
+// (antes eram --font-sans/--font-mono e a Geist nunca aparecia).
 const geistSans = Geist({
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
+// Mono só aparece nos modelos do inbox e nos gráficos: sem pré-carregamento (P4)
 const geistMono = Geist_Mono({
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
