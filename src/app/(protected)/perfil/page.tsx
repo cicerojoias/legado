@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.87', data: '21/10/2026', resumo: 'Segurança: webhook do WhatsApp só aceita mensagens assinadas pela Meta; erros técnicos não aparecem mais na tela (mensagens claras para os erros comuns do WhatsApp); cabeçalhos de segurança; usuário desativado perde o acesso em até 10 min e não consegue entrar com o PIN.' },
     { versao: '0.18.86', data: '21/10/2026', resumo: 'Segurança: banco fechado para acesso sem login (a chave pública do Supabase só lê o próprio usuário e o inbox para a equipe); cadastro público desligado. Limpeza: página de teste /sandbox removida, arquivos sem uso e ícone duplicado.' },
     { versao: '0.18.85', data: '17/10/2026', resumo: 'WAB: notificações agora mostram as 3 últimas mensagens de cada conversa (o título continua com o total).' },
     { versao: '0.18.84', data: '16/10/2026', resumo: 'WAB: notificações acumulam como no WhatsApp (uma por conversa, com as últimas mensagens, e somem ao abrir a conversa); horários do tempo real não aparecem mais 3h adiantados; console sem logs de debug. Tela Hoje: corrigido erro de hidratação no horário dos lançamentos.' },
