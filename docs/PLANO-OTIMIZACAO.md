@@ -82,7 +82,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 2 Segurança urgente ✅ | S1, S2, S4, S5, S6 | médio |
 | 3 Ganhos rápidos ✅ | P4, P5, A2 (A1 cancelado) | baixo |
 | 4 JavaScript ✅ | P1, P2, P3 | médio |
-| 5 Dependências | S3 (após D4), S7 | médio |
+| 5 Dependências ✅ | S3, S7 | médio |
 | 6 Vigilância | medir de novo tudo, tabela final | — |
 
 ## Registro
@@ -107,3 +107,5 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | P1 + P2 | Layout protegido lê papel/lojas no servidor (contexto); menu não faz mais `getUser()` + consulta em `users`; contador do WhatsApp só para GERENTE+ e com Supabase sob demanda; modal Registrar via `next/dynamic`. Barra inferior 203 → 51 KB; lateral 62 → 12 KB |
 | 21/10/2026 | P3 | Recharts sob demanda com espaço reservado: gráfico de Relatórios 114 → 1 KB e do Dashboard 115 → 1 KB logo de início. v0.18.89 publicada |
 | 21/10/2026 | Medição etapa 3 | `/login` celular: 96/93/100/92 → 97/93/100/66; LCP simulado 2,5 → 2,4 s (medido sem simulação: 1,4 s antes e depois); TBT 110 → 80 ms; peso 281 → 260 KB. v0.18.88 |
+| 22/10/2026 | S3 | Next 16.1.6 → 16.4.2 (e eslint-config-next). Build e tsc limpos; local e produção: /login 200, telas protegidas 307, webhook e cron 401, cabeçalhos ok |
+| 22/10/2026 | S7 | `npm audit fix` sem `--force`: 48 → 10 alertas (críticos 2 → 0, altos 33 → 9). Os 10 restantes estão só em ferramentas de desenvolvimento (shadcn CLI, eslint-config-next, tsx), que não vão para o site; a correção que o npm sugere é rebaixar versões, então ficam. v0.18.90 publicada |
