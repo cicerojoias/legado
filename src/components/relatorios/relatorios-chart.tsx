@@ -1,101 +1,26 @@
 'use client';
 
-import { Bar, BarChart, XAxis, YAxis } from 'recharts';
-import {
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-    type ChartConfig,
-} from '@/components/ui/chart';
+import dynamic from 'next/dynamic';
+import type { ChartDataPoint } from './relatorios-chart-barras';
 
-export interface ChartDataPoint {
-    date: string;
-    dateRange?: string;
-    entradas: number;
-    saidas: number;
-}
+export type { ChartDataPoint };
 
-const chartConfig = {
-    entradas: { label: 'Entradas', color: '#184434' },
-    saidas: { label: 'Saídas', color: '#B54040' },
-} satisfies ChartConfig;
-
-const DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
-const formatDay = (dateStr: string) => {
-    const parts = dateStr.split('-');
-    return parts[2] ?? dateStr;
-};
-
-type ChartTickProps = { x?: number; y?: number; payload?: { value?: string } };
-const MesTick = ({ x, y, payload, data }: ChartTickProps & { data: ChartDataPoint[] }) => {
-    const dateStr = payload?.value ?? '';
-    const entry = data.find((datum) => datum.date === dateStr);
-    const dateRange = entry?.dateRange ?? '';
-
-    return (
-        <g transform={`translate(${x ?? 0},${y ?? 0})`}>
-            <text x={0} y={0} dy={10} textAnchor="middle" fontSize={10} fill="#6B6358">{dateStr}</text>
-            {dateRange && <text x={0} y={0} dy={22} textAnchor="middle" fontSize={9} fill="#C79A34">{dateRange}</text>}
-        </g>
-    );
-};
-
-function SemanaTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: string } }) {
-    const parts = (payload?.value ?? '').split('-');
-    const dia = parts[2] ?? '';
-    const date = new Date(`${payload?.value ?? '2000-01-01'}T12:00:00Z`);
-    const letraDia = DIAS_SEMANA[date.getUTCDay()] ?? '';
-    return (
-        <g transform={`translate(${x ?? 0},${y ?? 0})`}>
-            <text x={0} y={0} dy={10} textAnchor="middle" fontSize={10} fill="#6B6358">{dia}</text>
-            <text x={0} y={0} dy={22} textAnchor="middle" fontSize={9} fill="#C79A34">{letraDia}</text>
-        </g>
-    );
-}
-
-const formatCompact = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        notation: 'compact',
-        maximumFractionDigits: 1,
-    }).format(value);
+// O gráfico (Recharts, ~100 KB) carrega depois dos números (P3).
+// O espaço já fica reservado na altura certa para a tela não pular.
+const RelatoriosBarras = dynamic(
+    () => import('./relatorios-chart-barras').then((m) => m.RelatoriosBarras),
+    { ssr: false, loading: () => <div className="h-full w-full rounded-lg bg-muted/40 animate-pulse" /> }
+);
 
 export function RelatoriosChart({ data, periodo }: { data: ChartDataPoint[]; periodo?: string }) {
     const isSemana = periodo === 'semana';
-    const isMes = periodo === 'mes';
     const isAno = periodo === 'ano';
 
     const chartTitle = isAno ? 'Entradas vs Saídas por Mês' : 'Entradas vs Saídas por Dia';
-
-    const chartContent = (
-        <ChartContainer config={chartConfig} className={isSemana ? 'h-44 w-full aspect-auto' : 'h-40 w-full aspect-auto'}>
-            <BarChart data={data} barCategoryGap="25%" margin={{ left: 0, right: 4, top: 4, bottom: isSemana ? 8 : 0 }}>
-                <XAxis
-                    dataKey="date"
-                    tickFormatter={isSemana ? undefined : (isMes ? undefined : (isAno ? undefined : formatDay))}
-                    tick={isSemana ? SemanaTick : (isMes ? (props: ChartTickProps) => <MesTick {...props} data={data} /> : { fontSize: 10, fill: '#6B6358' })}
-                    axisLine={false}
-                    tickLine={false}
-                    height={isSemana || isMes ? 36 : 20}
-                    interval={0}
-                />
-                <YAxis
-                    tickFormatter={formatCompact}
-                    tick={{ fontSize: 9, fill: '#6B6358' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={70}
-                />
-                <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-                />
-                <Bar dataKey="entradas" fill="#184434" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                <Bar dataKey="saidas" fill="#B54040" radius={[4, 4, 0, 0]} maxBarSize={28} />
-            </BarChart>
-        </ChartContainer>
+    const barras = (
+        <div className={isSemana ? 'h-44 w-full' : 'h-40 w-full'}>
+            <RelatoriosBarras data={data} periodo={periodo} />
+        </div>
     );
 
     return (
@@ -106,11 +31,11 @@ export function RelatoriosChart({ data, periodo }: { data: ChartDataPoint[]; per
             {isAno ? (
                 <div className="w-full overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border">
                     <div className="min-w-[600px] h-40">
-                        {chartContent}
+                        {barras}
                     </div>
                 </div>
             ) : (
-                chartContent
+                barras
             )}
         </div>
     );
