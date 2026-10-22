@@ -83,7 +83,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 3 Ganhos rápidos ✅ | P4, P5, A2 (A1 cancelado) | baixo |
 | 4 JavaScript ✅ | P1, P2, P3 | médio |
 | 5 Dependências ✅ | S3, S7 | médio |
-| 6 Vigilância | medir de novo tudo, tabela final | — |
+| 6 Vigilância ✅ | medir de novo tudo, tabela final | — |
 
 ## Registro
 
@@ -109,3 +109,26 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | Medição etapa 3 | `/login` celular: 96/93/100/92 → 97/93/100/66; LCP simulado 2,5 → 2,4 s (medido sem simulação: 1,4 s antes e depois); TBT 110 → 80 ms; peso 281 → 260 KB. v0.18.88 |
 | 22/10/2026 | S3 | Next 16.1.6 → 16.4.2 (e eslint-config-next). Build e tsc limpos; local e produção: /login 200, telas protegidas 307, webhook e cron 401, cabeçalhos ok |
 | 22/10/2026 | S7 | `npm audit fix` sem `--force`: 48 → 10 alertas (críticos 2 → 0, altos 33 → 9). Os 10 restantes estão só em ferramentas de desenvolvimento (shadcn CLI, eslint-config-next, tsx), que não vão para o site; a correção que o npm sugere é rebaixar versões, então ficam. v0.18.90 publicada |
+| 22/10/2026 | Etapa 6 | Medição final (Lighthouse 3×, mediana, site publicado). Achado P6 abaixo |
+
+## Resultado final (22/10/2026, v0.18.90)
+
+| Medida | Início (v0.18.85) | Agora (v0.18.90) |
+|---|---|---|
+| `/login` — Desempenho / Acessib. / Boas práticas / SEO | 96 / 93 / 100 / 92 | 96 / 93 / 100 / 66 (SEO cai de propósito: noindex) |
+| `/login` — LCP simulado / medido | 2,5 s / 1,4 s | 2,5 s / 1,4 s |
+| `/login` — TBT | 110 ms | 68 ms |
+| `/login` — CLS | 0 | 0 (1 das 3 rodadas: 0,038) |
+| `/login` — logo chega em | 474 ms | 272–305 ms |
+| `/login` — peso | 281 KB | 303 KB (274 KB sem o P6) |
+| Menu inferior / lateral (JS de início, gzip) | 203 / 62 KB | 51 / 12 KB |
+| Gráficos Relatórios / Dashboard (JS de início) | 114 / 115 KB | 1 / 1 KB |
+| Buscas na rede para montar o menu | 2 por tela | 0 |
+| Banco pela chave pública, sem login | tudo aberto (leitura e escrita) | 401 em todas as tabelas |
+| Webhook sem assinatura da Meta | aceito | 401 |
+| Cabeçalhos de segurança | 0 de 4 | 4 de 4 |
+| `npm audit` — bibliotecas do site | 25 (1 crítico) | **0** |
+| `npm audit` — total, com ferramentas de desenvolvimento | 48 (2 críticos) | 10 (0 críticos) |
+
+### P6 ⚪ (achado na etapa 6) — fonte baixada duas vezes no login
+Desde o Next 16.4, o build na Vercel cola `?dpl=<id do deploy>` no endereço das fontes. O nome do arquivo CSS não muda entre deploys quando o CSS é igual, e o cache da Vercel ignora o `?dpl`, então o CSS servido aponta para a fonte com o id de um deploy anterior, enquanto o HTML pré-carrega a mesma fonte com o id atual. O navegador baixa a Geist duas vezes (+29 KB, uma vez por deploy em cada aparelho). Também o JS do Next 16.4 é ~13 KB maior. Não achei relato público do problema. Correção possível: `preload: false` na Geist (uma só cópia; a fonte começa a baixar um pouco depois, sem pulo graças à fonte reserva ajustada).
