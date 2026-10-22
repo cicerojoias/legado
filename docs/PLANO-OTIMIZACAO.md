@@ -81,7 +81,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 1 Limpeza ✅ | I1, I2, I3, I4, I5 | baixo |
 | 2 Segurança urgente ✅ | S1, S2, S4, S5, S6 | médio |
 | 3 Ganhos rápidos ✅ | P4, P5, A2 (A1 cancelado) | baixo |
-| 4 JavaScript | P1, P2, P3 | médio |
+| 4 JavaScript ✅ | P1, P2, P3 | médio |
 | 5 Dependências | S3 (após D4), S7 | médio |
 | 6 Vigilância | medir de novo tudo, tabela final | — |
 
@@ -103,4 +103,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | P4 | Variáveis corrigidas (Geist aparece); Geist Mono com `preload: false` → 1 fonte pré-carregada em vez de 2 |
 | 21/10/2026 | P5 | Causa real: `<Suspense fallback={null}>` em volta da página inteira deixava o HTML do login vazio (logo só depois do JS). Agora só os avisos da URL ficam no Suspense; logo e formulário vêm no HTML, logo pré-carregado. Logo chega em 389 ms (antes 1 063 ms) |
 | 21/10/2026 | A2 | `robots.txt` (Disallow: /) + `noindex`; proxy libera `/robots.txt`. SEO do Lighthouse cai para 66 de propósito (ele penaliza bloquear buscadores) |
+| 21/10/2026 | Correção da medida | O script de "JS por tela" da linha de base somava bibliotecas de outras telas (o login não baixa Supabase nem Framer Motion, segundo o Lighthouse). Nova medida: o JS que cada componente puxa logo de início (esbuild, gzip), antes × depois no mesmo script |
+| 21/10/2026 | P1 + P2 | Layout protegido lê papel/lojas no servidor (contexto); menu não faz mais `getUser()` + consulta em `users`; contador do WhatsApp só para GERENTE+ e com Supabase sob demanda; modal Registrar via `next/dynamic`. Barra inferior 203 → 51 KB; lateral 62 → 12 KB |
+| 21/10/2026 | P3 | Recharts sob demanda com espaço reservado: gráfico de Relatórios 114 → 1 KB e do Dashboard 115 → 1 KB logo de início. v0.18.89 publicada |
 | 21/10/2026 | Medição etapa 3 | `/login` celular: 96/93/100/92 → 97/93/100/66; LCP simulado 2,5 → 2,4 s (medido sem simulação: 1,4 s antes e depois); TBT 110 → 80 ms; peso 281 → 260 KB. v0.18.88 |
