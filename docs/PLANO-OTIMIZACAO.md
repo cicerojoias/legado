@@ -79,8 +79,8 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 |---|---|---|
 | 0 Preparação | build local ✅, linha de base ✅ | — |
 | 1 Limpeza ✅ | I1, I2, I3, I4, I5 | baixo |
-| 2 Segurança urgente | S2 (código), S4, S5, S6; S1 após D1 | médio — pedir ok antes do push |
-| 3 Ganhos rápidos | P4, P5, A2, A1 (após D3) | baixo |
+| 2 Segurança urgente ✅ | S1, S2, S4, S5, S6 | médio |
+| 3 Ganhos rápidos ✅ | P4, P5, A2 (A1 cancelado) | baixo |
 | 4 JavaScript | P1, P2, P3 | médio |
 | 5 Dependências | S3 (após D4), S7 | médio |
 | 6 Vigilância | medir de novo tudo, tabela final | — |
@@ -98,4 +98,9 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | S2 | Webhook confere a assinatura da Meta; 7 casos testados. Publicado: sem assinatura → 401; WhatsApp real chegou no inbox |
 | 21/10/2026 | S4 | 6 rotas sem `details` técnico; erros comuns da Meta (24 h, modelo, limite, token) viram mensagem clara |
 | 21/10/2026 | S5 | X-Frame-Options, nosniff, Referrer-Policy e Permissions-Policy (microfone liberado só para o site) |
-| 21/10/2026 | S6 | Proxy lê `ativo` (cache 10 min) em todas as telas e APIs; PIN recusa desativado. v0.18.87. Aguardando ok para push |
+| 21/10/2026 | S6 | Proxy lê `ativo` (cache 10 min) em todas as telas e APIs; PIN recusa desativado. v0.18.87 publicada; deploy e testes públicos ok |
+| 21/10/2026 | Achado (fontes) | A Geist era baixada (2 arquivos, 53 KB, prioridade alta) mas nunca aplicada: `layout.tsx` criava `--font-sans`/`--font-mono` e o `@theme` lia `--font-geist-sans`/`--font-geist-mono`. Decisão do usuário: consertar e usar a Geist |
+| 21/10/2026 | P4 | Variáveis corrigidas (Geist aparece); Geist Mono com `preload: false` → 1 fonte pré-carregada em vez de 2 |
+| 21/10/2026 | P5 | Causa real: `<Suspense fallback={null}>` em volta da página inteira deixava o HTML do login vazio (logo só depois do JS). Agora só os avisos da URL ficam no Suspense; logo e formulário vêm no HTML, logo pré-carregado. Logo chega em 389 ms (antes 1 063 ms) |
+| 21/10/2026 | A2 | `robots.txt` (Disallow: /) + `noindex`; proxy libera `/robots.txt`. SEO do Lighthouse cai para 66 de propósito (ele penaliza bloquear buscadores) |
+| 21/10/2026 | Medição etapa 3 | `/login` celular: 96/93/100/92 → 97/93/100/66; LCP simulado 2,5 → 2,4 s (medido sem simulação: 1,4 s antes e depois); TBT 110 → 80 ms; peso 281 → 260 KB. v0.18.88 |
