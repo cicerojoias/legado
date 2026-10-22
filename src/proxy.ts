@@ -20,6 +20,6 @@ export const config = {
          * - manifest.json / sw.js: o browser busca sem cookies; redirecionar para /login quebra o PWA
          * Feel free to modify this pattern to include more paths.
          */
-        '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|api/whatsapp/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|robots.txt|api/whatsapp/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

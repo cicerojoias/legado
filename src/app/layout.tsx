@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: "Cícero Joias",
   description: "Tradição e Qualidade - Módulo Financeiro",
   manifest: "/manifest.json",
+  robots: { index: false, follow: false },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },
