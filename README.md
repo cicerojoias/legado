@@ -4,39 +4,38 @@ Este é o **Módulo Financeiro Oficial** da Cícero Joias, construído para subs
 
 ## 🚀 Status do Projeto
 
-Atualmente, o projeto concluiu as Fases de Fundação, Estruturação de Banco de Dados, Segurança e o **Módulo de Atendimento WhatsApp Pro** (Fases 1-4 do atendimento).
+Em produção em https://legadocicerojoias.vercel.app (versão atual na tela Perfil e no `package.json`).
 
-### Fases Concluídas
-* **Fase 1 (Fundação e Setup):** Next.js App Router, Tailwind CSS v4, Componentes Shadcn.
-* **Fase 2 (Banco de Dados):** Supabase + Prisma. Modelagem de Financeiro e WhatsApp.
-* **Fase 3 (Autenticação e Segurança):** Auth SSR, Middleware PIN e Proteção de Rotas.
-* **Módulo WhatsApp Pro (Fases 1-4):** 
-    - Inbox completa com suporte a mídias (Imagens, Áudios, Vídeos, Documentos).
-    - Webhook assíncrono com processamento de mídias e status de entrega.
-    - Sistema de exclusão/limpeza de conversas e integração com Supabase Storage.
+### O que já existe
+* **Financeiro:** tela Hoje (registrar entradas e saídas, edição em até 24 h), Lançamentos, Relatórios com gráficos, Dashboard, Custos fixos e resumo financeiro diário por notificação.
+* **Atendimento WhatsApp (WAB):** inbox com mídias (imagem, áudio, vídeo, documento), gravação de voz, modelos de mensagem da Meta, etiquetas, notas, encaminhamento, menu automático de boas-vindas e resposta com IA.
+* **Segurança:** login + PIN de 4 dígitos com cookie assinado, permissões por papel (SUPER_ADMIN, ADMIN, GERENTE, OPERADOR), banco fechado para acesso de fora (RLS), webhook com assinatura da Meta, log de auditoria de toda mudança financeira.
+* **Administração:** Usuários (papel, loja, ativo) e Logs de auditoria.
+* **App no celular (PWA):** instalável, com notificações push.
 
-### Próximas Fases (Roadmap)
-* **Fase 5 (Motor Financeiro):** Módulo Hoje, Formulário de Lançamentos e Dashboard Administrativo.
-* **Fase 6 (Relatórios e IA):** Processamento avançado de mídias recebidas e IA de Atendimento.
-* **Fase 7 (Polimento Final):** Offline Sync e PWA.
+### Próximos passos
+Ver `docs/LEGADO_roadmap.md` e `docs/melhorias.md`.
 
 ## 🛠️ Stack Tecnológica
 
-* **Framework:** [Next.js](https://nextjs.org/) (App Router + React 19)
-* **Estilização:** Tailwind CSS v4 + [Framer Motion](https://www.framer.com/motion/)
-* **Componentes UI:** [Shadcn UI](https://ui.shadcn.com/) / [Tremor](https://tremor.so/)
-* **Banco de Dados:** [Supabase](https://supabase.com/) (PostgreSQL)
-* **ORM:** [Prisma](https://www.prisma.io/)
-* **Validação/Segurança:** Zod / React Hook Form
+* **Framework:** [Next.js](https://nextjs.org/) 16 (App Router + React 19), hospedado na Vercel
+* **Estilização:** Tailwind CSS v4 + [Framer Motion](https://www.framer.com/motion/), fonte Geist
+* **Componentes UI:** [Shadcn UI](https://ui.shadcn.com/) (Radix) + Recharts nos gráficos
+* **Banco de Dados e login:** [Supabase](https://supabase.com/) (PostgreSQL + Auth + Realtime + Storage)
+* **ORM:** [Prisma](https://www.prisma.io/) 7 com adaptador `pg`
+* **Validação:** Zod / React Hook Form
+* **Integrações:** WhatsApp Cloud API (Meta), OpenAI, Cloudflare R2 (mídias), Web Push (Serwist)
 
 ## 📖 Documentação Adicional
 
-A documentação detalhada da visão de produto e do código-fonte pode ser encontrada na pasta `/docs`:
-- `LEGADO_mvp_scope.md`: Escopo completo do MVP, usuários e permissões.
-- `LEGADO_roadmap.md`: O roteiro estratégico do negócio para 2026.
-- `LEGADO_plano_execucao_detalhado.md`: Lista detalhada de tarefas arquiteturais do sistema.
-- `LEGADO_atendimento.md`: Padrão de respostas para a IA de Atendimento via WhatsApp.
-- `CHANGELOG.md`: Histórico de alterações e auditorias de segurança na raiz do projeto.
+Índice completo em [`docs/README.md`](docs/README.md). Os principais:
+- `CLAUDE.md` (raiz): arquitetura, regras de segurança e convenções do código.
+- `docs/LEGADO_soul.md`: princípios do projeto.
+- `docs/LEGADO_roadmap.md`: roteiro estratégico do negócio para 2026.
+- `docs/LEGADO_atendimento.md`: padrão de respostas para a IA de atendimento via WhatsApp.
+- `docs/PLANO-OTIMIZACAO.md`: otimização de outubro/2026 (velocidade e segurança, com antes/depois).
+- `docs/adr/`: decisões de arquitetura.
+- `CHANGELOG.md` (raiz, só no computador, fora do git): histórico de versões.
 
 ---
 
