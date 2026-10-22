@@ -16,18 +16,25 @@ npx prisma studio  # Local DB browser
 
 No test runner is configured. Type-checking with `npx tsc --noEmit` is the verification step.
 
+**Versão a cada entrega:** bump em `package.json` (e nas 2 linhas de versão do `package-lock.json`) + nova entrada no topo de `CHANGELOG_RESUMIDO` em `src/app/(protected)/perfil/page.tsx` (fonte oficial; a tela Perfil mostra as 3 últimas). O `CHANGELOG.md` da raiz é só local (`.gitignore`).
+
+`next build` rewrites `tsconfig.json`/`next-env.d.ts` — undo with `git checkout -- tsconfig.json next-env.d.ts`. On Windows the local build doesn't emit font preloads; check fonts in production.
+
 ## Architecture
 
 ### Route Groups
 - `src/app/(auth)/` — Public auth routes: `/login`, `/pin`, `/setup-pin`, logout action
-- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (ADMIN+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`, `/inbox`
-- `src/app/layout.tsx` — Root layout with Geist font and Sonner toaster
+- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (GERENTE+), `/inbox` (GERENTE+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`
+- `src/app/(protected)/layout.tsx` — async Server Component: reads role/lojas via `getPermissoes()` and feeds `PermissoesProvider` (see RBAC)
+- `src/app/layout.tsx` — Root layout with Geist font (`--font-geist-sans`, `preload: false` — see P6 in `docs/PLANO-OTIMIZACAO.md`) and Sonner toaster
+- `src/app/robots.ts` — `Disallow: /` + `noindex` in metadata (internal app)
 
 ### Auth Flow (two-layer)
-1. **Supabase session** — validated in `src/lib/supabase/middleware.ts` via `updateSession()`. Unauthenticated users redirect to `/login`.
-2. **PIN cookie** — `pin_verified_{userId}` (httpOnly, 12h TTL). Set in `src/app/(auth)/pin/actions.ts` after bcrypt comparison. Middleware checks this cookie on every protected request. The cookie name includes `userId` to prevent session collision between users on the same device.
+1. **Supabase session** — validated in `src/lib/supabase/middleware.ts` via `updateSession()` (local JWT check with `getClaims`). Unauthenticated users redirect to `/login`.
+2. **PIN cookie** — `pin_verified_{userId}`, HMAC-signed (`src/lib/signed-cookie.ts`, 12h TTL). Set in `src/app/(auth)/pin/actions.ts` after scrypt comparison (`src/lib/pin-utils.ts`). Only a valid signature for that `userId` counts — the cookie cannot be forged. The name includes `userId` to prevent session collision between users on the same device.
+3. **Role cookie** — signed cache of `role` (10 min) so the proxy doesn't query `users` on every request. Inactive users (`ativo=false`) get role `INATIVO`: APIs return 403, pages go to `/pin`, PIN cookie is deleted. `pin/actions.ts` also refuses inactive users.
 
-`src/middleware.ts` delegates entirely to `updateSession`. PIN-less users with a valid Supabase session are redirected to `/pin`.
+`src/proxy.ts` (Next 16 "proxy", formerly middleware) delegates entirely to `updateSession`. PIN-less users with a valid Supabase session are redirected to `/pin`.
 
 ### Server Actions pattern
 All mutations live in `actions.ts` files co-located with their route. The security chain for financial mutations is:
@@ -43,11 +50,13 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 - **Schema sync:** `npx prisma db push` (no `migrate dev` — no migration history).
 - **Soft-delete:** `Lancamento.deletado_at DateTime?` — null = active, timestamp = deleted (ADR-0001). All queries must filter `{ deletado_at: null }`.
 - **Audit log:** Every financial mutation writes a `Log` record with a JSON snapshot inside the same `$transaction`.
+- **RLS (obrigatório):** since 21/10/2026 all tables have RLS on and `anon`/`authenticated` have no grants (`prisma/sql/rls-seguranca.sql`, rollback in `rls-rollback.sql`). The public anon key (shipped in the browser JS) can only read the user's own row in `users` and the inbox tables for GERENTE+ (via `app_role()` SECURITY DEFINER), for Supabase Realtime. Prisma connects as `postgres` (BYPASSRLS), so server code is unaffected. **Any new table created with `db push` must get `ENABLE ROW LEVEL SECURITY` + revoke for anon/authenticated** — otherwise it is open to the internet. Never change production DB without explicit ok and a verified backup.
 
 ### RBAC
-- Roles: `SUPER_ADMIN` (Richard) | `ADMIN` (Cícero) | `OPERADOR` (staff)
+- Roles: `SUPER_ADMIN` (Richard) | `ADMIN` (Cícero) | `GERENTE` (inbox + lançamentos) | `OPERADOR` (staff)
 - `User.lojaAutorizada`: `JOAO_PESSOA` | `SANTA_RITA` | `AMBAS`
-- Middleware handles view-level RBAC: `/lancamentos` and `/relatorios` = ADMIN+, `/dashboard`, `/custos-fixos`, `/usuarios` and `/logs` = SUPER_ADMIN only. Server Actions enforce action-level RBAC by reading `dbUser.role` and `dbUser.lojaAutorizada` from the DB — never from the client.
+- Proxy handles view-level RBAC: `/lancamentos`, `/inbox` and `/api/whatsapp/*` (except webhook) = GERENTE+; `/relatorios` = ADMIN+; `/dashboard`, `/custos-fixos`, `/usuarios` and `/logs` = SUPER_ADMIN only.
+- UI visibility: `src/lib/permissoes.ts` (`getPermissoes`, React `cache`) reads role/lojas on the server; the protected layout passes it to `PermissoesProvider`; `usePermissions()` just reads the context (no fetch, `isLoading` always false, same output on server and client). Server Actions enforce action-level RBAC by reading `dbUser.role` and `dbUser.lojaAutorizada` from the DB — never from the client.
 - Users with `lojaAutorizada = AMBAS` must select a store in the UI; the server validates and rejects if omitted.
 
 ### Rate Limiting
@@ -56,7 +65,9 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 ### Key Files
 | File | Purpose |
 |---|---|
-| `src/lib/supabase/middleware.ts` | Full auth + PIN middleware logic |
+| `src/lib/supabase/middleware.ts` | Full auth + PIN + role/ativo logic (called by `src/proxy.ts`) |
+| `src/lib/signed-cookie.ts` | HMAC-signed PIN and role cookies |
+| `src/lib/permissoes.ts` | `getPermissoes()` — role/lojas on the server for the UI |
 | `src/lib/prisma.ts` | Singleton Prisma client with pg.Pool adapter |
 | `src/lib/validations/index.ts` | All Zod schemas (`CriarLancamentoSchema`, `EditarLancamentoSchema`, `DeleteQuerySchema`, etc.) |
 | `src/lib/rate-limit.ts` | Parametrized in-memory rate limiter |
@@ -64,7 +75,7 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 | `src/app/(auth)/pin/actions.ts` | `setupPinAction`, `verifyPinAction` with DB-backed lockout |
 | `src/components/financeiro/lancamento-modal.tsx` | Modal for creating lancamentos |
 | `src/components/financeiro/editar-lancamento-modal.tsx` | Modal for editing/deleting lancamentos |
-| `src/hooks/use-permissions.ts` | Client-side role check for UI visibility |
+| `src/hooks/use-permissions.ts` | `PermissoesProvider` + `usePermissions()` (reads server-provided context) |
 | `src/app/(protected)/relatorios/relatorios-content.tsx` | Relatórios data fetching + metrics + chart |
 | `src/app/(protected)/dashboard/page.tsx` | SUPER_ADMIN desktop dashboard |
 | `src/app/(protected)/custos-fixos/actions.ts` | CRUD for fixed costs (SUPER_ADMIN) |
@@ -102,7 +113,9 @@ Erros de hidratação quebram a UX e são difíceis de debugar. Siga estas regra
    ```
 2. **`toLocaleDateString` / `Intl.DateTimeFormat`** — Formatação de datas pode diferir entre Node.js (server) e browser (client). Use `suppressHydrationWarning` no elemento que exibe a data formatada, ou formate no server e passe como prop.
 3. **shadcn/ui `ChartContainer`** — O default inclui classes que podem conflitar com classes passadas via `className` (ex: `aspect-video` vs `aspect-auto`). O `tailwind-merge` no Tailwind v4 resolve esses conflitos de forma inconsistente entre server e client. Já removemos `aspect-video` do default — ao atualizar o componente via shadcn CLI, verificar se o conflito volta.
-4. **Renderização condicional com dados async** — Hooks como `usePermissions()` que fazem fetch em `useEffect` começam com estado default (`isLoading: true`). Nunca renderize conteúdo diferente baseado no estado carregado sem proteger com `<Suspense>` ou mostrar o mesmo layout skeleton no server e client.
+4. **Renderização condicional com dados async** — Hooks que fazem fetch em `useEffect` começam com estado default. Nunca renderize conteúdo diferente baseado no estado carregado sem proteger com `<Suspense>` ou mostrar o mesmo layout skeleton no server e client. Para dados do usuário (papel, lojas), prefira ler no servidor e passar por props/contexto, como `usePermissions()` faz desde a v0.18.89.
+6. **`<Suspense fallback={null}>` em volta da página inteira** deixa o HTML do servidor vazio (a tela só aparece depois do JS). Envolva só o pedaço que usa `useSearchParams` — veja `LoginAvisos` em `src/app/(auth)/login/page.tsx`.
+7. **Bibliotecas pesadas** (Recharts, modais grandes) entram com `next/dynamic` + espaço reservado do mesmo tamanho, para não pesar a primeira carga nem pular a tela — ex.: `relatorios-chart.tsx` / `relatorios-chart-barras.tsx`.
 5. **Ao criar novo componente client** — Pergunte: "Este componente usa `useSearchParams`, `usePathname`, ou dados que mudam entre server/client?" Se sim, envolva em `<Suspense>` onde for renderizado.
 
 ### Adding New Users
@@ -144,6 +157,7 @@ VALUES ('UUID_FROM_SUPABASE_AUTH', 'email', 'Nome', 'OPERADOR', 'JOAO_PESSOA', t
 - `WHATSAPP_TOKEN` — token de acesso permanente da Meta
 - `WHATSAPP_PHONE_ID` — ID do número de telefone
 - `WHATSAPP_VERIFY_TOKEN` — token de verificação do webhook
+- `META_APP_SECRET` — segredo do app Meta; o webhook confere a assinatura `X-Hub-Signature-256` com ele (`src/lib/whatsapp/validate-signature.ts`). Sem ele, em produção o webhook recusa tudo (401)
 - `SUPABASE_SERVICE_ROLE_KEY` — necessária apenas para outbound (download do Storage com bypass de RLS)
 
 ### ADRs
