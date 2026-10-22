@@ -95,4 +95,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | S1b + D5 | Cadastro público desligado; segredos como Secret; Redis removido; redeploy ok |
 | 21/10/2026 | S1 aplicado | Produção protegida: sem login → 401 em todas as tabelas. Próximo: todos trocam o PIN (S1c) |
 | 21/10/2026 | Etapa 1 (I1–I5) | /sandbox, webhook-parser e favicon duplicado removidos; prints fora do repo (`Documentos\Cícero Joias - Prints`); aviso do Prisma sumiu; v0.18.86 publicada |
-| 21/10/2026 | S2 (código) | Webhook confere a assinatura da Meta; 7 casos testados. Aguardando ok para push |
+| 21/10/2026 | S2 | Webhook confere a assinatura da Meta; 7 casos testados. Publicado: sem assinatura → 401; WhatsApp real chegou no inbox |
+| 21/10/2026 | S4 | 6 rotas sem `details` técnico; erros comuns da Meta (24 h, modelo, limite, token) viram mensagem clara |
+| 21/10/2026 | S5 | X-Frame-Options, nosniff, Referrer-Policy e Permissions-Policy (microfone liberado só para o site) |
+| 21/10/2026 | S6 | Proxy lê `ativo` (cache 10 min) em todas as telas e APIs; PIN recusa desativado. v0.18.87. Aguardando ok para push |
