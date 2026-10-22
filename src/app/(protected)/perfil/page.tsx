@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.18.91', data: '22/10/2026', resumo: 'Velocidade: a fonte do app era baixada duas vezes no login depois da atualização do Next; agora vem uma vez só (29 KB a menos).' },
     { versao: '0.18.90', data: '22/10/2026', resumo: 'Segurança: sistema atualizado (Next 16.4) e bibliotecas corrigidas — os alertas de risco caíram de 48 para 10, nenhum crítico, e os restantes ficam só nas ferramentas de desenvolvimento.' },
     { versao: '0.18.89', data: '21/10/2026', resumo: 'Velocidade: o menu já aparece completo (o papel do usuário vem pronto do servidor, sem 2 buscas a cada tela); o botão Registrar e os gráficos carregam logo depois da tela, deixando cada abertura mais leve.' },
     { versao: '0.18.88', data: '21/10/2026', resumo: 'Visual: a fonte Geist passa a aparecer de verdade (antes era baixada mas o app usava a fonte padrão do celular). Login abre mais rápido: logo e formulário já vêm prontos na página. App fora dos buscadores (robots.txt).' },
