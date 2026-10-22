@@ -23,8 +23,9 @@ import { toast } from 'sonner';
 
 type LoginFormValues = z.infer<typeof LoginSchema>;
 
-function LoginForm() {
-    const [isPending, startTransition] = useTransition();
+// Só os avisos dependem da URL: ficam isolados no Suspense para o formulário
+// (e o logo) virem prontos no HTML do servidor.
+function LoginAvisos() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -35,6 +36,12 @@ function LoginForm() {
             toast.error('Link inválido ou expirado. Solicite um novo.');
         }
     }, [searchParams]);
+
+    return null;
+}
+
+function LoginForm() {
+    const [isPending, startTransition] = useTransition();
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(LoginSchema),
@@ -69,7 +76,7 @@ function LoginForm() {
                         width={180}
                         height={60}
                         className="object-contain rounded-lg"
-                        priority
+                        preload
                     />
                     <CardDescription>Acesse sua conta para continuar</CardDescription>
                 </CardHeader>
@@ -129,8 +136,11 @@ function LoginForm() {
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={null}>
+        <>
+            <Suspense fallback={null}>
+                <LoginAvisos />
+            </Suspense>
             <LoginForm />
-        </Suspense>
+        </>
     );
 }
