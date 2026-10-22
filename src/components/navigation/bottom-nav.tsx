@@ -9,13 +9,31 @@ import { useWabUnreadTotal } from '@/hooks/use-wab-unread-total';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
 import { Suspense } from 'react';
-import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
+import dynamic from 'next/dynamic';
+
+// Botão igual ao do modal, mostrado enquanto o modal carrega
+function BotaoRegistrar() {
+    return (
+        <div className="flex flex-col items-center justify-center cursor-pointer text-primary">
+            <div className="bg-primary text-primary-foreground p-2 rounded-full shadow-md shadow-primary/20 mb-1">
+                <Plus className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-medium leading-none font-bold">Registrar</span>
+        </div>
+    );
+}
+
+// O modal "Registrar" (formulário + validação) carrega depois da tela pronta (P2)
+const LancamentoModal = dynamic(
+    () => import('@/components/financeiro/lancamento-modal').then((m) => m.LancamentoModal),
+    { ssr: false, loading: BotaoRegistrar }
+);
 
 export function BottomNav() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { isGerente, isAdmin, isLoading, lojaAutorizada, lojaPadrao } = usePermissions();
-    const wabUnread = useWabUnreadTotal();
+    const { isGerente, isAdmin, isLoading } = usePermissions();
+    const wabUnread = useWabUnreadTotal(isGerente);
 
     const defaultLoja: 'JOAO_PESSOA' | 'SANTA_RITA' = 'SANTA_RITA';
     const canSelectLoja = false;
@@ -54,11 +72,7 @@ export function BottomNav() {
                 if (link.label === 'Registrar') {
                     return (
                         <div key="registrar" className="relative flex flex-col items-center justify-center w-full h-full gap-1 pt-1">
-                            <Suspense fallback={
-                                <div className="p-2 rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20">
-                                    <Plus className="w-5 h-5" />
-                                </div>
-                            }>
+                            <Suspense fallback={<BotaoRegistrar />}>
                                 <LancamentoModal
                                     canSelectLoja={canSelectLoja}
                                     defaultLoja={defaultLoja}

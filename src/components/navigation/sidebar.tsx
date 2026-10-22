@@ -12,7 +12,7 @@ import { logoutAction } from '@/app/(auth)/logout/actions';
 export function Sidebar() {
     const pathname = usePathname();
     const { isGerente, isAdmin, isSuperAdmin, isLoading } = usePermissions();
-    const wabUnread = useWabUnreadTotal();
+    const wabUnread = useWabUnreadTotal(isGerente);
 
     const handleLogout = async () => {
         await logoutAction();

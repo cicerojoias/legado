@@ -3,13 +3,18 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { NavigationProgress } from "@/components/navigation/navigation-progress";
 import { PwaNavigationListener } from "@/components/navigation/pwa-navigation-listener";
+import { PermissoesProvider } from "@/hooks/use-permissions";
+import { getPermissoes } from "@/lib/permissoes";
 
-export default function ProtectedLayout({
+export default async function ProtectedLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const permissoes = await getPermissoes();
+
     return (
+        <PermissoesProvider value={permissoes}>
         <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
             <PwaNavigationListener />
             <Suspense fallback={null}>
@@ -35,5 +40,6 @@ export default function ProtectedLayout({
                 </Suspense>
             </div>
         </div>
+        </PermissoesProvider>
     );
 }
