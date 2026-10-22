@@ -30,6 +30,9 @@ export async function setupPinAction(pin: string, confirmPin: string) {
     if (!dbUser) {
         return { success: false, message: 'Perfil não encontrado na base de dados. Sincronize com o admin.' };
     }
+    if (!dbUser.ativo) {
+        return { success: false, message: 'Usuário desativado. Fale com o administrador.' };
+    }
 
     if (dbUser.pin_hash) {
         return { success: false, message: 'Seu PIN já está configurado.' };
@@ -69,6 +72,9 @@ export async function verifyPinAction(pin: string) {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     if (!dbUser) {
         return { success: false, message: 'Perfil não encontrado.' };
+    }
+    if (!dbUser.ativo) {
+        return { success: false, message: 'Usuário desativado. Fale com o administrador.' };
     }
 
     if (!dbUser.pin_hash) {

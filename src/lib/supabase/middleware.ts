@@ -9,6 +9,8 @@ import {
     readRoleCookie,
 } from '@/lib/signed-cookie';
 
+const INATIVO = 'INATIVO';
+
 export async function updateSession(request: NextRequest) {
     const mwStart = performance.now();
     let mwRoleMs = 0;
@@ -94,20 +96,21 @@ export async function updateSession(request: NextRequest) {
         // SUPER_ADMIN apenas
         const isSuperAdminRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/custos-fixos') || pathname.startsWith('/usuarios') || pathname.startsWith('/logs');
 
-        if (hasVerifiedPin && (isGerenteRoute || isAdminRoute || isSuperAdminRoute)) {
+        if (hasVerifiedPin && !isPinRoute && !isResetPasswordRoute) {
             // Role em cache num cookie assinado (10 min) — evita uma query por request.
             // Ações sensíveis continuam validando a role no banco (server actions/rotas).
+            // Usuário desativado vira 'INATIVO': perde o acesso em até 10 min (S6).
             let role = readRoleCookie(request.cookies.get(ROLE_COOKIE_NAME)?.value, userId) ?? undefined;
             let freshRole: string | null = null;
             if (!role) {
                 const roleStart = performance.now();
                 const { data: dbUser } = await supabase
                     .from('users')
-                    .select('role')
+                    .select('role, ativo')
                     .eq('id', userId)
                     .single();
                 mwRoleMs = performance.now() - roleStart;
-                role = (dbUser?.role as string | undefined) ?? undefined;
+                if (dbUser) role = dbUser.ativo ? (dbUser.role as string) : INATIVO;
                 freshRole = role ?? null;
             }
             const withRoleCookie = (res: NextResponse) => {
@@ -122,6 +125,15 @@ export async function updateSession(request: NextRequest) {
                 }
                 return res;
             };
+
+            // Desativado: APIs recusam; telas voltam ao PIN, que mostra "Usuário desativado"
+            if (role === INATIVO) {
+                const res = pathname.startsWith('/api/')
+                    ? NextResponse.json({ error: 'Usuário desativado.' }, { status: 403 })
+                    : NextResponse.redirect(new URL('/pin', request.url));
+                res.cookies.delete(pinCookieName(userId));
+                return withRoleCookie(res);
+            }
 
             if (isGerenteRoute && role !== 'GERENTE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
                 const url = request.nextUrl.clone();
