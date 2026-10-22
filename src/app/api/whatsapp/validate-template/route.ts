@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const err = error instanceof Error ? error : new Error(String(error))
     console.error('[validate-template] Erro:', err)
     return Response.json(
-      { error: 'Erro ao validar template', details: err.message },
+      { error: 'Erro ao validar template.' },
       { status: 500 }
     )
   }

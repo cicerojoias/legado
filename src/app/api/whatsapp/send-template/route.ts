@@ -1,3 +1,4 @@
+import { mensagemErroWhatsApp } from '@/lib/whatsapp/errors'
 import { prisma } from '@/lib/prisma'
 import { sendTemplateMessage, validateTemplate } from '@/lib/whatsapp/meta-client'
 import { createClient } from '@/lib/supabase/server'
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
     console.error('=== ERRO NO ENVIO DE TEMPLATE (Meta/WhatsApp): ===')
     console.error(err)
     return Response.json(
-      { error: 'Erro ao enviar template', details: err.message },
+      { error: mensagemErroWhatsApp(err, 'Erro ao enviar template.') },
       { status: 500 }
     )
   }

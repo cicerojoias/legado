@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         error: 'Erro ao enviar resumo diário',
-        details: error instanceof Error ? error.message : 'Erro desconhecido',
       },
       { status: 500 }
     )

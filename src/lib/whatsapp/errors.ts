@@ -94,6 +94,34 @@ export function isWhatsAppError(error: unknown): error is WhatsAppError {
 }
 
 /**
+ * Turns a Meta/WhatsApp error into a message the team can understand,
+ * without returning the technical detail (that stays in the server log).
+ * Codes: https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
+ */
+export function mensagemErroWhatsApp(error: unknown, padrao: string): string {
+  const texto = error instanceof Error ? error.message : String(error)
+  const codigo = Number(texto.match(/"code"\s*:\s*(\d+)/)?.[1])
+  switch (codigo) {
+    case 131047:
+      return 'Passaram 24 h desde a última mensagem do cliente: use um modelo (template).'
+    case 132000:
+    case 132001:
+    case 132012:
+      return 'O modelo não está aprovado pela Meta ou os campos estão errados.'
+    case 131026:
+      return 'O número não pode receber mensagens no WhatsApp.'
+    case 130429:
+    case 131048:
+    case 131056:
+      return 'Muitas mensagens em pouco tempo. Aguarde um pouco e tente de novo.'
+    case 190:
+      return 'A conexão com o WhatsApp expirou. Avise o administrador.'
+    default:
+      return padrao
+  }
+}
+
+/**
  * Handles any error and returns a safe response
  *
  * Converts WhatsAppError to typed response, other errors to generic message.

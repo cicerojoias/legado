@@ -71,6 +71,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[migrate-media] Erro durante a migração:', msg)
-    return NextResponse.json({ error: 'Erro ao migrar mídias', details: msg }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao migrar mídias' }, { status: 500 })
   }
 }

@@ -1,3 +1,4 @@
+import { mensagemErroWhatsApp } from '@/lib/whatsapp/errors'
 import { prisma } from '@/lib/prisma'
 import { sendTextMessage } from '@/lib/whatsapp/meta-client'
 import { createClient } from '@/lib/supabase/server'
@@ -92,7 +93,6 @@ export async function POST(req: Request) {
       timing.log()
       return Response.json({ message }, { headers: { 'Server-Timing': timing.header() } })
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
       await touchConversation
       await prisma.waMessage.update({
         where: { id: draft.id },
@@ -102,14 +102,14 @@ export async function POST(req: Request) {
       console.error('=== ERRO NO ENVIO OUTBOUND (Meta/WhatsApp): ===')
       console.error(error)
       return Response.json(
-        { error: 'Erro ao enviar a mensagem', details: errorMessage },
+        { error: mensagemErroWhatsApp(error, 'Erro ao enviar a mensagem.') },
         { status: 500 }
       )
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('[send] Erro:', error)
     return Response.json(
-      { error: 'Erro ao enviar a mensagem', details: errorMessage },
+      { error: 'Erro ao enviar a mensagem.' },
       { status: 500 }
     )
   }
