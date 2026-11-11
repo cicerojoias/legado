@@ -16,7 +16,6 @@ export interface MsgSnapshot {
 interface SelectionState {
   active: boolean
   selected: Map<string, MsgSnapshot>
-  canDelete: boolean   // true apenas se todas as msgs selecionadas são: outbound + ≤60h + têm wa_message_id
   count: number
 }
 
@@ -27,12 +26,9 @@ interface SelectionActions {
   clear: () => void                   // sai do modo seleção
 }
 
-const SIXTY_HOURS_MS = 60 * 60 * 60 * 1000
-
 const SelectionStateCtx = createContext<SelectionState>({
   active: false,
   selected: new Map(),
-  canDelete: false,
   count: 0,
 })
 
@@ -48,20 +44,9 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 
   const active = selected.size > 0
 
-  const canDelete = useMemo(() => {
-    if (selected.size === 0) return false
-    const now = Date.now()
-    for (const msg of selected.values()) {
-      if (msg.direction !== 'outbound') return false
-      if (!msg.wa_message_id) return false
-      if (now - new Date(msg.timestamp).getTime() > SIXTY_HOURS_MS) return false
-    }
-    return true
-  }, [selected])
-
   const state = useMemo<SelectionState>(
-    () => ({ active, selected, canDelete, count: selected.size }),
-    [active, selected, canDelete]
+    () => ({ active, selected, count: selected.size }),
+    [active, selected]
   )
 
   // ── Stable refs ──────────────────────────────────────────────────────────

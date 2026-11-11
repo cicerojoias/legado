@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Copy, Trash2, Forward } from 'lucide-react'
+import { X, Copy, Info, Forward } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -20,16 +18,13 @@ import { ForwardModal } from './ForwardModal'
 interface SelectionHeaderOverlayProps {
   /** Nome do contato — exibido como remetente nas mensagens copiadas */
   contactName: string
-  /** ID da conversa — necessário para o endpoint de deleção (Fase 4) */
-  conversationId: string
 }
 
-export function SelectionHeaderOverlay({ contactName, conversationId }: SelectionHeaderOverlayProps) {
-  const { count, selected, canDelete } = useSelectionState()
+export function SelectionHeaderOverlay({ contactName }: SelectionHeaderOverlayProps) {
+  const { count, selected } = useSelectionState()
   const { clear } = useSelectionActions()
 
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [deleteInfoOpen, setDeleteInfoOpen] = useState(false)
   const [forwardOpen, setForwardOpen] = useState(false)
 
   // ── Copiar mensagens selecionadas ─────────────────────────────────────────
@@ -63,47 +58,6 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
       clear()
     } catch {
       toast.error('Não foi possível copiar — permissão de área de transferência negada')
-    }
-  }
-
-  // ── Deletar mensagens selecionadas ────────────────────────────────────────
-  const handleConfirmDelete = async () => {
-    setDeleting(true)
-    try {
-      const ids = [...selected.keys()]
-      const res = await fetch('/api/whatsapp/messages/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageIds: ids, conversationId }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        toast.error(data.error ?? 'Erro ao deletar mensagens')
-        return
-      }
-
-      const data = await res.json()
-      const deletedCount: number = data.deleted ?? ids.length
-      const skippedCount: number = data.skipped ?? 0
-
-      if (deletedCount > 0) {
-        toast.success(
-          deletedCount === 1 ? 'Mensagem deletada' : `${deletedCount} mensagens deletadas`
-        )
-      }
-      if (skippedCount > 0) {
-        toast.warning(
-          `${skippedCount} mensagem${skippedCount > 1 ? 's' : ''} não ${skippedCount > 1 ? 'puderam' : 'pôde'} ser deletada${skippedCount > 1 ? 's' : ''} (janela de 60h expirada)`
-        )
-      }
-
-      clear()
-    } catch {
-      toast.error('Erro de rede ao deletar mensagens')
-    } finally {
-      setDeleting(false)
-      setDeleteOpen(false)
     }
   }
 
@@ -146,24 +100,14 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
             <Copy className="w-5 h-5" />
           </button>
 
-          {/* Deletar — apenas quando canDelete */}
+          {/* Explica a limitação sem oferecer uma exclusão indisponível. */}
           <button
-            onClick={() => setDeleteOpen(true)}
-            disabled={!canDelete}
-            className={cn(
-              'p-1.5 rounded-lg transition-colors',
-              canDelete
-                ? 'text-destructive hover:bg-destructive/10'
-                : 'text-muted-foreground/30 cursor-not-allowed'
-            )}
-            title={
-              canDelete
-                ? 'Deletar mensagens'
-                : 'Só é possível deletar mensagens enviadas por você dentro de 60h'
-            }
-            aria-label="Deletar mensagens selecionadas"
+            onClick={() => setDeleteInfoOpen(true)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            title="Sobre excluir mensagens"
+            aria-label="Sobre excluir mensagens"
           >
-            <Trash2 className="w-5 h-5" />
+            <Info className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -177,28 +121,19 @@ export function SelectionHeaderOverlay({ contactName, conversationId }: Selectio
         onForwarded={clear}
       />
 
-      {/* Dialog de confirmação de deleção */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={deleteInfoOpen} onOpenChange={setDeleteInfoOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Deletar {count === 1 ? 'esta mensagem' : `${count} mensagens`}?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Não é possível apagar mensagens enviadas</AlertDialogTitle>
             <AlertDialogDescription>
-              {count === 1
-                ? 'A mensagem será removida para todos na conversa via Meta API. Essa ação não pode ser desfeita.'
-                : `As ${count} mensagens serão removidas para todos na conversa via Meta API. Essa ação não pode ser desfeita.`}
+              A integração com o WhatsApp não permite apagar mensagens já enviadas.
+              A mensagem continua na conversa do cliente. Para corrigir alguma informação,
+              envie uma nova mensagem. Fora da janela de 24 horas, use um modelo aprovado
+              adequado ou aguarde a resposta do cliente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={(e) => { e.preventDefault(); handleConfirmDelete() }}
-              disabled={deleting}
-            >
-              {deleting ? 'Deletando…' : 'Sim, deletar'}
-            </AlertDialogAction>
+            <AlertDialogAction>Entendi</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

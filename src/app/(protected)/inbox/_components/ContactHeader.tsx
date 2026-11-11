@@ -150,7 +150,6 @@ export function ContactHeader({ contact, conversation, showBackButton, currentTa
     return (
       <SelectionHeaderOverlay
         contactName={contact.name ?? contact.phone}
-        conversationId={conversation.id}
       />
     )
   }

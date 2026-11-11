@@ -19,6 +19,20 @@ O WhatsApp Business API possui uma **janela de 24 horas** que se inicia quando u
 
 ---
 
+## Mensagem enviada com nome ou conteúdo errado
+
+Diagnóstico em 11/11/2026: a integração Cloud API não oferece operação documentada para apagar uma mensagem enviada do WhatsApp do cliente. A janela de 24h regula o envio de mensagens livres; não habilita exclusão. A antiga regra de 60h no módulo era incorreta.
+
+O módulo chamava `DELETE /{wamid}`, operação sem suporte, e retornava HTTP 200 com `deleted: 0` e erros individuais. A tela ignorava esses erros, fechando a confirmação sem explicar a falha. Não há evidência de exclusão do lado do cliente.
+
+Correção implementada (v0.18.92): confirmação de exclusão substituída por aviso informativo; rota legada devolve HTTP 501 com `WHATSAPP_DELETE_UNSUPPORTED`, sem chamar a Meta nem consultar/alterar mensagens no banco. Autenticação e limite de requisições preservados. Não há exclusão somente local disfarçada de remoção para o cliente.
+
+Para corrigir o conteúdo: dentro da janela, enviar uma retificação; fora dela, usar um template aprovado adequado ou aguardar a resposta do cliente. Enviar outro template não abre a janela de mensagens livres: a resposta do cliente é necessária.
+
+Referência: [coleção oficial da Meta — WhatsApp Cloud API](https://www.postman.com/meta/whatsapp-business-platform/documentation/wlk6lh4/whatsapp-cloud-api) (operações de mensagens e mídia; não há exclusão de mensagem enviada). A referência no domínio da Meta retornou 429 durante a consulta.
+
+Validação local concluída: 3 testes da rota em `node --test scripts/test-whatsapp-delete.mjs` (501 sem Meta/banco; 401 e 429 preservados), `npx tsc --noEmit`, ESLint dos arquivos alterados e `npm run build`. Regressão reproduzida antes da correção: a rota devolvia 200 quando a Meta recusava a exclusão. Testes e build precisaram rodar fora do sandbox por bloqueio de subprocessos (`EPERM`). Nenhuma conversa real foi alterada e nenhuma mensagem foi enviada durante os testes.
+
 ## 🔧 Passo a Passo: Criar e Aprovar Templates
 
 ### 1. Acessar o Meta Business Manager
