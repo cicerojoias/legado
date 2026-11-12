@@ -535,16 +535,19 @@ async function tryHandleWelcomeMenu(
   // Se não encontrou mensagem de boas-vindas com menu, não processa
   if (!welcomeMessage) return false
 
-  // Se um atendente já respondeu depois do menu, um número solto (ex.: "2" = quantidade)
-  // faz parte da conversa e não deve disparar a resposta automática
-  const humanRepliedAfterWelcome = history.some(
-    (m) =>
-      m.direction === 'outbound' &&
-      m.timestamp > welcomeMessage.timestamp &&
-      m.sent_by &&
-      m.sent_by !== 'ai'
-  )
-  if (humanRepliedAfterWelcome) return false
+  // O número só vale como escolha se for a PRIMEIRA mensagem do cliente depois do menu
+  // e nada tiver sido enviado a ele desde então (resposta automática, IA ou atendente).
+  // Qualquer número depois disso é conversa normal (ex.: "2" = quantidade).
+  const afterWelcome = history.filter((m) => m.timestamp > welcomeMessage.timestamp)
+  if (afterWelcome.some((m) => m.direction === 'outbound')) return false
+  const inboundAfterWelcome = afterWelcome.filter((m) => m.direction === 'inbound')
+  if (inboundAfterWelcome.length !== 1 || inboundAfterWelcome[0].id !== lastInbound.id) return false
+
+  // O histórico acima só tem texto; foto, áudio etc. depois do menu também contam como conversa
+  const anyMessagesAfterWelcome = await prisma.waMessage.count({
+    where: { conversation_id: conversationId, timestamp: { gt: welcomeMessage.timestamp } },
+  })
+  if (anyMessagesAfterWelcome !== 1) return false
 
   // Obtém a mensagem de resposta do template
   const responseText = MENU_RESPONSE_TEMPLATES[option]
