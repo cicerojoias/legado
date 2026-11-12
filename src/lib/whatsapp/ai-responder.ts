@@ -22,7 +22,7 @@ const MAX_CONTEXT_MESSAGES = 20
 const MAX_CATCH_UP_SEGMENTS = 3
 const CATCH_UP_REPLY_GAP_MIN_MS = 1800
 const CATCH_UP_REPLY_GAP_JITTER_MS = 1200
-const WELCOME_MENU_WINDOW_MS = 5 * 60 * 1000 // 5 minutos para resposta de menu
+const WELCOME_MENU_WINDOW_MS = 48 * 60 * 60 * 1000 // 48h para resposta de menu
 
 // ─── Budget de tokens (fix #3) ──────────────────────────────────────────────
 // Evita gasto ilimitado: cada conversa tem um teto de tokens por hora
@@ -534,6 +534,17 @@ async function tryHandleWelcomeMenu(
 
   // Se não encontrou mensagem de boas-vindas com menu, não processa
   if (!welcomeMessage) return false
+
+  // Se um atendente já respondeu depois do menu, um número solto (ex.: "2" = quantidade)
+  // faz parte da conversa e não deve disparar a resposta automática
+  const humanRepliedAfterWelcome = history.some(
+    (m) =>
+      m.direction === 'outbound' &&
+      m.timestamp > welcomeMessage.timestamp &&
+      m.sent_by &&
+      m.sent_by !== 'ai'
+  )
+  if (humanRepliedAfterWelcome) return false
 
   // Obtém a mensagem de resposta do template
   const responseText = MENU_RESPONSE_TEMPLATES[option]
