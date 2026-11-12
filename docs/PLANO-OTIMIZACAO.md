@@ -51,7 +51,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 
 ## Decisões pendentes
 
-- **D1 — RLS (S1).** ✅ Aplicado na produção em 21/10/2026 com ok do usuário. Conferido: 14 tabelas com RLS, só 5 políticas novas, API pública sem login nega leitura e escrita em tudo (401). Backup feito e restaurado com sucesso numa cópia (`Documentos\Cícero Joias - Backups\banco-2026-10-21-antes-rls`, 14 tabelas, contagens iguais).
+- **D1 — RLS (S1).** ✅ Aplicado na produção em 21/10/2026 com ok do usuário. Conferido: 14 tabelas com RLS, só 5 políticas novas, API pública sem login nega leitura e escrita em tudo (401). Backup feito e restaurado com sucesso numa cópia (`Documentos\Cícero Joias\Backups\banco-2026-10-21-antes-rls`, 14 tabelas, contagens iguais).
 - **D2 — Segredo do app Meta (S2).** ✅ `META_APP_SECRET` criado (Secret, Production + Preview). Falta ligar a checagem no código.
 - **D3 — Zoom (A1).** ✅ Decidido: **manter bloqueado**. A1 cancelado.
 - **D4 — Next 16.1 → 16.4 (S3).** ✅ Aprovado, etapa 5.
@@ -94,7 +94,7 @@ Severidade: 🔴 crítica · 🟠 alta · 🟡 média · ⚪ baixa
 | 21/10/2026 | S1 preparo | Backup (14 tabelas) restaurado numa cópia; correção + rollback ensaiados |
 | 21/10/2026 | S1b + D5 | Cadastro público desligado; segredos como Secret; Redis removido; redeploy ok |
 | 21/10/2026 | S1 aplicado | Produção protegida: sem login → 401 em todas as tabelas. Próximo: todos trocam o PIN (S1c) |
-| 21/10/2026 | Etapa 1 (I1–I5) | /sandbox, webhook-parser e favicon duplicado removidos; prints fora do repo (`Documentos\Cícero Joias - Prints`); aviso do Prisma sumiu; v0.18.86 publicada |
+| 21/10/2026 | Etapa 1 (I1–I5) | /sandbox, webhook-parser e favicon duplicado removidos; prints fora do repo (`Documentos\Cícero Joias\Prints`); aviso do Prisma sumiu; v0.18.86 publicada |
 | 21/10/2026 | S2 | Webhook confere a assinatura da Meta; 7 casos testados. Publicado: sem assinatura → 401; WhatsApp real chegou no inbox |
 | 21/10/2026 | S4 | 6 rotas sem `details` técnico; erros comuns da Meta (24 h, modelo, limite, token) viram mensagem clara |
 | 21/10/2026 | S5 | X-Frame-Options, nosniff, Referrer-Policy e Permissions-Policy (microfone liberado só para o site) |

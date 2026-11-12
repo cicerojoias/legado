@@ -20,6 +20,7 @@
 - **[CHECKLIST-CRON.md](./CHECKLIST-CRON.md)** - Versão rápida (5 min) do guia acima
 
 ### Melhorias, análises e otimização
+- **[PLANO-COMPRAS-PARCELADAS.md](./PLANO-COMPRAS-PARCELADAS.md)** - Compras no cartão e parcelas (só ADMIN+): regras fechadas, implementado na v0.19.0 (aba "A pagar" em Lançamentos, aviso em Hoje)
 - **[melhorias.md](./melhorias.md)** - Registro de melhorias implementadas
 - **[LEGADO_analise_abr2026.md](./LEGADO_analise_abr2026.md)** - Auditoria estratégica de abril/2026 (v0.18.39)
 - **[PLANO-OTIMIZACAO.md](./PLANO-OTIMIZACAO.md)** - Otimização de outubro/2026 (v0.18.85 → v0.18.91): velocidade, segurança, organização, com antes/depois
