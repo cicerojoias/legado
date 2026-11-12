@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.19.1', data: '12/11/2026', resumo: 'Compras no cartão (admin): o cadastro agora fica dentro do Registrar (Saída → Crédito parcelado), com parcelas, primeiro vencimento e cartão. Na tela Hoje, um botão redondo com ícone de cartão, acima do fechamento do dia, leva direto para A pagar.' },
     { versao: '0.19.0', data: '12/11/2026', resumo: 'Novo: compras no cartão e parceladas (só admin). Em Lançamentos, a aba "A pagar" mostra as parcelas mês a mês e você confirma cada pagamento com a data real, sem somar a compra duas vezes. Cadastro com titular, banco e bandeira do cartão; edição de parcela pendente e cancelamento da compra. A tela Hoje avisa parcelas que vencem hoje ou estão atrasadas.' },
     { versao: '0.18.92', data: '11/11/2026', resumo: 'WAB: corrigido o aviso de exclusão de mensagens. A integração não permite apagar mensagens já enviadas do WhatsApp do cliente; o módulo agora explica essa limitação e orienta como corrigir o conteúdo.' },
     { versao: '0.18.91', data: '22/10/2026', resumo: 'Velocidade: a fonte do app era baixada duas vezes no login depois da atualização do Next; agora vem uma vez só (29 KB a menos).' },

@@ -39,9 +39,23 @@ import {
 } from '@/lib/financeiro/metodos-pgto';
 
 import { createLancamento } from '@/app/(protected)/hoje/actions';
-
+import { criarCompra, listarCartoes } from '@/app/(protected)/lancamentos/compras-actions';
+import { usePermissions } from '@/hooks/use-permissions';
 import { CATEGORIA_LABELS, CATEGORIAS_ENTRADA, CATEGORIAS_SAIDA } from '@/lib/financeiro/categorias';
 import { formatCurrency, parseBRLtoNumber } from '@/lib/financeiro/moeda';
+import { mensagemCompraErro } from '@/lib/financeiro/compras-mensagens';
+import { reaisParaCentavos } from '@/lib/financeiro/parcelas';
+import type { CartaoInfo } from './a-pagar-tipos';
+import {
+    CompraCartaoCampos,
+    cartaoEscolhido,
+    estadoInicialCompra,
+    previaParcelas,
+    type CompraCartaoEstado,
+} from './compra-cartao-campos';
+
+// Opção extra da saída, só para ADMIN+: compra no cartão de crédito parcelada (vira previsões em A pagar)
+const METODO_CARTAO = 'CARTAO_CREDITO';
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
 const lancamentoSchema = z.object({
@@ -114,10 +128,27 @@ export function LancamentoModal({
         }
     }, [open, defaultLoja, form]);
 
+    const { isAdmin } = usePermissions();
     const isEntrada = form.watch('tipo') === 'ENTRADA';
     const descricaoValue = form.watch('descricao') ?? '';
-    const metodosDisponiveis = isEntrada ? METODOS_ENTRADA : METODOS_SAIDA;
+    const valorValue = form.watch('valor');
+    const modoCartao = !isEntrada && isAdmin && form.watch('metodo_pgto') === METODO_CARTAO;
+    const metodosDisponiveis: readonly string[] = isEntrada
+        ? METODOS_ENTRADA
+        : isAdmin ? [...METODOS_SAIDA, METODO_CARTAO] : METODOS_SAIDA;
     const categoriasDisponiveis = isEntrada ? CATEGORIAS_ENTRADA : CATEGORIAS_SAIDA;
+
+    // Campos da compra no cartão + cartões já usados (carregados só quando essa opção é escolhida)
+    const [compra, setCompra] = useState<CompraCartaoEstado>(estadoInicialCompra);
+    const [cartoes, setCartoes] = useState<CartaoInfo[] | null>(null);
+    useEffect(() => {
+        if (!modoCartao || cartoes !== null) return;
+        let vivo = true;
+        listarCartoes()
+            .then((r) => { if (vivo) setCartoes(r.success ? r.cartoes : []); })
+            .catch(() => { if (vivo) setCartoes([]); });
+        return () => { vivo = false; };
+    }, [modoCartao, cartoes]);
 
     useEffect(() => {
         form.setValue('categoria', isEntrada ? 'CONSERTO' : 'DESPESA_FIXA');
@@ -128,9 +159,54 @@ export function LancamentoModal({
         onChange(formatted);
     }, []);
 
+    // Saída no cartão de crédito parcelado: cria a compra e as parcelas em A pagar (não é saída realizada ainda)
+    const registrarCompra = async (values: FormValues) => {
+        const cartao = cartaoEscolhido(compra, cartoes ?? []);
+        if (!values.descricao?.trim()) throw new Error('Informe a descrição da compra.');
+        if (cartao.titular.length < 2) throw new Error('Informe o titular do cartão.');
+        if (!previaParcelas(reaisParaCentavos(parseBRLtoNumber(values.valor)), compra)) {
+            throw new Error('Confira o valor total, as parcelas e o primeiro vencimento.');
+        }
+        const r = await criarCompra({
+            descricao: values.descricao,
+            categoria: values.categoria ?? null,
+            loja: values.loja === 'JOAO_PESSOA' || values.loja === 'SANTA_RITA' ? values.loja : null,
+            valor_total: parseBRLtoNumber(values.valor),
+            qtd_parcelas: Number(compra.qtd),
+            primeiro_vencimento: compra.primeiro,
+            cartao_titular: cartao.titular,
+            cartao_banco: cartao.banco,
+            cartao_bandeira: cartao.bandeira,
+            observacao: null,
+        });
+        if (!r.success) throw new Error(mensagemCompraErro(r));
+        setCartoes(null); // o cartão novo passa a aparecer na lista da próxima vez
+        setCompra(estadoInicialCompra());
+        const n = Number(compra.qtd);
+        setFeedback({
+            type: 'success',
+            message: `Compra registrada: ${n} ${n === 1 ? 'parcela agendada' : 'parcelas agendadas'} em Lançamentos → A pagar.`,
+        });
+        form.reset({
+            tipo: 'ENTRADA', valor: '0,00', descricao: '', categoria: 'CONSERTO',
+            metodo_pgto: 'PIX', loja: defaultLoja ?? '', observacao: '',
+        });
+        setFocusTrigger((x) => x + 1);
+    };
+
     const onSubmit = async (values: FormValues) => {
-        const formData = new FormData();
         setFeedback(null);
+
+        if (!isEntrada && isAdmin && values.metodo_pgto === METODO_CARTAO) {
+            try {
+                await registrarCompra(values);
+            } catch (err) {
+                setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Erro ao registrar' });
+            }
+            return;
+        }
+
+        const formData = new FormData();
 
         // Converte valor BRL para formato numérico
         const valorNumerico = parseBRLtoNumber(values.valor);
@@ -242,7 +318,11 @@ export function LancamentoModal({
                                             ? 'bg-emerald-600 text-white shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
-                                    onClick={() => form.setValue('tipo', 'ENTRADA')}
+                                    onClick={() => {
+                                        form.setValue('tipo', 'ENTRADA');
+                                        // "Crédito parcelado" só existe em saída
+                                        if (form.getValues('metodo_pgto') === METODO_CARTAO) form.setValue('metodo_pgto', 'PIX');
+                                    }}
                                 >
                                     <ArrowUpRight className="w-4 h-4" />
                                     Entrada
@@ -256,7 +336,9 @@ export function LancamentoModal({
                                     }`}
                                     onClick={() => {
                                         form.setValue('tipo', 'SAIDA');
-                                        if (!METODOS_SAIDA.includes(form.getValues('metodo_pgto') as typeof METODOS_SAIDA[number])) {
+                                        const atual = form.getValues('metodo_pgto');
+                                        const permitido = METODOS_SAIDA.includes(atual as typeof METODOS_SAIDA[number]) || (isAdmin && atual === METODO_CARTAO);
+                                        if (!permitido) {
                                             form.setValue('metodo_pgto', 'PIX');
                                         }
                                     }}
@@ -273,7 +355,7 @@ export function LancamentoModal({
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>
-                                            Valor (R$) <span className="text-rose-500">*</span>
+                                            {modoCartao ? 'Valor total da compra (R$)' : 'Valor (R$)'} <span className="text-rose-500">*</span>
                                         </FormLabel>
                                         <FormControl>
                                             <div className="relative">
@@ -307,7 +389,7 @@ export function LancamentoModal({
                                 render={({ field }) => (
                                     <FormItem>
                                         <div className="flex items-center justify-between">
-                                            <FormLabel>Descrição</FormLabel>
+                                            <FormLabel>{modoCartao ? <>O que foi comprado? <span className="text-rose-500">*</span></> : 'Descrição'}</FormLabel>
                                             <span className={`text-xs ${descricaoValue.length > DESC_MAX ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}>
                                                 {descricaoValue.length}/{DESC_MAX}
                                             </span>
@@ -337,7 +419,7 @@ export function LancamentoModal({
                                                 <SelectContent>
                                                     {metodosDisponiveis.map((m) => (
                                                         <SelectItem key={m} value={m}>
-                                                            {METODO_LABELS[m] ?? m}
+                                                            {m === METODO_CARTAO ? 'Crédito parcelado' : (METODO_LABELS[m] ?? m)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -403,6 +485,16 @@ export function LancamentoModal({
                                 />
                             )}
 
+                            {/* Compra no cartão de crédito (só ADMIN+): parcelas, vencimento, cartão e prévia */}
+                            {modoCartao && (
+                                <CompraCartaoCampos
+                                    estado={compra}
+                                    onChange={(patch) => setCompra((c) => ({ ...c, ...patch }))}
+                                    cartoes={cartoes}
+                                    totalCentavos={reaisParaCentavos(parseBRLtoNumber(valorValue))}
+                                />
+                            )}
+
                             {/* Submit */}
                             <Button
                                 type="submit"
@@ -411,6 +503,8 @@ export function LancamentoModal({
                             >
                                 {form.formState.isSubmitting ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : modoCartao ? (
+                                    `Agendar ${compra.qtd} ${Number(compra.qtd) === 1 ? 'parcela' : 'parcelas'}`
                                 ) : (
                                     'Confirmar Lançamento'
                                 )}

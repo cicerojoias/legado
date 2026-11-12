@@ -54,6 +54,25 @@ async function executar(
     return resultado;
 }
 
+export type CartaoUsado = { titular: string; banco: string | null; bandeira: string | null };
+
+// Cartões já usados em compras anteriores (sugestão no cadastro). Só ADMIN+, filtrado pela loja do usuário.
+export async function listarCartoes(): Promise<{ success: true; cartoes: CartaoUsado[] } | { success: false }> {
+    const a = await autorizarAdmin();
+    if (!a.ok) return { success: false };
+    const brutos = await prisma.compraParcelada.findMany({
+        where: a.auth.lojaAutorizada === 'AMBAS' ? {} : { loja: a.auth.lojaAutorizada },
+        distinct: ['cartao_titular', 'cartao_banco', 'cartao_bandeira'],
+        select: { cartao_titular: true, cartao_banco: true, cartao_bandeira: true },
+        orderBy: { created_at: 'desc' },
+        take: 30,
+    });
+    return {
+        success: true,
+        cartoes: brutos.map((c) => ({ titular: c.cartao_titular, banco: c.cartao_banco, bandeira: c.cartao_bandeira })),
+    };
+}
+
 export async function criarCompra(input: unknown): Promise<CompraResult> {
     return executar((auth) => criarCompraCore(prisma, auth, input));
 }

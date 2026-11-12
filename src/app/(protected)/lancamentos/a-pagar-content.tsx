@@ -30,15 +30,6 @@ export async function APagarContent({ mes, hoje, dbUserLoja }: { mes: string; ho
         include: { parcelas: { orderBy: { numero: 'asc' } } },
     });
 
-    // Cartões já usados (sugestão no cadastro de nova compra)
-    const cartoesBrutos = await prisma.compraParcelada.findMany({
-        where: filtroLoja,
-        distinct: ['cartao_titular', 'cartao_banco', 'cartao_bandeira'],
-        select: { cartao_titular: true, cartao_banco: true, cartao_bandeira: true },
-        orderBy: { created_at: 'desc' },
-        take: 30,
-    });
-
     const status = (venc: string): StatusVencimento => (venc < hoje ? 'ATRASADA' : venc === hoje ? 'HOJE' : 'AGENDADA');
 
     const itens: ParcelaPendente[] = pendentes.map((p) => {
@@ -98,7 +89,6 @@ export async function APagarContent({ mes, hoje, dbUserLoja }: { mes: string; ho
             parcelas={itens}
             compras={comprasInfo}
             resumoCartoes={[...porCartao.values()].sort((a, b) => b.totalCentavos - a.totalCentavos)}
-            cartoesConhecidos={cartoesBrutos.map((c) => ({ titular: c.cartao_titular, banco: c.cartao_banco, bandeira: c.cartao_bandeira }))}
             lojaFixa={dbUserLoja === 'AMBAS' ? null : (dbUserLoja as 'JOAO_PESSOA' | 'SANTA_RITA')}
         />
     );

@@ -79,6 +79,7 @@ export default async function HojePage({
                     dateStr={dateStr}
                     targetLoja={targetLoja}
                     userId={user.id}
+                    mostrarCartao={dbUser.role === 'ADMIN' || dbUser.role === 'SUPER_ADMIN'}
                 />
             </Suspense>
         </div>

@@ -4,15 +4,17 @@ import { FechamentoDia } from '@/components/financeiro/fechamento-dia';
 import { Loja, Prisma } from '@prisma/client';
 import { normalizeMetodoPgto } from '@/lib/financeiro/metodos-pgto';
 import { LancamentoModal } from '@/components/financeiro/lancamento-modal';
-import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import { CreditCard, Plus } from 'lucide-react';
 
 interface HojeContentProps {
     dateStr: string;
     targetLoja: string;
     userId: string;
+    mostrarCartao?: boolean;
 }
 
-export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentProps) {
+export async function HojeContent({ dateStr, targetLoja, userId, mostrarCartao = false }: HojeContentProps) {
     const startOfDay = new Date(dateStr + 'T00:00:00.000Z');
     const endOfDay = new Date(dateStr + 'T23:59:59.999Z');
 
@@ -80,7 +82,17 @@ export async function HojeContent({ dateStr, targetLoja, userId }: HojeContentPr
 
             <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 right-3 md:bottom-4 md:left-64 md:right-0 p-0 md:px-8 z-20 pointer-events-none flex justify-center">
                 <div className="pointer-events-auto w-full max-w-5xl flex items-end gap-3 md:gap-4 mx-auto">
-                    <div className="flex-1">
+                    <div className="flex-1 relative">
+                        {/* Atalho para compras no cartão / A pagar (só ADMIN+), logo acima do fechamento do dia */}
+                        {mostrarCartao && (
+                            <Link
+                                href="/lancamentos?aba=a-pagar"
+                                aria-label="Compras no cartão: ver A pagar"
+                                className="absolute bottom-full left-0 mb-3 h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/25 active:scale-90 hover:bg-primary/90 transition-all pointer-events-auto"
+                            >
+                                <CreditCard className="w-5 h-5" />
+                            </Link>
+                        )}
                         <FechamentoDia totais={{ ...totais, saldo }} />
                     </div>
                     

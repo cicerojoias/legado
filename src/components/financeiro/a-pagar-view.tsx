@@ -11,10 +11,9 @@ import { formatBRL } from '@/lib/financeiro/moeda';
 import { formatarDiaMes, nomeMes, nomeMesSo } from '@/lib/financeiro/formato-data';
 import { rotuloCartao } from '@/lib/financeiro/compras-mensagens';
 import { reaisParaCentavos } from '@/lib/financeiro/parcelas';
-import { CompraCartaoModal } from './compra-cartao-modal';
 import { CompraDetalheModal } from './compra-detalhe-modal';
 import { ConfirmarPagamentoModal } from './confirmar-pagamento-modal';
-import type { CartaoInfo, CompraInfo, ParcelaPendente, ResumoCartao, StatusVencimento } from './a-pagar-tipos';
+import type { CompraInfo, ParcelaPendente, ResumoCartao, StatusVencimento } from './a-pagar-tipos';
 
 const BADGE: Record<StatusVencimento, { texto: string; classe: string; cartao: string }> = {
     ATRASADA: { texto: 'Atrasada', classe: 'bg-rose-500/10 text-rose-700', cartao: 'border border-rose-300' },
@@ -30,11 +29,10 @@ interface Props {
     parcelas: ParcelaPendente[];
     compras: Record<string, CompraInfo>;
     resumoCartoes: ResumoCartao[];
-    cartoesConhecidos: CartaoInfo[];
     lojaFixa: 'JOAO_PESSOA' | 'SANTA_RITA' | null;
 }
 
-export function APagarView({ mes, mesAnterior, mesSeguinte, parcelas, compras, resumoCartoes, cartoesConhecidos, lojaFixa }: Props) {
+export function APagarView({ mes, mesAnterior, mesSeguinte, parcelas, compras, resumoCartoes, lojaFixa }: Props) {
     const [confirmando, setConfirmando] = useState<ParcelaPendente | null>(null);
     const [vendoCompraId, setVendoCompraId] = useState<string | null>(null);
 
@@ -90,10 +88,7 @@ export function APagarView({ mes, mesAnterior, mesSeguinte, parcelas, compras, r
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">O que está por vir no cartão.</p>
-                <CompraCartaoModal cartoesConhecidos={cartoesConhecidos} lojaFixa={lojaFixa} />
-            </div>
+            <p className="text-sm text-muted-foreground">O que está por vir no cartão. Para cadastrar uma compra, use <b>Registrar → Saída → Crédito parcelado</b>.</p>
 
             <div className="flex items-center justify-between">
                 <Button asChild variant="ghost" size="icon" aria-label="Mês anterior">
