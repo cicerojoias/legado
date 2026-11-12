@@ -1,6 +1,6 @@
 # Compras no cartão e parcelamento
 
-Status (12/11/2026): implementado e publicado na v0.19.0. Visual e organização aprovados em 11/11/2026; regras operacionais fechadas (seção "Decisões fechadas"); banco aplicado com backup verificado. Veja "Andamento da implementação".
+Status (12/11/2026): implementado e publicado na v0.19.0; acesso ajustado na v0.19.1 (cadastro no Registrar + botão em Hoje). Testes manuais em produção: a cargo do Richard, no uso do dia a dia. Visual e organização aprovados em 11/11/2026; regras operacionais fechadas (seção "Decisões fechadas"); banco aplicado com backup verificado. Veja "Andamento da implementação".
 
 ## Contexto verificado
 

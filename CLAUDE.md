@@ -24,7 +24,7 @@ No test runner is configured. Type-checking with `npx tsc --noEmit` is the verif
 
 ### Route Groups
 - `src/app/(auth)/` — Public auth routes: `/login`, `/pin`, `/setup-pin`, logout action
-- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (GERENTE+), `/inbox` (GERENTE+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`
+- `src/app/(protected)/` — All guarded routes: `/hoje`, `/lancamentos` (GERENTE+; aba "A pagar" de compras no cartão só ADMIN+, checado na página e nas ações), `/inbox` (GERENTE+), `/relatorios` (ADMIN+), `/dashboard` (SUPER_ADMIN), `/custos-fixos` (SUPER_ADMIN), `/usuarios` (SUPER_ADMIN), `/logs` (SUPER_ADMIN), `/perfil`
 - `src/app/(protected)/layout.tsx` — async Server Component: reads role/lojas via `getPermissoes()` and feeds `PermissoesProvider` (see RBAC)
 - `src/app/layout.tsx` — Root layout with Geist font (`--font-geist-sans`, `preload: false` — see P6 in `docs/PLANO-OTIMIZACAO.md`) and Sonner toaster
 - `src/app/robots.ts` — `Disallow: /` + `noindex` in metadata (internal app)
@@ -75,6 +75,10 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 | `src/app/(auth)/pin/actions.ts` | `setupPinAction`, `verifyPinAction` with DB-backed lockout |
 | `src/components/financeiro/lancamento-modal.tsx` | Modal for creating lancamentos |
 | `src/components/financeiro/editar-lancamento-modal.tsx` | Modal for editing/deleting lancamentos |
+| `src/lib/financeiro/compras-core.ts` | Compras no cartão/parceladas: criar, editar parcela, cancelar, confirmar pagamento (Serializable; `ParcelaCompra.lancamento_id @unique` impede confirmar duas vezes). Previsões NÃO são `Lancamento` |
+| `src/app/(protected)/lancamentos/compras-actions.ts` | Wrappers `'use server'` ADMIN+ do core acima + `listarCartoes()` |
+| `src/lib/financeiro/parcelas.ts` | Divisão em centavos e vencimentos (clamp de fim de mês) das parcelas |
+| `docs/PLANO-COMPRAS-PARCELADAS.md` | Regras fechadas, banco aplicado e andamento do módulo de cartão |
 | `src/hooks/use-permissions.ts` | `PermissoesProvider` + `usePermissions()` (reads server-provided context) |
 | `src/app/(protected)/relatorios/relatorios-content.tsx` | Relatórios data fetching + metrics + chart |
 | `src/app/(protected)/dashboard/page.tsx` | SUPER_ADMIN desktop dashboard |
