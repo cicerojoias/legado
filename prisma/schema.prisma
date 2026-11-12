@@ -41,6 +41,7 @@ model User {
   lancamentos           Lancamento[]
   logs                  Log[]
   custos_fixos          CustoFixo[]
+  compras_parceladas    CompraParcelada[]
   push_subscriptions    WaPushSubscription[]
   conversation_reads    WaConversationRead[]
   assigned_tags         ConversationTag[]     @relation("assigned_tags")
@@ -69,6 +70,7 @@ model Lancamento {
 
   usuario_id   String
   usuario      User           @relation(fields: [usuario_id], references: [id])
+  parcela_compra ParcelaCompra? // preenchido quando o lançamento nasceu da confirmação de uma parcela
 
   created_at   DateTime       @default(now())
   updated_at   DateTime       @updatedAt
@@ -81,6 +83,64 @@ model Lancamento {
   // Evita seq scan quando o planner prefere ordenar por created_at
   @@index([deletado_at, created_at(sort: Desc)])
   @@map("lancamentos")
+}
+
+// ─── Compras no cartão / parceladas ──────────────────────────────────────────
+// Previsões NÃO são Lancamento: só viram saída realizada quando a parcela é
+// confirmada (ParcelaCompra.lancamento_id). valor_total é informativo.
+// Docs: docs/PLANO-COMPRAS-PARCELADAS.md
+
+model CompraParcelada {
+  id                  String   @id @default(uuid())
+  descricao           String
+  categoria           String?
+  loja                Loja
+  valor_total         Decimal  @db.Decimal(10, 2)
+  qtd_parcelas        Int
+  primeiro_vencimento DateTime @db.Date
+
+  // Identificação do cartão (sem número, validade ou CVV). Titular pode não ser usuário.
+  cartao_titular      String
+  cartao_banco        String?
+  cartao_bandeira     String?
+  observacao          String?
+
+  // Cancelamento encerra só as parcelas pendentes (ADR-0001: nada é apagado)
+  cancelado_at        DateTime?
+
+  usuario_id          String
+  usuario             User     @relation(fields: [usuario_id], references: [id])
+  parcelas            ParcelaCompra[]
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([loja, cancelado_at])
+  @@index([usuario_id])
+  @@map("compras_parceladas")
+}
+
+model ParcelaCompra {
+  id            String          @id @default(uuid())
+  compra_id     String
+  compra        CompraParcelada @relation(fields: [compra_id], references: [id])
+  numero        Int             // 1..qtd_parcelas
+  valor         Decimal         @db.Decimal(10, 2)
+  vencimento    DateTime        @db.Date
+
+  // Pendente = lancamento_id nulo e cancelada_at nulo.
+  // @unique garante no banco que uma parcela vira no máximo um lançamento (sem duplicidade).
+  lancamento_id String?         @unique
+  lancamento    Lancamento?     @relation(fields: [lancamento_id], references: [id])
+  paga_at       DateTime?
+  cancelada_at  DateTime?
+
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  @@unique([compra_id, numero])
+  @@index([vencimento, lancamento_id, cancelada_at])
+  @@map("parcelas_compra")
 }
 
 model CustoFixo {

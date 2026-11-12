@@ -6,6 +6,7 @@ import { DateNavigation } from '@/components/financeiro/date-navigation';
 import { LojaHeader } from '@/components/financeiro/loja-header';
 import { HojeContent } from '@/components/financeiro/hoje-content';
 import { LancamentoListSkeleton } from '@/components/financeiro/lancamento-list-skeleton';
+import { AvisoVencimentos } from '@/components/financeiro/aviso-vencimentos';
 import { Loja } from '@prisma/client';
 
 // Use 'force-dynamic' to ensure fresh data, but Suspense + prefetch handles UX
@@ -54,6 +55,13 @@ export default async function HojePage({
                     <DateNavigation currentDate={dateStr} />
                 </Suspense>
             </div>
+
+            {/* Aviso de parcelas no cartão (só ADMIN+); fora do Suspense da lista para não piscar ao trocar de dia */}
+            {(dbUser.role === 'ADMIN' || dbUser.role === 'SUPER_ADMIN') && (
+                <Suspense fallback={null}>
+                    <AvisoVencimentos lojaAutorizada={dbUser.lojaAutorizada} />
+                </Suspense>
+            )}
 
             {/*
              * Suspense boundary: on every date navigation, only this region

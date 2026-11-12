@@ -31,6 +31,7 @@ type MutacaoErrorCode =
     | 'CONFLITO_CONCORRENTE' // P2034: serialization failure em tx concorrente
     | 'USUARIO_INATIVO'      // dbUser.ativo === false
     | 'RATE_LIMIT'           // Limite de requisições excedido
+    | 'PARCELA_VINCULADA'    // Lançamento nasceu da confirmação de uma parcela: não pode ser editado
     | 'ERRO_INTERNO';        // Erro inesperado — logado, não exposto ao client
 
 class MutacaoError extends Error {
@@ -195,6 +196,13 @@ export async function deletarLancamento(id: string): Promise<MutacaoResult> {
                 data: { deletado_at: new Date() },
             });
 
+            // 5d'. Se o lançamento veio da confirmação de uma parcela, desfaz o pagamento:
+            //      a parcela volta para "A pagar" e pode ser editada ou confirmada de novo.
+            const parcelaDesfeita = await tx.parcelaCompra.updateMany({
+                where: { lancamento_id: parsed.data.id },
+                data: { lancamento_id: null, paga_at: null },
+            });
+
             // 5e. Audit log com snapshot completo do registro para rastreabilidade
             await tx.log.create({
                 data: {
@@ -207,6 +215,7 @@ export async function deletarLancamento(id: string): Promise<MutacaoResult> {
                         loja: lancamento.loja,
                         data_ref: lancamento.data_ref,
                         created_at: lancamento.created_at,
+                        parcela_desfeita: parcelaDesfeita.count > 0,
                     }),
                     usuario_id: user.id,
                 },
@@ -298,6 +307,14 @@ export async function editarLancamento(formData: FormData): Promise<MutacaoResul
             if (Date.now() - lancamento.created_at.getTime() > JANELA_24H_MS) {
                 throw new MutacaoError('JANELA_EXPIRADA');
             }
+
+            // 5c'. Lançamento de parcela paga: valor deve continuar igual ao da parcela.
+            //      Para corrigir, exclua (dentro de 24h) — a parcela volta para "A pagar".
+            const vinculo = await tx.parcelaCompra.findUnique({
+                where: { lancamento_id: lancamento.id },
+                select: { id: true },
+            });
+            if (vinculo) throw new MutacaoError('PARCELA_VINCULADA');
 
             // 5d. Update — apenas campos validados; loja/data_ref são preservados
             await tx.lancamento.update({

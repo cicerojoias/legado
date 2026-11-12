@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PARCELAS, dataValida, reaisParaCentavos } from "@/lib/financeiro/parcelas";
 
 // Dicionários Reutilizáveis
 export const LojasEnum = z.enum(["JOAO_PESSOA", "SANTA_RITA", "AMBAS"]);
@@ -48,6 +49,46 @@ export const EditarLancamentoSchema = z.object({
 
 // A Exclusão exige validação estrita do ID
 export const DeleteQuerySchema = z.object({
+    id: z.string().uuid("Formato de ID inválido"),
+});
+
+// Compras no cartão / parceladas (docs/PLANO-COMPRAS-PARCELADAS.md)
+const DataIsoSchema = z.string().refine((s) => dataValida(s) && s >= "2020-01-01" && s <= "2100-12-31", "Data inválida");
+// Limite = Decimal(10,2) do banco (R$ 99.999.999,99): acima disso a gravação falharia com erro interno
+const ValorBRLSchema = z.string().min(1, "Informe o valor").refine((s) => {
+    const c = reaisParaCentavos(s);
+    return c !== null && c <= 9_999_999_999;
+}, "Valor inválido");
+const TextoOpcional = (max: number) =>
+    z.string().trim().max(max).optional().nullable().transform((v) => (v ? v : null));
+
+export const CriarCompraSchema = z.object({
+    descricao: z.string().trim().min(1, "Informe a descrição").max(120, "Máximo 120 caracteres"),
+    categoria: TextoOpcional(40),
+    loja: z.enum(["JOAO_PESSOA", "SANTA_RITA"]).optional().nullable(),
+    valor_total: ValorBRLSchema,
+    qtd_parcelas: z.coerce.number().int().min(1, "Mínimo 1 parcela").max(MAX_PARCELAS, `Máximo ${MAX_PARCELAS} parcelas`),
+    primeiro_vencimento: DataIsoSchema,
+    cartao_titular: z.string().trim().min(2, "Informe o titular do cartão").max(80),
+    cartao_banco: TextoOpcional(40),
+    cartao_bandeira: TextoOpcional(40),
+    observacao: TextoOpcional(300),
+});
+
+export const EditarParcelaSchema = z.object({
+    id: z.string().uuid("Formato de ID inválido"),
+    valor: ValorBRLSchema,
+    vencimento: DataIsoSchema,
+});
+
+export const ConfirmarPagamentoSchema = z.object({
+    parcela_id: z.string().uuid("Formato de ID inválido"),
+    data_pagamento: DataIsoSchema,
+    metodo_pgto: z.enum(["PIX", "ESPECIE"]),
+    observacao: TextoOpcional(300),
+});
+
+export const CancelarCompraSchema = z.object({
     id: z.string().uuid("Formato de ID inválido"),
 });
 

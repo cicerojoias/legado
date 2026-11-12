@@ -112,6 +112,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     CONFLITO_CONCORRENTE: 'Conflito detectado. Tente novamente em instantes.',
     USUARIO_INATIVO: 'Sua conta está inativa.',
     RATE_LIMIT: 'Muitas tentativas. Aguarde um momento.',
+    PARCELA_VINCULADA: 'Este lançamento é o pagamento de uma parcela e não pode ser editado. Exclua para voltar a parcela para "A pagar".',
     ERRO_INTERNO: 'Erro interno. Tente novamente.',
 };
 

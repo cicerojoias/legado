@@ -40,45 +40,8 @@ import {
 
 import { createLancamento } from '@/app/(protected)/hoje/actions';
 
-// ─── Helpers de formatação BRL (estilo transferência bancária) ───────────────
-function formatCurrency(value: string): string {
-    // Extrai apenas dígitos
-    const digits = value.replace(/\D/g, '');
-    if (!digits) return '0,00';
-
-    // Converte para centavos e formata
-    const cents = parseInt(digits, 10);
-    const reais = (cents / 100).toFixed(2);
-    const [intPart, decPart] = reais.split('.');
-
-    // Adiciona pontos de milhar
-    const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-    return `${withThousands},${decPart}`;
-}
-
-function parseBRLtoNumber(value: string): string {
-    // Converte "1.500,50" para "1500.50"
-    return value.replace(/\./g, '').replace(',', '.');
-}
-
-// ─── Labels humanizados ─────────────────────────────────────────────────────
-const CATEGORIA_LABELS: Record<string, string> = {
-    BANHO_OURO: 'Banho de Ouro',
-    ALIANCA: 'Aliança',
-    ANEL_FORMATURA: 'Anel de Formatura',
-    CONSERTO: 'Conserto',
-    VENDA: 'Venda',
-    OUTROS: 'Outros',
-    DESPESA_FIXA: 'Despesa Fixa',
-    FORNECEDOR: 'Fornecedor',
-    MANUTENCAO: 'Manutenção',
-    TRANSPORTE_FRETE: 'Transporte / Frete',
-    MARKETING: 'Marketing',
-};
-
-const CATEGORIAS_ENTRADA = ['BANHO_OURO', 'ALIANCA', 'ANEL_FORMATURA', 'CONSERTO', 'VENDA', 'OUTROS'];
-const CATEGORIAS_SAIDA = ['DESPESA_FIXA', 'FORNECEDOR', 'MANUTENCAO', 'TRANSPORTE_FRETE', 'MARKETING'];
+import { CATEGORIA_LABELS, CATEGORIAS_ENTRADA, CATEGORIAS_SAIDA } from '@/lib/financeiro/categorias';
+import { formatCurrency, parseBRLtoNumber } from '@/lib/financeiro/moeda';
 
 // ─── Schema ─────────────────────────────────────────────────────────────────
 const lancamentoSchema = z.object({
