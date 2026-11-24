@@ -138,23 +138,13 @@ export const AtualizarNotificacoesSchema = z.object({
     notif_horario: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Formato inválido (HH:MM)"),
 });
 
-export const EditarUsuarioLojaSchema = z.object({
-    userId: z.string().uuid("ID de usuário inválido"),
-    lojaAutorizada: LojasEnum,
-});
-
 export const EditarUsuarioAtivoSchema = z.object({
     userId: z.string().uuid("ID de usuário inválido"),
     ativo: z.boolean(),
 });
 
-export const EditarLojaPadraoSchema = z.object({
-    lojaPadrao: LojasEnum.nullable(),
-});
-
 export const EditarUsuarioSchema = z.object({
     userId: z.string().uuid("ID de usuário inválido"),
-    lojaAutorizada: LojasEnum,
     ativo: z.boolean(),
     role: RolesEnum.optional(),
 });
@@ -168,5 +158,6 @@ export const CriarUsuarioSchema = z.object({
     email: z.string().email("E-mail inválido."),
     senha: z.string().min(8, "Senha deve ter ao menos 8 caracteres."),
     role: z.enum(["ADMIN", "GERENTE", "OPERADOR"]),
-    lojaAutorizada: LojasEnum,
 });
+
+export const VincularUsuarioAuthSchema = CriarUsuarioSchema.omit({ senha: true });

@@ -20,6 +20,7 @@
 - **[CHECKLIST-CRON.md](./CHECKLIST-CRON.md)** - Versão rápida (5 min) do guia acima
 
 ### Melhorias, análises e otimização
+- **[PLANO-LOJA-USUARIOS.md](./PLANO-LOJA-USUARIOS.md)** - Conclusão da unificação dos usuários em Santa Rita.
 - **[PLANO-COMPRAS-PARCELADAS.md](./PLANO-COMPRAS-PARCELADAS.md)** - Compras no cartão e parcelas (só ADMIN+): regras fechadas, implementado nas v0.19.0 e v0.19.1 (aba "A pagar" em Lançamentos, cadastro dentro do Registrar, botão de cartão e aviso em Hoje)
 - **[melhorias.md](./melhorias.md)** - Registro de melhorias implementadas
 - **[LEGADO_analise_abr2026.md](./LEGADO_analise_abr2026.md)** - Auditoria estratégica de abril/2026 (v0.18.39)

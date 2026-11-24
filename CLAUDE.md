@@ -54,10 +54,9 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 
 ### RBAC
 - Roles: `SUPER_ADMIN` (Richard) | `ADMIN` (Cícero) | `GERENTE` (inbox + lançamentos) | `OPERADOR` (staff)
-- `User.lojaAutorizada`: `JOAO_PESSOA` | `SANTA_RITA` | `AMBAS`
+- `User.lojaAutorizada`: o cadastro, o vínculo e a edição gravam `SANTA_RITA`. O padrão e a restrição no banco são definidos em `prisma/sql/usuarios-santa-rita.sql`.
 - Proxy handles view-level RBAC: `/lancamentos`, `/inbox` and `/api/whatsapp/*` (except webhook) = GERENTE+; `/relatorios` = ADMIN+; `/dashboard`, `/custos-fixos`, `/usuarios` and `/logs` = SUPER_ADMIN only.
 - UI visibility: `src/lib/permissoes.ts` (`getPermissoes`, React `cache`) reads role/lojas on the server; the protected layout passes it to `PermissoesProvider`; `usePermissions()` just reads the context (no fetch, `isLoading` always false, same output on server and client). Server Actions enforce action-level RBAC by reading `dbUser.role` and `dbUser.lojaAutorizada` from the DB — never from the client.
-- Users with `lojaAutorizada = AMBAS` must select a store in the UI; the server validates and rejects if omitted.
 
 ### Rate Limiting
 `src/lib/rate-limit.ts` — in-memory `Map`, not persistent across restarts. Auth uses defaults (5/min, 15min lockout). Financial mutations use `rateLimit(key, 30, 15)`. PIN lockout is stored in `User.bloqueado_ate` (database) — not in-memory.
@@ -84,7 +83,7 @@ Auth (supabase.auth.getUser) → Rate limit → Zod validation → dbUser.ativo 
 | `src/app/(protected)/dashboard/page.tsx` | SUPER_ADMIN desktop dashboard |
 | `src/app/(protected)/custos-fixos/actions.ts` | CRUD for fixed costs (SUPER_ADMIN) |
 | `src/app/(protected)/perfil/actions.ts` | Trocar PIN, alterar senha, encerrar sessão, notificações |
-| `src/app/(protected)/usuarios/actions.ts` | Toggle loja e ativo por usuário (SUPER_ADMIN) |
+| `src/app/(protected)/usuarios/actions.ts` | Cadastro, vínculo e gerenciamento de acessos em Santa Rita (SUPER_ADMIN) |
 | `src/app/(protected)/logs/page.tsx` | Audit log viewer with filters + pagination (SUPER_ADMIN) |
 | `src/lib/pin-utils.ts` | Shared `hashPin`/`comparePin` (scrypt + timing-safe) |
 | `src/app/(protected)/inbox/` | WhatsApp inbox — lista de conversas + chat window com polling |
@@ -123,11 +122,7 @@ Erros de hidratação quebram a UX e são difíceis de debugar. Siga estas regra
 5. **Ao criar novo componente client** — Pergunte: "Este componente usa `useSearchParams`, `usePathname`, ou dados que mudam entre server/client?" Se sim, envolva em `<Suspense>` onde for renderizado.
 
 ### Adding New Users
-New users must exist in **both** Supabase Auth (`auth.users`) and the app's `public.users` table. The UUID must match exactly. Insert manually:
-```sql
-INSERT INTO users (id, email, nome, role, "lojaAutorizada", ativo, created_at, updated_at)
-VALUES ('UUID_FROM_SUPABASE_AUTH', 'email', 'Nome', 'OPERADOR', 'JOAO_PESSOA', true, NOW(), NOW());
-```
+New users must exist in **both** Supabase Auth (`auth.users`) and the app's `public.users` table with the same UUID. Use **Novo Usuário** in `/usuarios` to create the account, or **Já existe no Auth** to link an existing one. Both flows assign Santa Rita on the server.
 
 ### WhatsApp Inbox — Arquitetura de Mídias
 

@@ -10,7 +10,6 @@ import {
     alterarSenhaAction,
     encerrarSessaoAction,
     atualizarNotificacoesAction,
-    atualizarLojaPadraoAction,
 } from './actions';
 import {
     KeyRound,
@@ -21,7 +20,6 @@ import {
     Info,
     ChevronRight,
     User,
-    Store,
 } from 'lucide-react';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
 import * as motion from 'framer-motion/client';
@@ -32,14 +30,12 @@ interface PerfilContentProps {
     nome: string;
     email: string;
     role: 'SUPER_ADMIN' | 'ADMIN' | 'GERENTE' | 'OPERADOR';
-    lojaAutorizada: 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS';
-    lojaPadrao: 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS' | null;
     notifPush: boolean;
     notifHorario: string;
     changelog: ChangelogEntry[];
 }
 
-type OpenSection = 'pin' | 'senha' | 'notificacoes' | 'lojaPadrao' | null;
+type OpenSection = 'pin' | 'senha' | 'notificacoes' | null;
 
 // ─── Role labels ────────────────────────────────────────────────────────────
 
@@ -64,8 +60,6 @@ export function PerfilContent({
     nome, 
     email, 
     role, 
-    lojaAutorizada,
-    lojaPadrao,
     notifPush, 
     notifHorario,
     changelog,
@@ -107,11 +101,6 @@ export function PerfilContent({
                                 <span className="inline-block text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
                                     {ROLE_LABELS[role] ?? role}
                                 </span>
-                                {lojaAutorizada === 'AMBAS' && (
-                                    <span className="inline-block text-xs px-2 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">
-                                        Ambas as lojas
-                                    </span>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -171,26 +160,6 @@ export function PerfilContent({
                                     />
                                 )}
                             </>
-                        )}
-                    </div>
-                )}
-
-                {/* Preferência de Loja Global - AMBAS */}
-                {lojaAutorizada === 'AMBAS' && (
-                    <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 pb-1">
-                            Preferências
-                        </p>
-                        <SectionButton
-                            icon={<Store className="w-4 h-4" />}
-                            label="Loja Padrão"
-                            isOpen={openSection === 'lojaPadrao'}
-                            onClick={() => toggleSection('lojaPadrao')}
-                        />
-                        {openSection === 'lojaPadrao' && (
-                            <AtualizarLojaPadraoForm
-                                initialLoja={lojaPadrao}
-                            />
                         )}
                     </div>
                 )}
@@ -623,67 +592,3 @@ function NotificacoesForm({
         </motion.div>
     );
 }
-
-// ─── Atualizar Loja Padrão Form ─────────────────────────────────────────────
-
-function AtualizarLojaPadraoForm({
-    initialLoja,
-}: {
-    initialLoja: 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS' | null;
-}) {
-    const [isPending, startTransition] = useTransition();
-    const [loja, setLoja] = useState<string>(initialLoja || 'null');
-
-    const handleSave = () => {
-        const formData = new FormData();
-        formData.set('lojaPadrao', loja);
-
-        startTransition(async () => {
-            const result = await atualizarLojaPadraoAction(formData);
-            if (result.success) {
-                toast.success('Loja padrão de inicialização atualizada!');
-            } else {
-                toast.error(result.error);
-            }
-        });
-    };
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-card rounded-xl border p-4 space-y-4"
-        >
-            <div className="space-y-1">
-                <p className="text-sm font-medium">Inicialização do Sistema</p>
-                <p className="text-xs text-muted-foreground">
-                    Ao abrir o sistema, qual loja deve ser carregada primeiro? 
-                    (Automático: opta por João Pessoa).
-                </p>
-            </div>
-
-            <div className="space-y-2">
-                <select 
-                    title="Selecione a loja padrão" 
-                    value={loja} 
-                    onChange={(e) => setLoja(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <option value="null">Automático (João Pessoa)</option>
-                    <option value="JOAO_PESSOA">João Pessoa (Forçado)</option>
-                    <option value="SANTA_RITA">Santa Rita (Forçado)</option>
-                </select>
-            </div>
-
-            <Button
-                onClick={handleSave}
-                className="w-full"
-                disabled={isPending || loja === String(initialLoja || 'null')}
-            >
-                {isPending ? 'Salvando...' : 'Definir como Padrão'}
-            </Button>
-        </motion.div>
-    );
-}
-

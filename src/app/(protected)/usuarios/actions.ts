@@ -4,8 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { Loja } from '@prisma/client';
-import { EditarUsuarioLojaSchema, EditarUsuarioAtivoSchema, EditarUsuarioSchema, ExcluirUsuarioSchema, CriarUsuarioSchema } from '@/lib/validations';
+import type { Prisma } from '@prisma/client';
+import { EditarUsuarioAtivoSchema, EditarUsuarioSchema, ExcluirUsuarioSchema, CriarUsuarioSchema, VincularUsuarioAuthSchema } from '@/lib/validations';
+
+const LOJA_USUARIOS = 'SANTA_RITA';
 
 // ─── Infraestrutura ─────────────────────────────────────────────────────────
 
@@ -51,7 +53,7 @@ function isAuthError(e: unknown): e is { status: number } {
     return typeof e === 'object' && e !== null && 'status' in e;
 }
 
-// ─── 1. Alterar Loja, Role e Ativo de uma vez (Modal de Edição) ─────────────
+// ─── 1. Alterar nível e status de acesso (Modal de Edição) ───────────────────
 // Security chain: Auth → RBAC (SUPER_ADMIN) → Zod → self-guard → $transaction { read → write → audit }
 
 export async function editUserAction(formData: FormData): Promise<ActionResult> {
@@ -61,9 +63,8 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
 
         const raw = {
             userId: formData.get('userId') as string,
-            lojaAutorizada: formData.get('lojaAutorizada') as string,
             ativo: formData.get('ativo') === 'true',
-            role: formData.get('role') as string | undefined,
+            role: formData.get('role') ?? undefined,
         };
 
         const parsed = EditarUsuarioSchema.safeParse(raw);
@@ -89,8 +90,8 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
 
             if (!target) throw new Error('Usuário não encontrado.');
 
-            const updateData: { lojaAutorizada: Loja; ativo: boolean; role?: 'SUPER_ADMIN' | 'ADMIN' | 'GERENTE' | 'OPERADOR' } = {
-                lojaAutorizada: parsed.data.lojaAutorizada as Loja,
+            const updateData: Prisma.UserUpdateInput = {
+                lojaAutorizada: LOJA_USUARIOS,
                 ativo: parsed.data.ativo,
             };
 
@@ -110,7 +111,7 @@ export async function editUserAction(formData: FormData): Promise<ActionResult> 
                         targetId: target.id,
                         nome: target.nome,
                         loja_antes: target.lojaAutorizada,
-                        loja_depois: parsed.data.lojaAutorizada,
+                        loja_depois: LOJA_USUARIOS,
                         ativo_antes: target.ativo,
                         ativo_depois: parsed.data.ativo,
                         role_antes: target.role,
@@ -244,7 +245,6 @@ export async function criarUsuarioAction(formData: FormData): Promise<ActionResu
             email: formData.get('email') as string,
             senha: formData.get('senha') as string,
             role: formData.get('role') as string,
-            lojaAutorizada: formData.get('lojaAutorizada') as string,
         };
 
         const parsed = CriarUsuarioSchema.safeParse(raw);
@@ -283,7 +283,7 @@ export async function criarUsuarioAction(formData: FormData): Promise<ActionResu
                         nome: parsed.data.nome,
                         email: parsed.data.email,
                         role: parsed.data.role as 'ADMIN' | 'GERENTE' | 'OPERADOR',
-                        lojaAutorizada: parsed.data.lojaAutorizada as Loja,
+                        lojaAutorizada: LOJA_USUARIOS,
                         ativo: true,
                     },
                 });
@@ -296,7 +296,7 @@ export async function criarUsuarioAction(formData: FormData): Promise<ActionResu
                             nome: parsed.data.nome,
                             email: parsed.data.email,
                             role: parsed.data.role,
-                            loja: parsed.data.lojaAutorizada,
+                            loja: LOJA_USUARIOS,
                         }),
                         usuario_id: admin.userId,
                     },
@@ -326,14 +326,17 @@ export async function vincularUsuarioAuthAction(formData: FormData): Promise<Act
         const admin = await getSuperAdmin();
         if (!admin) return { success: false, error: 'Não autorizado.' };
 
-        const email = (formData.get('email') as string)?.trim().toLowerCase();
-        const nome = (formData.get('nome') as string)?.trim();
-        const role = formData.get('role') as string;
-        const lojaAutorizada = formData.get('lojaAutorizada') as string;
-
-        if (!email || !nome || !role || !lojaAutorizada) {
-            return { success: false, error: 'Todos os campos são obrigatórios.' };
+        const emailForm = formData.get('email');
+        const nomeForm = formData.get('nome');
+        const parsed = VincularUsuarioAuthSchema.safeParse({
+            email: typeof emailForm === 'string' ? emailForm.trim().toLowerCase() : emailForm,
+            nome: typeof nomeForm === 'string' ? nomeForm.trim() : nomeForm,
+            role: formData.get('role'),
+        });
+        if (!parsed.success) {
+            return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
         }
+        const { email, nome, role } = parsed.data;
 
         const supabaseAdmin = getSupabaseAdmin();
         if (!supabaseAdmin || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -371,8 +374,8 @@ export async function vincularUsuarioAuthAction(formData: FormData): Promise<Act
                     id: found.id,
                     nome,
                     email,
-                    role: role as 'ADMIN' | 'OPERADOR',
-                    lojaAutorizada: lojaAutorizada as Loja,
+                    role,
+                    lojaAutorizada: LOJA_USUARIOS,
                     ativo: true,
                 },
             });
@@ -380,7 +383,7 @@ export async function vincularUsuarioAuthAction(formData: FormData): Promise<Act
             await tx.log.create({
                 data: {
                     acao: 'USUARIO_VINCULADO',
-                    detalhe: JSON.stringify({ targetId: found.id, nome, email, role, loja: lojaAutorizada }),
+                    detalhe: JSON.stringify({ targetId: found.id, nome, email, role, loja: LOJA_USUARIOS }),
                     usuario_id: admin.userId,
                 },
             });
@@ -391,59 +394,6 @@ export async function vincularUsuarioAuthAction(formData: FormData): Promise<Act
 
     } catch (error) {
         console.error('[vincularUsuarioAuthAction] Erro:', error);
-        return { success: false, error: 'Erro interno. Tente novamente.' };
-    }
-}
-
-// ─── Actions Antigas (Mantidas p/ Compatibilidade se necessário) ────────────
-
-export async function alterarLojaUsuario(formData: FormData): Promise<ActionResult> {
-    try {
-        const admin = await getSuperAdmin();
-        if (!admin) return { success: false, error: 'Não autorizado.' };
-
-        const raw = {
-            userId: formData.get('userId') as string,
-            lojaAutorizada: formData.get('lojaAutorizada') as string,
-        };
-
-        const parsed = EditarUsuarioLojaSchema.safeParse(raw);
-        if (!parsed.success) {
-            return { success: false, error: parsed.error.issues[0]?.message ?? 'Campos inválidos.' };
-        }
-
-        await prisma.$transaction(async (tx) => {
-            const target = await tx.user.findUnique({
-                where: { id: parsed.data.userId },
-                select: { id: true, nome: true, lojaAutorizada: true },
-            });
-
-            if (!target) throw new Error('Usuário não encontrado.');
-
-            await tx.user.update({
-                where: { id: parsed.data.userId },
-                data: { lojaAutorizada: parsed.data.lojaAutorizada as Loja },
-            });
-
-            await tx.log.create({
-                data: {
-                    acao: 'USUARIO_LOJA_ALTERADA',
-                    detalhe: JSON.stringify({
-                        targetId: target.id,
-                        nome: target.nome,
-                        antes: target.lojaAutorizada,
-                        depois: parsed.data.lojaAutorizada,
-                    }),
-                    usuario_id: admin.userId,
-                },
-            });
-        });
-
-        revalidateAll();
-        return { success: true };
-
-    } catch (error) {
-        console.error('[alterarLojaUsuario] Erro:', error);
         return { success: false, error: 'Erro interno. Tente novamente.' };
     }
 }

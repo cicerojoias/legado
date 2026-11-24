@@ -8,6 +8,7 @@ import { PerfilContent, type ChangelogEntry } from './perfil-content';
 // para evitar peso no bundle JS do cliente.
 
 const CHANGELOG_RESUMIDO: ChangelogEntry[] = [
+    { versao: '0.19.5', data: '23/11/2026', resumo: 'Usuários: Santa Rita é a única loja no cadastro, no vínculo de contas e na edição. A escolha de loja saiu do Perfil.' },
     { versao: '0.19.4', data: '12/11/2026', resumo: 'WAB: a resposta automática do menu de boas-vindas (opções 0 a 5) agora vale por 48 horas, e não só 5 minutos. Vale enquanto o menu ainda não foi respondido: "oi?" seguido de "5" funciona; números no meio da conversa (quantidade, tamanho ou depois de já ter escolhido) não disparam.' },
     { versao: '0.19.1', data: '12/11/2026', resumo: 'Compras no cartão (admin): o cadastro agora fica dentro do Registrar (Saída → Crédito parcelado), com parcelas, primeiro vencimento e cartão. Na tela Hoje, um botão redondo com ícone de cartão, acima do fechamento do dia, leva direto para A pagar.' },
     { versao: '0.19.0', data: '12/11/2026', resumo: 'Novo: compras no cartão e parceladas (só admin). Em Lançamentos, a aba "A pagar" mostra as parcelas mês a mês e você confirma cada pagamento com a data real, sem somar a compra duas vezes. Cadastro com titular, banco e bandeira do cartão; edição de parcela pendente e cancelamento da compra. A tela Hoje avisa parcelas que vencem hoje ou estão atrasadas.' },
@@ -143,8 +144,6 @@ export default async function PerfilPage() {
             nome: true,
             email: true,
             role: true,
-            lojaAutorizada: true,
-            lojaPadrao: true,
             notif_push: true,
             notif_horario: true,
         },
@@ -160,8 +159,6 @@ export default async function PerfilPage() {
                         nome={dbUser.nome}
                         email={dbUser.email}
                         role={dbUser.role}
-                        lojaAutorizada={dbUser.lojaAutorizada}
-                        lojaPadrao={dbUser.lojaPadrao}
                         notifPush={dbUser.notif_push}
                         notifHorario={dbUser.notif_horario}
                         changelog={CHANGELOG_RESUMIDO}

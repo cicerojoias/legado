@@ -22,7 +22,6 @@ async function UsuariosData() {
             nome: true,
             email: true,
             role: true,
-            lojaAutorizada: true,
             ativo: true,
         },
         orderBy: [
@@ -31,13 +30,7 @@ async function UsuariosData() {
         ],
     });
 
-    const serialized = usuarios.map((u) => ({
-        ...u,
-        role: u.role as 'SUPER_ADMIN' | 'ADMIN' | 'OPERADOR',
-        lojaAutorizada: u.lojaAutorizada as 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS',
-    }));
-
-    return <UsuariosContent usuarios={serialized} />;
+    return <UsuariosContent usuarios={usuarios} />;
 }
 
 export default async function UsuariosPage() {
@@ -58,7 +51,7 @@ export default async function UsuariosPage() {
             <div className="px-4 pt-4 pb-3 border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
                 <h1 className="text-lg font-semibold">Usuários</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                    Gerencie acessos e permissões de loja
+                    Gerencie os acessos da loja de Santa Rita
                 </p>
             </div>
 

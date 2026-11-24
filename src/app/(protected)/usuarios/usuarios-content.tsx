@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { editUserAction, deleteUserAction, criarUsuarioAction, vincularUsuarioAuthAction } from './actions';
-import { User, Shield, MapPin, Pencil, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
+import { User, Shield, Pencil, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as motion from 'framer-motion/client';
 
@@ -40,7 +40,6 @@ interface Usuario {
     nome: string;
     email: string;
     role: 'SUPER_ADMIN' | 'ADMIN' | 'GERENTE' | 'OPERADOR';
-    lojaAutorizada: 'JOAO_PESSOA' | 'SANTA_RITA' | 'AMBAS';
     ativo: boolean;
 }
 
@@ -55,12 +54,6 @@ const ROLE_LABELS: Record<string, string> = {
     ADMIN: 'Admin',
     GERENTE: 'Gerente',
     OPERADOR: 'Operador',
-};
-
-const LOJA_LABELS: Record<string, string> = {
-    JOAO_PESSOA: 'João Pessoa',
-    SANTA_RITA: 'Santa Rita',
-    AMBAS: 'Ambas',
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -140,10 +133,6 @@ function UsuarioCard({ usuario }: { usuario: Usuario }) {
                                 )}>
                                     <Shield className="w-3 h-3" />
                                     {ROLE_LABELS[usuario.role]}
-                                </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-secondary text-secondary-foreground flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {LOJA_LABELS[usuario.lojaAutorizada]}
                                 </span>
                                 {!usuario.ativo && (
                                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100/50 text-red-600 border border-red-200">
@@ -236,25 +225,11 @@ function EditUserModal({
                     <DialogHeader>
                         <DialogTitle>Editar Usuário</DialogTitle>
                         <DialogDescription>
-                            Altere a localização e o status de acesso de <strong>{usuario.nome}</strong>.
+                            Gerencie o nível e o status de acesso de <strong>{usuario.nome}</strong> em Santa Rita.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-6 py-6">
-                        <div className="space-y-3">
-                            <Label htmlFor="lojaAutorizada">Loja Autorizada</Label>
-                            <Select name="lojaAutorizada" defaultValue={usuario.lojaAutorizada} disabled={isPending}>
-                                <SelectTrigger id="lojaAutorizada" className="w-full">
-                                    <SelectValue placeholder="Selecione a loja..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="JOAO_PESSOA">João Pessoa</SelectItem>
-                                    <SelectItem value="SANTA_RITA">Santa Rita</SelectItem>
-                                    <SelectItem value="AMBAS">Ambas</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
                         <div className="space-y-3">
                             <Label htmlFor="role">Nível de Acesso (Role)</Label>
                             <Select name="role" defaultValue={usuario.role} disabled={isPending || isSuperAdmin}>
@@ -415,18 +390,9 @@ function CriarUsuarioModal({
                             </Select>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="lojaAutorizada">Loja</Label>
-                            <Select name="lojaAutorizada" defaultValue="JOAO_PESSOA" disabled={isPending}>
-                                <SelectTrigger id="lojaAutorizada" className="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="JOAO_PESSOA">João Pessoa</SelectItem>
-                                    <SelectItem value="SANTA_RITA">Santa Rita</SelectItem>
-                                    <SelectItem value="AMBAS">Ambas</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-1 text-sm">
+                            <p className="font-medium">Loja</p>
+                            <p className="text-muted-foreground">Santa Rita</p>
                         </div>
                     </div>
 
